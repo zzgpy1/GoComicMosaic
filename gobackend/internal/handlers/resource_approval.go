@@ -1,0 +1,1000 @@
+package handlers
+
+import (
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"time"
+	"strings"
+	"github.com/gin-gonic/gin"
+
+	"dongman/internal/models"
+)
+
+// ApproveResource 审批资源 - 仅管理员可访问
+func ApproveResource(c *gin.Context) {
+	// 获取路径参数
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+
+	// 解析请求
+	var approval models.ResourceApproval
+	if err := c.ShouldBindJSON(&approval); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
+		return
+	}
+
+	// 检查资源是否存在
+	var resource models.Resource
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+
+	// 如果是补充内容审批
+	if resource.Supplement != nil && resource.IsSupplementApproval == false {
+		log.Printf("当前是补充资源审批")
+		approveResourceSupplement(c, resourceID, resource, approval)
+		resource.Status = models.ResourceStatus(strings.ToUpper(string(approval.Status)))
+		resource.UpdatedAt = time.Now()
+		return
+	}
+
+	// 更新资源状态
+	resource.Status = models.ResourceStatus(strings.ToUpper(string(approval.Status)))
+	resource.UpdatedAt = time.Now()
+
+	log.Printf("当前是初始资源审批 Received approval: %+v", approval)
+
+	// 如果资源被批准，处理图片移动
+	// 保存所有新路径
+	newImagePaths := make([]string, 0, len(approval.ApprovedImages))
+	if strings.ToLower(string(approval.Status)) == strings.ToLower(string(models.ResourceStatusApproved)){
+		// 移动已批准的图片
+		if len(approval.ApprovedImages) > 0 {
+			log.Printf("[DEBUG] 开始移动已批准的图片，资源ID: %d, 图片数量: %d", resource.ID, len(approval.ApprovedImages))
+			log.Printf("[DEBUG] 原始图片路径: %v", approval.ApprovedImages)
+
+			// 获取工作目录
+			workDir, err := os.Getwd()
+			if err != nil {
+				log.Printf("[ERROR] 获取工作目录失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取工作目录失败"})
+				return
+			}
+			
+			log.Printf("[DEBUG] 当前工作目录: %s", workDir)
+			
+			// 构建assets目录路径
+			assetsDir := filepath.Join(workDir, "..", "assets")
+			log.Printf("[DEBUG] Assets目录路径: %s", assetsDir)
+			
+			// 创建目标目录
+			imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
+			log.Printf("[DEBUG] 创建目标目录: %s", imgsDir)
+			if err := os.MkdirAll(imgsDir, 0755); err != nil {
+				log.Printf("[ERROR] 创建目录失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建图片目录失败: %v", err)})
+				return
+			}
+			
+			// 手动执行每个图片的移动操作
+			for _, imgPath := range approval.ApprovedImages {
+				if imgPath == "" {
+					continue
+				}
+				
+				// 提取文件名
+				filename := filepath.Base(imgPath)
+				log.Printf("[DEBUG] 处理图片: %s, 文件名: %s", imgPath, filename)
+				
+				// 源文件路径
+				sourcePath := filepath.Join(assetsDir, imgPath[7:]) // 去掉前面的"/assets"
+				
+				// 目标文件路径
+				destPath := filepath.Join(imgsDir, filename)
+				
+				log.Printf("[DEBUG] 移动图片: %s -> %s", sourcePath, destPath)
+				
+				// 检查源文件是否存在
+				if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+					log.Printf("[ERROR] 源文件不存在: %s", sourcePath)
+					continue
+				} else {
+					log.Printf("[DEBUG] 源文件存在: %s", sourcePath)
+				}
+				
+				// 确保目标目录存在
+				err = os.MkdirAll(filepath.Dir(destPath), 0755)
+				if err != nil {
+					log.Printf("[ERROR] 创建目标目录失败: %v", err)
+					continue
+				}
+				
+				// 移动文件（复制后删除）
+				// 1. 复制文件
+				sourceFile, err := os.Open(sourcePath)
+				if err != nil {
+					log.Printf("[ERROR] 打开源文件失败: %v", err)
+					continue
+				}
+				
+				destFile, err := os.Create(destPath)
+				if err != nil {
+					log.Printf("[ERROR] 创建目标文件失败: %v", err)
+					sourceFile.Close()
+					continue
+				}
+				
+				// 复制内容
+				bytesWritten, err := io.Copy(destFile, sourceFile)
+				sourceFile.Close()
+				destFile.Close()
+				
+				if err != nil {
+					log.Printf("[ERROR] 复制文件内容失败: %v", err)
+					continue
+				}
+				log.Printf("[DEBUG] 复制了 %d 字节数据", bytesWritten)
+				
+				// 验证目标文件已创建
+				if _, err := os.Stat(destPath); os.IsNotExist(err) {
+					log.Printf("[ERROR] 复制后目标文件不存在: %s", destPath)
+					continue
+				} else {
+					log.Printf("[DEBUG] 成功创建目标文件: %s", destPath)
+				}
+				
+				// 2. 删除原文件
+				if err := os.Remove(sourcePath); err != nil {
+					log.Printf("[WARN] 删除源文件失败，将重试: %v", err)
+					time.Sleep(100 * time.Millisecond)
+					if err := os.Remove(sourcePath); err != nil {
+						log.Printf("[ERROR] 第二次删除源文件失败: %v", err)
+					} else {
+						log.Printf("[DEBUG] 第二次尝试删除源文件成功")
+					}
+				} else {
+					log.Printf("[DEBUG] 成功删除源文件: %s", sourcePath)
+				}
+				
+				log.Printf("[INFO] 成功移动图片: %s -> %s", sourcePath, destPath)
+				
+				// 生成新路径并保存
+				newPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
+				log.Printf("[DEBUG] 生成新路径: %s", newPath)
+				newImagePaths = append(newImagePaths, newPath)
+			}
+			
+			resource.Images = newImagePaths
+			log.Printf("[INFO] 变为 %v", resource.Images)
+		}
+
+		// 处理海报图片
+		if approval.PosterImage != "" {
+			log.Printf("[DEBUG] 开始移动海报图片，资源ID: %d, 原路径: %s", resource.ID, approval.PosterImage)	
+			// 提取文件名
+			filename := filepath.Base(approval.PosterImage)
+			log.Printf("[DEBUG] 海报文件名: %s", filename)
+			// 生成新路径
+			newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
+			log.Printf("[INFO] 更新资源海报图片路径，从 %v 变为 %s", resource.PosterImage, newPosterPath)
+			resource.PosterImage = &newPosterPath
+		}
+	}
+
+	// 创建审批记录
+	approvalRecord := models.ApprovalRecord{
+		ResourceID:      resourceID,
+		Status:          resource.Status,
+		FieldApprovals:  models.JsonMap{},
+		FieldRejections: models.JsonMap{},
+		ApprovedImages:  approval.ApprovedImages,
+		RejectedImages:  approval.RejectedImages,
+		PosterImage:     approval.PosterImage,
+		Notes:           approval.Notes,
+		ApprovedLinks:   models.JsonMap{},
+		RejectedLinks:   models.JsonMap{},
+		CreatedAt:       time.Now(),
+	}
+	// 处理批准的链接，将它们追加到原始资源的Links字段中
+	if len(approval.ApprovedLinks) > 0 {
+		log.Printf("[DEBUG] 处理批准的链接，资源ID: %d, 链接数量: %d", resourceID, len(approval.ApprovedLinks))
+		
+		// 如果原始资源的Links字段为空，则初始化
+		if resource.Links == nil {
+			resource.Links = models.JsonMap{}
+		}
+		
+		// 先按category分组链接
+		linksByCategory := make(map[string][]map[string]interface{})
+		// 遍历批准的链接，按category分组
+		for _, link := range approval.ApprovedLinks {
+			// 使用category作为键，将链接添加到对应分组
+			if category, ok := link["category"].(string); ok && category != "" {
+				// 创建不包含category字段的新map
+				linkData := make(map[string]interface{})
+				for k, v := range link {
+					if k != "category" {
+						linkData[k] = v
+					}
+				}
+				
+				linksByCategory[category] = append(linksByCategory[category], linkData)
+			} else {
+				// 如果没有有效的category，使用"unknown"作为键
+				linksByCategory["other"] = append(linksByCategory["other"], link)
+			}
+		}
+
+		log.Printf("[DEBUG] 分组后的链接: %v", linksByCategory)
+		// 赋值给 approvalRecord.ApprovedLinks
+		jsonMap := make(map[string]interface{})
+		for k, v := range linksByCategory {
+			jsonMap[k] = v // []map[string]interface{} 可作为 interface{}
+		}
+		approvalRecord.ApprovedLinks = models.JsonMap(jsonMap)
+	}
+
+
+	// 更新记录
+	log.Printf("[DEBUG] 开始更新数据库记录，资源ID: %d", resourceID)
+	log.Printf("[DEBUG] 资源状态: %s", resource.Status)
+	log.Printf("[DEBUG] 资源图片: %v", resource.Images)
+	log.Printf("[DEBUG] 资源海报图片: %v", resource.PosterImage)
+	
+	// approval_records插入审批记录
+	result, err := models.DB.Exec(
+		`INSERT INTO approval_records (
+			resource_id, status, field_approvals, field_rejections,
+			approved_images, rejected_images, poster_image, notes,
+			approved_links, rejected_links, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		approvalRecord.ResourceID, approvalRecord.Status,
+		approvalRecord.FieldApprovals, approvalRecord.FieldRejections,
+		models.JsonList(newImagePaths), approvalRecord.RejectedImages,
+		approvalRecord.PosterImage, approvalRecord.Notes,
+		approvalRecord.ApprovedLinks, approvalRecord.RejectedLinks,
+		approvalRecord.CreatedAt,
+	)
+
+		if err != nil {
+			log.Printf("创建审批记录失败: %v", err)
+			// 继续处理，不要因为审批记录创建失败而中断流程
+		} else {
+			id, _ := result.LastInsertId()
+			log.Printf("已创建审批记录，ID: %d", id)
+		}
+
+		
+	
+	// resources 更新资源
+	_, err = models.DB.Exec(
+		`UPDATE resources SET 
+			status = ?, images = ?, poster_image = ?, 
+			approval_history = ?, updated_at = ?
+		WHERE id = ?`,
+		resource.Status, resource.Images, resource.PosterImage,
+		resource.ApprovalHistory, resource.UpdatedAt, resource.ID,
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] 更新资源失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源失败: %v", err)})
+		return
+	}
+	
+	log.Printf("[INFO] 成功更新资源，ID: %d", resourceID)
+
+	// 再次从数据库获取资源，确保返回最新数据
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		log.Printf("警告：获取更新后的资源失败，但资源已更新: %v", err)
+	}
+
+	c.JSON(http.StatusOK, resource)
+}
+
+// approveResourceSupplement 处理资源补充内容的审批
+func approveResourceSupplement(c *gin.Context, resourceID int, resource models.Resource, approval models.ResourceApproval) {
+	log.Printf("处理资源补充内容审批，资源ID: %d", resourceID)
+
+	// 检查补充内容是否存在且状态为待审批
+	if resource.Supplement == nil {
+		log.Printf("资源 %d 没有补充内容", resourceID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "资源没有补充内容"})
+		return
+	}
+
+	status, ok := resource.Supplement["status"]
+	if !ok {
+		log.Printf("资源 %d 的补充内容没有status字段", resourceID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "补充内容缺少状态信息"})
+		return
+	}
+
+	statusStr, ok := status.(string)
+	if !ok {
+		log.Printf("资源 %d 的补充内容status字段不是字符串", resourceID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "补充内容状态格式错误"})
+			return
+		}
+		
+	if statusStr != string(models.ResourceStatusPending) {
+		log.Printf("资源 %d 的补充内容状态不是待审批: %s", resourceID, statusStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "补充内容不是待审批状态"})
+			return
+		}
+		
+	// 创建补充内容审批记录
+	approvalRecord := models.ApprovalRecord{
+		ResourceID:           resourceID,
+		Status:               models.ResourceStatus(strings.ToUpper(string(approval.Status))),
+		FieldApprovals:       models.JsonMap{},
+		FieldRejections:      models.JsonMap{},
+		ApprovedImages:       approval.ApprovedImages,
+		RejectedImages:       approval.RejectedImages,
+		PosterImage:          approval.PosterImage,
+		Notes:                approval.Notes,
+		ApprovedLinks:        models.JsonMap{},
+		RejectedLinks:        models.JsonMap{},
+		IsSupplementApproval: true,
+		CreatedAt:            time.Now(),
+	}
+
+	// 转换字段审批信息
+	if approval.FieldApprovals != nil {
+		for k, v := range approval.FieldApprovals {
+			approvalRecord.FieldApprovals[k] = v
+		}
+	}
+
+	if approval.FieldRejections != nil {
+		for k, v := range approval.FieldRejections {
+			approvalRecord.FieldRejections[k] = v
+		}
+	}
+
+	// 转换链接审批信息
+	if len(approval.ApprovedLinks) > 0 {
+		linksMap := make(map[string]interface{})
+		for i, link := range approval.ApprovedLinks {
+			linksMap[fmt.Sprintf("link_%d", i)] = link
+		}
+		approvalRecord.ApprovedLinks = linksMap
+	}
+
+	if len(approval.RejectedLinks) > 0 {
+		linksMap := make(map[string]interface{})
+		for i, link := range approval.RejectedLinks {
+			linksMap[fmt.Sprintf("link_%d", i)] = link
+		}
+		approvalRecord.RejectedLinks = linksMap
+	}
+
+	// 保存所有新路径
+	newImagePaths := make([]string, 0, len(approval.ApprovedImages))
+	
+	// 如果资源被批准，处理图片移动
+	if strings.ToLower(string(approval.Status)) == strings.ToLower(string(models.ResourceStatusApproved)) {
+		// 移动已批准的图片
+		if len(approval.ApprovedImages) > 0 {
+			log.Printf("[DEBUG] 开始移动已批准的补充图片，资源ID: %d, 图片数量: %d", resource.ID, len(approval.ApprovedImages))
+			log.Printf("[DEBUG] 原始图片路径: %v", approval.ApprovedImages)
+
+			// 获取工作目录
+			workDir, err := os.Getwd()
+			if err != nil {
+				log.Printf("[ERROR] 获取工作目录失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取工作目录失败"})
+				return
+			}
+			
+			log.Printf("[DEBUG] 当前工作目录: %s", workDir)
+			
+			// 构建assets目录路径
+			assetsDir := filepath.Join(workDir, "..", "assets")
+			log.Printf("[DEBUG] Assets目录路径: %s", assetsDir)
+			
+			// 创建目标目录
+			imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
+			log.Printf("[DEBUG] 创建目标目录: %s", imgsDir)
+			if err := os.MkdirAll(imgsDir, 0755); err != nil {
+				log.Printf("[ERROR] 创建目录失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建图片目录失败: %v", err)})
+				return
+			}
+			
+			// 手动执行每个图片的移动操作
+			for _, imgPath := range approval.ApprovedImages {
+				if imgPath == "" {
+					continue
+				}
+				
+				// 提取文件名
+				filename := filepath.Base(imgPath)
+				log.Printf("[DEBUG] 处理图片: %s, 文件名: %s", imgPath, filename)
+				
+				// 源文件路径
+				sourcePath := filepath.Join(assetsDir, imgPath[7:]) // 去掉前面的"/assets"
+				
+				// 目标文件路径
+				destPath := filepath.Join(imgsDir, filename)
+				
+				log.Printf("[DEBUG] 移动图片: %s -> %s", sourcePath, destPath)
+				
+				// 检查源文件是否存在
+				if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+					log.Printf("[ERROR] 源文件不存在: %s", sourcePath)
+					continue
+				} else {
+					log.Printf("[DEBUG] 源文件存在: %s", sourcePath)
+				}
+				
+				// 确保目标目录存在
+				err = os.MkdirAll(filepath.Dir(destPath), 0755)
+				if err != nil {
+					log.Printf("[ERROR] 创建目标目录失败: %v", err)
+					continue
+				}
+				
+				// 移动文件（复制后删除）
+				// 1. 复制文件
+				sourceFile, err := os.Open(sourcePath)
+				if err != nil {
+					log.Printf("[ERROR] 打开源文件失败: %v", err)
+					continue
+				}
+				
+				destFile, err := os.Create(destPath)
+				if err != nil {
+					log.Printf("[ERROR] 创建目标文件失败: %v", err)
+					sourceFile.Close()
+					continue
+				}
+				
+				// 复制内容
+				bytesWritten, err := io.Copy(destFile, sourceFile)
+				sourceFile.Close()
+				destFile.Close()
+				
+				if err != nil {
+					log.Printf("[ERROR] 复制文件内容失败: %v", err)
+					continue
+				}
+				log.Printf("[DEBUG] 复制了 %d 字节数据", bytesWritten)
+				
+				// 验证目标文件已创建
+				if _, err := os.Stat(destPath); os.IsNotExist(err) {
+					log.Printf("[ERROR] 复制后目标文件不存在: %s", destPath)
+					continue
+				} else {
+					log.Printf("[DEBUG] 成功创建目标文件: %s", destPath)
+				}
+				
+				// 2. 删除原文件
+				if err := os.Remove(sourcePath); err != nil {
+					log.Printf("[WARN] 删除源文件失败，将重试: %v", err)
+					time.Sleep(100 * time.Millisecond)
+					if err := os.Remove(sourcePath); err != nil {
+						log.Printf("[ERROR] 第二次删除源文件失败: %v", err)
+					} else {
+						log.Printf("[DEBUG] 第二次尝试删除源文件成功")
+					}
+				} else {
+					log.Printf("[DEBUG] 成功删除源文件: %s", sourcePath)
+				}
+				
+				log.Printf("[INFO] 成功移动图片: %s -> %s", sourcePath, destPath)
+				
+				// 生成新路径并保存
+				newPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
+				log.Printf("[DEBUG] 生成新路径: %s", newPath)
+				newImagePaths = append(newImagePaths, newPath)
+			}
+			
+			// 获取资源当前的图片
+			currentImages := resource.Images
+			if currentImages == nil {
+				currentImages = []string{}
+			}
+			
+			// 将批准的图片路径追加到resource.Images，而不是覆盖
+			log.Printf("[INFO] 更新资源图片路径，从 %v", resource.Images)
+			resource.Images = append(currentImages, newImagePaths...)
+			log.Printf("[INFO] 变为 %v（追加而非覆盖）", resource.Images)
+		}
+		
+		// 处理海报图片，如果补充内容中设置了新的海报图片
+		if approval.PosterImage != "" {
+			log.Printf("[DEBUG] 处理补充内容的海报图片，资源ID: %d, 原路径: %s", resource.ID, approval.PosterImage)
+			
+			// 提取文件名
+			filename := filepath.Base(approval.PosterImage)
+			log.Printf("[DEBUG] 海报文件名: %s", filename)
+			
+			// 更新资源的海报图片
+			newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
+			log.Printf("[INFO] 更新资源海报图片，从 %v 变为 %s", resource.PosterImage, newPosterPath)
+			resource.PosterImage = &newPosterPath
+		}
+		
+		// 处理批准的链接，将它们追加到原始资源的Links字段中
+		if len(approval.ApprovedLinks) > 0 {
+			log.Printf("[DEBUG] 处理批准的链接，资源ID: %d, 链接数量: %d", resourceID, len(approval.ApprovedLinks))
+			
+			// 如果原始资源的Links字段为空，则初始化
+			if resource.Links == nil {
+				resource.Links = models.JsonMap{}
+			}
+			
+			// 先按category分组链接
+			linksByCategory := make(map[string][]map[string]interface{})
+			
+			// 遍历批准的链接，按category分组
+			for _, link := range approval.ApprovedLinks {
+				// 使用category作为键，将链接添加到对应分组
+				if category, ok := link["category"].(string); ok && category != "" {
+					// 创建不包含category字段的新map
+					linkData := make(map[string]interface{})
+					for k, v := range link {
+						if k != "category" {
+							linkData[k] = v
+						}
+					}
+					
+					linksByCategory[category] = append(linksByCategory[category], linkData)
+				} else {
+					// 如果没有有效的category，使用"unknown"作为键
+					linksByCategory["unknown"] = append(linksByCategory["unknown"], link)
+				}
+			}
+			
+			// 将分组后的链接添加到resource.Links中
+			for category, links := range linksByCategory {
+				log.Printf("[DEBUG] 添加链接组，键: %s, 数量: %d", category, len(links))
+				
+				// 检查是否已存在该category的链接
+				if existingLinks, ok := resource.Links[category]; ok {
+					// 已存在该category的链接，将新链接追加到现有数组
+					if existingLinksArray, ok := existingLinks.([]interface{}); ok {
+						// 已经是数组格式，追加新链接
+						for _, link := range links {
+							existingLinksArray = append(existingLinksArray, link)
+						}
+						resource.Links[category] = existingLinksArray
+					} else {
+						// 不是数组格式，转换为数组后追加
+						newLinks := []interface{}{existingLinks}
+						for _, link := range links {
+							newLinks = append(newLinks, link)
+						}
+						resource.Links[category] = newLinks
+					}
+				} else {
+					// 不存在该category的链接，直接添加
+					interfaceLinks := make([]interface{}, len(links))
+					for i, link := range links {
+						interfaceLinks[i] = link
+					}
+					resource.Links[category] = interfaceLinks
+				}
+			}
+			
+			log.Printf("[INFO] 更新后的资源链接: %v", resource.Links)
+		}
+		
+		// 更新数据库中的资源信息
+		_, err := models.DB.Exec(
+			`UPDATE resources SET 
+				images = ?, poster_image = ?, links = ?,
+				updated_at = ?
+			WHERE id = ?`,
+			resource.Images, resource.PosterImage, resource.Links,
+			time.Now(), resourceID,
+		)
+		
+		if err != nil {
+			log.Printf("[ERROR] 更新资源图片失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源图片失败: %v", err)})
+			return
+		}
+		
+		log.Printf("[INFO] 成功更新资源图片，ID: %d", resourceID)
+	}
+
+	// 更新补充内容状态
+	resource.IsSupplementApproval = true
+	resource.UpdatedAt = time.Now()
+
+	// 更新资源
+	_, err := models.DB.Exec(
+		`UPDATE resources SET is_supplement_approval = 'True', updated_at = ? WHERE id = ?`,
+		resource.UpdatedAt, resourceID,
+	)
+
+	// 检查错误
+	if err != nil {
+		log.Printf("更新资源is_supplement_approval失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源is_supplement_approval失败: %v", err)})
+		return
+	}
+
+	log.Printf("资源ID: %d 的is_supplement_approval已成功更新为True", resourceID)
+
+	// 插入审批记录
+	result, err := models.DB.Exec(
+		`INSERT INTO approval_records (
+			resource_id, status, field_approvals, field_rejections,
+			approved_images, rejected_images, poster_image, notes,
+			approved_links, rejected_links, is_supplement_approval, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		approvalRecord.ResourceID, approvalRecord.Status,
+		approvalRecord.FieldApprovals, approvalRecord.FieldRejections,
+		models.JsonList(newImagePaths), approvalRecord.RejectedImages,
+		approvalRecord.PosterImage, approvalRecord.Notes,
+		approvalRecord.ApprovedLinks, approvalRecord.RejectedLinks,
+		approvalRecord.IsSupplementApproval, approvalRecord.CreatedAt,
+	)
+	
+
+	if err != nil {
+		log.Printf("创建补充内容审批记录失败: %v", err)
+		// 继续处理，不要因为审批记录创建失败而中断流程
+	} else {
+		id, _ := result.LastInsertId()
+		log.Printf("已创建补充内容审批记录，ID: %d", id)
+	}
+	
+	
+	// 返回更新后的资源
+	var updatedResource models.Resource
+	err = models.DB.Get(&updatedResource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		log.Printf("警告：获取更新后的资源失败，但资源已更新: %v", err)
+		c.JSON(http.StatusOK, resource)
+	} else {
+		c.JSON(http.StatusOK, updatedResource)
+	}
+}
+
+// DeleteApprovalRecord 删除审批记录 - 仅管理员可访问
+func DeleteApprovalRecord(c *gin.Context) {
+	// 获取路径参数
+	recordID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Printf("解析审批记录ID失败: %v, 参数: %s", err, c.Param("id"))
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的审批记录ID"})
+		return
+	}
+
+	log.Printf("尝试删除审批记录，ID: %d", recordID)
+
+	// 检查记录是否存在
+	var record models.ApprovalRecord
+	err = models.DB.Get(&record, `SELECT * FROM approval_records WHERE id = ?`, recordID)
+	if err != nil {
+		log.Printf("未找到ID为%d的审批记录: %v", recordID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "未找到审批记录"})
+		return
+	}
+
+	log.Printf("找到ID为%d的审批记录，资源ID: %d", recordID, record.ResourceID)
+
+	// 删除记录
+	result, err := models.DB.Exec(`DELETE FROM approval_records WHERE id = ?`, recordID)
+	if err != nil {
+		log.Printf("删除ID为%d的审批记录失败: %v", recordID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除审批记录失败"})
+		return
+	}
+
+	// 检查是否真的删除了记录
+	affected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("获取影响行数失败: %v", err)
+	} else if affected == 0 {
+		log.Printf("ID为%d的审批记录未被删除", recordID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除审批记录失败，没有记录被删除"})
+		return
+	}
+
+	log.Printf("成功删除ID为%d的审批记录", recordID)
+	c.Status(http.StatusNoContent)
+}
+
+// SupplementResource 为资源添加补充内容
+func SupplementResource(c *gin.Context) {
+	// 获取路径参数
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+
+	// 解析请求
+	var supplement models.SupplementCreate
+	if err := c.ShouldBindJSON(&supplement); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
+		return
+	}
+
+	// 检查资源是否存在并且是已批准的
+	var resource models.Resource
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+
+	// 创建补充内容
+	supplementData := models.JsonMap{
+		"images":          supplement.Images,
+		"links":           supplement.Links,
+		"status":          string(models.ResourceStatusPending),
+		"submission_date": time.Now().Format(time.RFC3339),
+	}
+
+	// 更新资源，添加补充内容
+	_, err = models.DB.Exec(
+		`UPDATE resources SET supplement = ?, is_supplement_approval = ?, updated_at = ? WHERE id = ?`,
+		supplementData, false, time.Now(), resourceID,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("添加补充内容失败: %v", err)})
+		return
+	}
+
+	// 更新内存中的资源对象
+	resource.Supplement = supplementData
+	resource.UpdatedAt = time.Now()
+
+	c.JSON(http.StatusOK, resource)
+}
+
+// GetResourceSupplement 获取资源的补充内容 - 仅管理员可访问
+func GetResourceSupplement(c *gin.Context) {
+	// 获取路径参数
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+
+	// 查询资源
+	var resource models.Resource
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+
+	if resource.Supplement == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源没有补充内容"})
+		return
+	}
+
+	c.JSON(http.StatusOK, resource.Supplement)
+}
+
+// GetPendingSupplementResources 获取待审批补充内容的资源列表 - 仅管理员可访问
+func GetPendingSupplementResources(c *gin.Context) {
+	// 解析查询参数
+	skip, _ := strconv.Atoi(c.DefaultQuery("skip", "0"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+
+	// 查询所有包含补充内容的资源
+	var resources []models.Resource
+	err := models.DB.Select(&resources, 
+		`SELECT * FROM resources WHERE supplement IS NOT NULL LIMIT ? OFFSET ?`,
+		limit, skip)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询待审批补充内容资源失败"})
+		return
+	}
+	
+	// 确保resources不为null
+	if resources == nil {
+		resources = []models.Resource{}
+	}
+
+	// 筛选待审批的补充内容资源
+	pendingSupplements := []models.Resource{}
+	for _, resource := range resources {
+		if resource.Supplement == nil {
+			continue
+		}
+
+		status, ok := resource.Supplement["status"]
+		if !ok {
+			continue
+		}
+
+		if statusStr, ok := status.(string); ok && statusStr == string(models.ResourceStatusPending) {
+			resource.HasPendingSupplement = true
+			pendingSupplements = append(pendingSupplements, resource)
+		}
+	}
+
+	// 即使没有待审批补充内容也返回空数组
+	c.JSON(http.StatusOK, pendingSupplements)
+}
+
+// DeleteApprovalRecords 批量删除审批记录 - 仅管理员可访问
+func DeleteApprovalRecords(c *gin.Context) {
+	// 解析请求体中的审批记录ID列表
+	var request struct {
+		IDs []int `json:"ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		log.Printf("解析请求体失败: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
+		return
+	}
+
+	if len(request.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID列表为空"})
+		return
+	}
+
+	log.Printf("批量删除审批记录，ID数量: %d, IDs: %v", len(request.IDs), request.IDs)
+
+	// 批量删除记录
+	var successCount int
+	var failedIDs []int
+
+	for _, id := range request.IDs {
+		// 检查记录是否存在
+		var count int
+		err := models.DB.Get(&count, `SELECT COUNT(*) FROM approval_records WHERE id = ?`, id)
+		if err != nil || count == 0 {
+			log.Printf("未找到ID为%d的审批记录", id)
+			failedIDs = append(failedIDs, id)
+			continue
+		}
+
+		// 删除记录
+		result, err := models.DB.Exec(`DELETE FROM approval_records WHERE id = ?`, id)
+		if err != nil {
+			log.Printf("删除ID为%d的审批记录失败: %v", id, err)
+			failedIDs = append(failedIDs, id)
+			continue
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil || affected == 0 {
+			log.Printf("ID为%d的审批记录未被删除", id)
+			failedIDs = append(failedIDs, id)
+			continue
+		}
+
+		successCount++
+	}
+
+	log.Printf("批量删除完成，成功: %d, 失败: %d", successCount, len(failedIDs))
+	c.JSON(http.StatusOK, gin.H{
+		"success_count": successCount,
+		"failed_ids":    failedIDs,
+	})
+}
+
+// GetApprovalRecords 获取所有审批记录 - 仅管理员可访问
+func GetApprovalRecords(c *gin.Context) {
+	// 解析查询参数
+	skip, _ := strconv.Atoi(c.DefaultQuery("skip", "0"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+
+	log.Printf("获取审批记录: skip=%d, limit=%d", skip, limit)
+
+	// 获取审批记录总数
+	var count int
+	err := models.DB.Get(&count, "SELECT COUNT(*) FROM approval_records")
+	if err != nil {
+		log.Printf("获取审批记录总数失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取审批记录总数失败"})
+		return
+	}
+
+	// 如果没有记录，返回空数组
+	if count == 0 {
+		log.Printf("没有审批记录")
+		c.JSON(http.StatusOK, gin.H{
+			"records": []interface{}{},
+			"total":   0,
+		})
+		return
+	}
+
+	// 查询审批记录
+	query := `
+		SELECT ar.*, r.title, r.title_en, r.resource_type, r.status as resource_status
+		FROM approval_records ar
+		LEFT JOIN resources r ON ar.resource_id = r.id
+		ORDER BY ar.created_at DESC
+		LIMIT ? OFFSET ?
+	`
+	
+	rows, err := models.DB.Queryx(query, limit, skip)
+	if err != nil {
+		log.Printf("查询审批记录失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询审批记录失败"})
+		return
+	}
+	defer rows.Close()
+
+	// 处理结果
+	type ApprovalRecordResponse struct {
+		models.ApprovalRecord
+		Title          string             `db:"title" json:"title"`
+		TitleEn        string             `db:"title_en" json:"title_en"`
+		ResourceType   string             `db:"resource_type" json:"resource_type"`
+		ResourceStatus models.ResourceStatus `db:"resource_status" json:"resource_status"`
+	}
+
+	records := []ApprovalRecordResponse{}
+	for rows.Next() {
+		var record ApprovalRecordResponse
+		if err := rows.StructScan(&record); err != nil {
+			log.Printf("扫描审批记录失败: %v", err)
+			continue
+		}
+		records = append(records, record)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("遍历审批记录结果集失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "处理审批记录失败"})
+		return
+	}
+
+	log.Printf("成功获取 %d 条审批记录", len(records))
+	c.JSON(http.StatusOK, gin.H{
+		"records": records,
+		"total":   count,
+	})
+}
+
+// GetResourceApprovalRecords 获取单个资源的审批记录 - 仅管理员可访问
+func GetResourceApprovalRecords(c *gin.Context) {
+	// 获取资源ID
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Printf("无效的资源ID: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+
+	// 检查资源是否存在
+	var resource models.Resource
+	err = models.DB.Get(&resource, "SELECT * FROM resources WHERE id = ?", resourceID)
+	if err != nil {
+		log.Printf("资源未找到: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+
+	// 查询该资源的审批记录
+	var records []models.ApprovalRecord
+	err = models.DB.Select(&records, "SELECT * FROM approval_records WHERE resource_id = ? ORDER BY created_at DESC", resourceID)
+	if err != nil {
+		log.Printf("查询资源审批记录失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询资源审批记录失败"})
+		return
+	}
+
+	log.Printf("成功获取资源ID=%d的%d条审批记录", resourceID, len(records))
+	c.JSON(http.StatusOK, gin.H{
+		"resource": resource,
+		"records":  records,
+	})
+} 
