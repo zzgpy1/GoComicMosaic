@@ -75,6 +75,7 @@
 ![image|690x397](docs/20.jpg)
 
 ## 新增分页
+![image|690x397](docs/21.jpg)
 
 ---
 

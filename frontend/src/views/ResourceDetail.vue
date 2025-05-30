@@ -504,6 +504,7 @@ const editLinks = reactive({
   "pikpak": [],
   "baidu": [],
   "123": [],
+  "xunlei": [],
   "online": [],
   "others": []
 })
@@ -865,6 +866,7 @@ const categoryDisplayNames = {
   "pikpak": "PikPak",
   "baidu": "百度网盘",
   "123": "123网盘",
+  "xunlei": "迅雷网盘",
   "online": "在线观看",
   "others": "其他链接"
 }

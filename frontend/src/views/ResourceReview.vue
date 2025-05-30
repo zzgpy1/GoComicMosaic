@@ -433,7 +433,7 @@ const categoryDisplayNames = {
   "pikpak": "PikPak",
   "baidu": "百度网盘",
   "123": "123网盘",
-  "xunlei": "迅雷",
+  "xunlei": "迅雷网盘",
   "online": "在线观看",
   "others": "其他链接"
 }
@@ -1014,8 +1014,22 @@ const selectAllLinks = () => {
   selectedLinks.value = [];
   
   // 遍历所有分类和链接
-  if (resource.value && resource.value.links) {
-    Object.keys(resource.value.links).forEach(category => {
+  if (isSupplementResource.value) {
+    // 仅选择补充链接，避免选择已存在的只读链接
+    Object.keys(supplementLinks.value || {}).forEach(category => {
+      const categoryLinks = supplementLinks.value[category];
+      if (Array.isArray(categoryLinks)) {
+        categoryLinks.forEach((_, index) => {
+          // 只选择未审核的链接（既不是已批准也不是已拒绝的）
+          if (getLinkApprovalStatus(category, index) === 'pending') {
+            selectedLinks.value.push({ category, index });
+          }
+        });
+      }
+    });
+  } else {
+    // 对于新资源审核，选择所有链接
+    Object.keys(resource.value?.links || {}).forEach(category => {
       const categoryLinks = resource.value.links[category];
       if (Array.isArray(categoryLinks)) {
         categoryLinks.forEach((_, index) => {
@@ -1732,16 +1746,29 @@ const closeLargeImage = () => {
 
 // 获取链接审批状态
 const getLinkApprovalStatus = (category, index) => {
+  // 对于补充资源审核，确保我们只考虑补充链接的状态
+  if (isSupplementResource.value) {
+    // 确认该链接是补充链接而不是原始链接
+    const isSupplementLink = supplementLinks.value && 
+                            supplementLinks.value[category] && 
+                            index < supplementLinks.value[category].length;
+                            
+    if (!isSupplementLink) {
+      // 如果不是补充链接（是原始链接），则返回"已批准"状态，表示不需要审核
+      return 'approved';
+    }
+  }
+  
   // 检查是否已批准
   if (approvedLinks.value.some(l => l.category === category && l.index === index)) {
-    return 'approved'
+    return 'approved';
   }
   // 检查是否已拒绝
   if (rejectedLinks.value.some(l => l.category === category && l.index === index)) {
-    return 'rejected'
+    return 'rejected';
   }
   // 默认为待审核
-  return 'pending'
+  return 'pending';
 }
 
 // 切换链接批准状态

@@ -364,12 +364,50 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 	}
 
 	// 转换链接审批信息
+	// if len(approval.ApprovedLinks) > 0 {
+	// 	linksMap := make(map[string]interface{})
+	// 	for i, link := range approval.ApprovedLinks {
+	// 		linksMap[fmt.Sprintf("link_%d", i)] = link
+	// 	}
+	// 	approvalRecord.ApprovedLinks = linksMap
+	// }
+	// 处理批准的链接，将它们追加到原始资源的Links字段中
 	if len(approval.ApprovedLinks) > 0 {
-		linksMap := make(map[string]interface{})
-		for i, link := range approval.ApprovedLinks {
-			linksMap[fmt.Sprintf("link_%d", i)] = link
+		log.Printf("[DEBUG] 处理批准的链接，资源ID: %d, 链接数量: %d", resourceID, len(approval.ApprovedLinks))
+		
+		// 如果原始资源的Links字段为空，则初始化
+		if resource.Links == nil {
+			resource.Links = models.JsonMap{}
 		}
-		approvalRecord.ApprovedLinks = linksMap
+		
+		// 先按category分组链接
+		linksByCategory := make(map[string][]map[string]interface{})
+		// 遍历批准的链接，按category分组
+		for _, link := range approval.ApprovedLinks {
+			// 使用category作为键，将链接添加到对应分组
+			if category, ok := link["category"].(string); ok && category != "" {
+				// 创建不包含category字段的新map
+				linkData := make(map[string]interface{})
+				for k, v := range link {
+					if k != "category" {
+						linkData[k] = v
+					}
+				}
+				
+				linksByCategory[category] = append(linksByCategory[category], linkData)
+			} else {
+				// 如果没有有效的category，使用"unknown"作为键
+				linksByCategory["other"] = append(linksByCategory["other"], link)
+			}
+		}
+
+		log.Printf("[DEBUG] 分组后的链接: %v", linksByCategory)
+		// 赋值给 approvalRecord.ApprovedLinks
+		jsonMap := make(map[string]interface{})
+		for k, v := range linksByCategory {
+			jsonMap[k] = v // []map[string]interface{} 可作为 interface{}
+		}
+		approvalRecord.ApprovedLinks = models.JsonMap(jsonMap)
 	}
 
 	if len(approval.RejectedLinks) > 0 {
@@ -735,7 +773,103 @@ func SupplementResource(c *gin.Context) {
 		return
 	}
 
-	// 创建补充内容
+	// 检查是否已有待审批的补充内容
+	if resource.Supplement != nil {
+		// 尝试获取现有补充内容的状态
+		if status, ok := resource.Supplement["status"]; ok {
+			if statusStr, ok := status.(string); ok && statusStr == string(models.ResourceStatusPending) {
+				// 有待审批的补充内容，需要合并而不是覆盖
+				log.Printf("资源 %d 已有待审批的补充内容，将进行合并", resourceID)
+				
+				// 合并图片列表
+				existingImages := []string{}
+				if imgs, ok := resource.Supplement["images"]; ok {
+					if imgList, ok := imgs.([]interface{}); ok {
+						for _, img := range imgList {
+							if imgStr, ok := img.(string); ok {
+								existingImages = append(existingImages, imgStr)
+							}
+						}
+					}
+				}
+				
+				// 将新图片追加到现有图片列表中
+				mergedImages := append(existingImages, supplement.Images...)
+				
+				// 处理链接 - 合并现有链接和新链接
+				existingLinks := make(map[string][]interface{})
+				if links, ok := resource.Supplement["links"]; ok {
+					if linksMap, ok := links.(map[string]interface{}); ok {
+						for category, categoryLinks := range linksMap {
+							if catLinks, ok := categoryLinks.([]interface{}); ok {
+								existingLinks[category] = catLinks
+							}
+						}
+					}
+				}
+				
+				// 将新链接合并到现有链接中
+				mergedLinks := make(map[string]interface{})
+				for category, links := range existingLinks {
+					mergedLinks[category] = links
+				}
+				
+				// 合并新提交的链接
+				for category, categoryLinks := range supplement.Links {
+					if existingCatLinks, ok := mergedLinks[category]; ok {
+						// 已有该分类的链接，追加
+						if existingArr, ok := existingCatLinks.([]interface{}); ok {
+							// 根据categoryLinks的类型进行不同处理
+							if newLinksArray, ok := categoryLinks.([]interface{}); ok {
+								// 如果已经是[]interface{}类型，直接追加
+								mergedLinks[category] = append(existingArr, newLinksArray...)
+							} else if newLinksArray, ok := categoryLinks.([]map[string]interface{}); ok {
+								// 如果是[]map[string]interface{}类型，转换后追加
+								for _, link := range newLinksArray {
+									existingArr = append(existingArr, link)
+								}
+								mergedLinks[category] = existingArr
+							} else {
+								// 单个链接对象，直接追加
+								mergedLinks[category] = append(existingArr, categoryLinks)
+							}
+						}
+					} else {
+						// 没有该分类的链接，直接添加
+						mergedLinks[category] = categoryLinks
+					}
+				}
+				
+				// 更新合并后的补充内容
+				supplementData := models.JsonMap{
+					"images":          mergedImages,
+					"links":           mergedLinks,
+					"status":          string(models.ResourceStatusPending),
+					"submission_date": time.Now().Format(time.RFC3339),
+				}
+				
+				// 更新资源，添加补充内容
+				_, err = models.DB.Exec(
+					`UPDATE resources SET supplement = ?, is_supplement_approval = ?, updated_at = ? WHERE id = ?`,
+					supplementData, false, time.Now(), resourceID,
+				)
+				
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("添加补充内容失败: %v", err)})
+					return
+				}
+				
+				// 更新内存中的资源对象
+				resource.Supplement = supplementData
+				resource.UpdatedAt = time.Now()
+				
+				c.JSON(http.StatusOK, resource)
+				return
+			}
+		}
+	}
+
+	// 没有待审批的补充内容，直接创建新的
 	supplementData := models.JsonMap{
 		"images":          supplement.Images,
 		"links":           supplement.Links,

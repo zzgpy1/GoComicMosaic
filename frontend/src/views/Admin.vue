@@ -1290,18 +1290,30 @@ onMounted(async () => {
 .table-container {
   width: 100%;
   overflow-x: auto;
+  overflow-y: auto;  /* 添加垂直滚动功能 */
+  max-height: 600px; /* 设置最大高度以触发滚动条 */
   border-radius: var(--border-radius);
   background: rgba(255, 255, 255, 0.5);
   padding: 0;
   position: relative;
 }
 
+/* 固定表头样式 */
 .custom-table {
   display: table;
   min-width: 800px;
   width: 100%;
   white-space: nowrap;
   table-layout: fixed;
+  border-collapse: separate; /* 设置为separate以支持固定表头 */
+  border-spacing: 0; /* 移除边框间距 */
+}
+
+.custom-table thead {
+  position: sticky; /* 设置表头为粘性定位 */
+  top: 0;          /* 固定在容器顶部 */
+  z-index: 1;       /* 确保表头在内容上层 */
+  background: rgba(255, 255, 255, 0.95); /* 确保表头背景不透明 */
 }
 
 .custom-table th {
@@ -1311,6 +1323,9 @@ onMounted(async () => {
   padding: 1rem;
   text-align: left;
   border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  position: sticky; /* 确保每个th元素也保持粘性定位 */
+  top: 0;          /* 固定在容器顶部 */
+  z-index: 2;      /* 确保高于tbody内容 */
 }
 
 .custom-table td {
