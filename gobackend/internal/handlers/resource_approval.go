@@ -363,14 +363,6 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 		}
 	}
 
-	// 转换链接审批信息
-	// if len(approval.ApprovedLinks) > 0 {
-	// 	linksMap := make(map[string]interface{})
-	// 	for i, link := range approval.ApprovedLinks {
-	// 		linksMap[fmt.Sprintf("link_%d", i)] = link
-	// 	}
-	// 	approvalRecord.ApprovedLinks = linksMap
-	// }
 	// 处理批准的链接，将它们追加到原始资源的Links字段中
 	if len(approval.ApprovedLinks) > 0 {
 		log.Printf("[DEBUG] 处理批准的链接，资源ID: %d, 链接数量: %d", resourceID, len(approval.ApprovedLinks))
@@ -396,7 +388,7 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 				
 				linksByCategory[category] = append(linksByCategory[category], linkData)
 			} else {
-				// 如果没有有效的category，使用"unknown"作为键
+				// 如果没有有效的category，使用"other"作为键
 				linksByCategory["other"] = append(linksByCategory["other"], link)
 			}
 		}
@@ -651,11 +643,12 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 
 	// 更新补充内容状态
 	resource.IsSupplementApproval = true
+	resource.Supplement = nil // 清空补充内容
 	resource.UpdatedAt = time.Now()
 
 	// 更新资源
 	_, err := models.DB.Exec(
-		`UPDATE resources SET is_supplement_approval = 'True', updated_at = ? WHERE id = ?`,
+		`UPDATE resources SET is_supplement_approval = 'True', supplement = NULL, updated_at = ? WHERE id = ?`,
 		resource.UpdatedAt, resourceID,
 	)
 
@@ -666,7 +659,7 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 		return
 	}
 
-	log.Printf("资源ID: %d 的is_supplement_approval已成功更新为True", resourceID)
+	log.Printf("资源ID: %d 的is_supplement_approval已成功更新为True，supplement已清空", resourceID)
 
 	// 插入审批记录
 	result, err := models.DB.Exec(
