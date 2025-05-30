@@ -258,7 +258,7 @@ sudo nano /etc/supervisor/conf.d/dongman.conf
 
 ```ini
 [program:dm]
-command=./app 
+command=/home/work/dongman/gobackend/app 
 directory=/home/work/dongman/gobackend        ; 项目的文件夹路径
 autostart=true                              ; 是否在 Supervisor 启动时自动启动该程序
 autorestart=true                            ; 程序退出后是否自动重启
