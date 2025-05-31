@@ -5,7 +5,7 @@
         <div class="brand">
           <router-link to="/" class="brand-link">
             <i class="bi bi-collection-play brand-icon"></i>
-            <span class="brand-text">美漫共建</span>
+            <span class="brand-text">美漫资源共建</span>
           </router-link>
         </div>
         
@@ -95,11 +95,12 @@
 <script setup>
 import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
 import { isAuthenticated, getCurrentUser, logout, setupAxiosInterceptors } from './utils/auth'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import LocalSearch from './components/LocalSearch.vue'
 import axios from 'axios'
 
 const route = useRoute()
+const router = useRouter()
 const isLoggedIn = ref(false)
 const currentUser = ref({})
 const footerPreloaded = ref(false)
@@ -186,15 +187,81 @@ const clearPaginationStorage = () => {
   // 如果还有其他需要清理的分页相关数据，可以在这里添加
 }
 
-onMounted(() => {
-  setupAxiosInterceptors()
-  checkAuthState()
-
-  // 监听存储变化
-  window.addEventListener('storage', checkAuthState)
+// 处理滚动事件，显示/隐藏回到顶部按钮
+const handleScroll = () => {
+  // 滚动时检测是否接近底部
+  const scrollPosition = window.scrollY + window.innerHeight;
+  const documentHeight = document.documentElement.scrollHeight;
   
-  // 监听自定义登录事件
-  window.addEventListener('login-success', checkAuthState)
+  // 如果接近底部，预加载页脚内容
+  if (documentHeight - scrollPosition < 300 && !footerPreloaded.value) {
+    preloadFooterContent();
+  }
+}
+
+// 更新页面标题和meta信息的函数
+const updateMetaInfo = (to) => {
+  // 设置默认值
+  const defaultTitle = '美漫资源共建 - 动漫爱好者共同贡献的美漫资源库'
+  const defaultDescription = '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。'
+  const defaultKeywords = '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建'
+  
+  // 获取路由的meta信息
+  const title = to.meta.title || defaultTitle
+  const description = to.meta.description || defaultDescription
+  const keywords = to.meta.keywords || defaultKeywords
+  
+  // 更新页面标题
+  document.title = title
+  
+  // 更新meta描述
+  let metaDescription = document.querySelector('meta[name="description"]')
+  if (metaDescription) {
+    metaDescription.setAttribute('content', description)
+  }
+  
+  // 更新meta关键词
+  let metaKeywords = document.querySelector('meta[name="keywords"]')
+  if (metaKeywords) {
+    metaKeywords.setAttribute('content', keywords)
+  }
+  
+  // 更新Open Graph标签
+  let ogTitle = document.querySelector('meta[property="og:title"]')
+  if (ogTitle) {
+    ogTitle.setAttribute('content', title)
+  }
+  
+  let ogDescription = document.querySelector('meta[property="og:description"]')
+  if (ogDescription) {
+    ogDescription.setAttribute('content', description)
+  }
+}
+
+// 使用afterEach钩子监听路由变化
+onMounted(() => {
+  // 设置路由afterEach钩子
+  router.afterEach((to) => {
+    // 更新meta信息
+    updateMetaInfo(to)
+    
+    // 回到页面顶部（可选）
+    // window.scrollTo(0, 0)
+  })
+  
+  checkAuthState()
+  
+  // 初始加载时设置meta信息
+  updateMetaInfo(route)
+  
+  // 设置axios拦截器
+  setupAxiosInterceptors(() => {
+    logout()
+    isLoggedIn.value = false
+  })
+  
+  // 监听滚动事件
+  window.addEventListener('scroll', handleScroll, { passive: true })
   
   // 优化滚动性能
   optimizeScrollPerformance()
@@ -210,6 +277,7 @@ onMounted(() => {
 
 // 页面卸载时移除事件监听器
 onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('beforeunload', clearPaginationStorage)
 })
 </script>
@@ -673,7 +741,7 @@ body {
   content: '';
   position: absolute;
   top: 0;
-  left: -170%;
+  left: -100%;
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);

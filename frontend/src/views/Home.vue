@@ -1,8 +1,8 @@
 <template>
   <div class="home-container">
     <div class="hero-section">
-      <h1 class="hero-title">精选美漫资源库</h1>
-      <p class="hero-subtitle">资源共建，共享精彩</p>
+      <!-- <h1 class="hero-title">精选美漫资源库</h1> -->
+      <!-- <p class="hero-subtitle">资源共建，共享精彩</p> -->
       
       <!-- 添加排序选项 -->
       <div class="sort-options">

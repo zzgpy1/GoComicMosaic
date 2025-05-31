@@ -302,18 +302,13 @@ sudo vi /etc/nginx/conf.d/dongman.conf
 
 ```nginx
 server {
-    listen 80;
-    server_name dm.xueximeng.com;
-    
-    # 重定向 HTTP 请求到 HTTPS
-    return 301 https://$host$request_uri;
-}
-
-server {
     listen 443 ssl;
     server_name dm.xueximeng.com;
     
-    # SSL 配置
+    # 定义基础路径变量
+    set $base_path /home/work/dongman;
+    
+    # SSL 配置（保持不变）
     ssl_certificate /etc/letsencrypt/live/xueximeng.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/xueximeng.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -323,7 +318,7 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_tickets off;
     
-    # 安全头部
+    # 安全头部（保持不变）
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
     add_header X-Content-Type-Options nosniff;
     add_header X-Frame-Options SAMEORIGIN;
@@ -331,20 +326,29 @@ server {
 
     # 上传的资源文件
     location /assets/ {
-        alias /home/work/dongman/assets/;
+        alias $base_path/assets/;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000";
     }
 
-    # 前端静态资源 - 使用不同的路径
-    location /static/assets/ {
-        alias /home/work/dongman/frontend/dist/assets/;
+    # 前端静态资源
+    location /static/ {
+        alias $base_path/frontend/dist/;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000";
         access_log off;
     }
 
-    # API 请求转发到后端
+    # 特定文件处理
+    location = /static/favicon.ico {
+        alias $base_path/frontend/dist/favicon.ico;
+    }
+   
+    location = /static/apple-touch-icon.png {
+        alias $base_path/frontend/dist/apple-touch-icon.png;
+    }
+
+    # API 请求转发到后端（无 /home/work/dongman，无需修改）
     location /api/ {
         proxy_pass http://127.0.0.1:8000/;
         proxy_set_header Host $host;
@@ -358,7 +362,7 @@ server {
     
     # 前端静态文件
     location / {
-        root /home/work/dongman/frontend/dist;
+        root $base_path/frontend/dist;
         index index.html;
         try_files $uri $uri/ /index.html;
         
@@ -378,11 +382,12 @@ server {
     # 限制文件上传大小
     client_max_body_size 50M;
     
-    # 日志配置
+    # 日志配置（保持不变）
     access_log /home/work/logs/dongman.access.log;
     error_log /home/work/logs/dongman.error.log;
 }
 ```
+
 
 ### 3. 启用站点配置
 
