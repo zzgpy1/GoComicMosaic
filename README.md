@@ -445,3 +445,111 @@ sudo supervisorctl status dm
 ```bash
 sudo systemctl status nginx
 ```
+
+### 美漫资源共建进度
+- The Simpsons（辛普森一家）✅
+- South Park（南方公园）✅
+- Rick and Morty（瑞克和莫蒂）✅
+- Family Guy（恶搞之家）✅
+- American Dad!（美国老爹）✅
+- BoJack Horseman（马男波杰克）✅
+- Adventure Time（探险活宝 / 探险时光）✅
+- Futurama（飞出个未来）✅
+- Inside Job（阴谋职场 / 阴谋办公室）✅
+- The Boondocks（乡下人）✅
+- Superjail!（暴力监狱 / 超级监狱）✅
+- Hazbin Hotel（地狱客栈）✅
+- Mr. Pickles（腌黄瓜先生）✅
+- Solar Opposites（外星也难民）✅
+- King of the Hill（山丘之王 / 乡巴佬希尔一家的幸福生活）✅
+- Brickleberry（脆莓公园）✅
+- Pokémon（宝可梦 / 宠物小精灵）✅
+- Common Side Effects（常见副作用）✅
+- Bob's Burgers（开心汉堡店）
+- SpongeBob SquarePants（海绵宝宝）
+- Invincible（无敌少侠）
+- Harley Quinn（哈莉·奎茵）
+- The Owl House（猫头鹰魔法社）
+- Guardians of Ga’Hoole（守护者）
+- Gravity Falls（怪诞小镇）
+- We Bare Bears（咱们裸熊）
+- Arcane（奥术）
+- Castlevania（恶魔城）
+- Teen Titans Go!（少年泰坦出击）
+- DuckTales（鸭子历险记）
+- Dexter's Laboratory（德克斯特的实验室）
+- Hey Arnold!（嘿！阿诺德）
+- Robot Chicken（机器鸡）
+- Krapopolis（克拉波利斯）
+- Smiling Friends（微笑朋友）
+- Teenage Mutant Ninja Turtles（忍者神龟）
+- Gargoyles（夜行神龙）
+- Camp Snoopy（史努比营地）
+- Batman: The Animated Series（蝙蝠侠动画系列）
+- Doug（道格）
+- Scooby-Doo（史酷比）
+- Aeon Flux（魔力女战士）
+- Bullwinkle（布温克尔）
+- Ren & Stimpy（伦和史丁比）
+- Tuca & Bertie（图卡与伯蒂）
+- F is for Family（家庭的意义）
+- Love, Death & Robots（爱，死亡与机器人）
+- Clerks: The Animated Series（店员动画系列）
+- Static Shock（静电侠）
+- Scavengers Reign（拾荒者统治）
+- The Amazing World of Gumball（阿甘妙世界）
+- Paradise PD（天堂镇警局）
+- Ugly Americans（俗世乐土）
+- Primal（史前战纪）
+- Blue Eye Samurai（蓝眼武士）
+- Hilda（希尔达）
+- HouseBroken（一家之主）
+- Star vs. the Forces of Evil（星蝶公主）
+- Amphibia（奇幻沼泽）
+- Helluva Boss（极恶老大）
+- The Great North（东倒西歪）
+- Murder Drones（无机杀手）
+- House of Demons（恶魔之家）
+- The Amazing Digital Circus（神奇数字马戏团）
+- Steven Universe（宇宙小子）
+- Summer Camp Island（夏令营岛）
+- OK K.O.! Let's Be Heroes（超级科学伙伴）
+- The Midnight Gospel（午夜福音）
+- Pantheon（万神殿）
+- Ten Year Old Tom（十岁的汤姆）
+- The Boys Presents: Diabolical（黑袍纠察队劣迹）
+- Dead End: Paranormal Park（灵异游乐园无处可逃）
+- Little Demon（小恶魔）
+- The Cyanide & Happiness Show（氰化欢乐秀）
+- Disenchantment（幻灭）
+- Bless the Harts（福是全家福的福）
+- My Adventures with Superman（我亲爱的怪物伙伴）
+- Ben 10（少年骇客）
+- She-Ra and the Princesses of Power（神勇战士）
+- Over the Garden Wall（花园墙外）
+- Central Park（中央公园）
+- The Age of the Chip and the Amazing Animals（奇波和神奇动物的时代）
+- Daria（拽妹黛薇儿）
+- Big Mouth（大嘴巴）
+- Animals.（纽约屁民）
+- Metalocalypse（金属启示录）
+- Exploding Kittens（爆炸猫）
+- The Flintstones（摩登原始人）
+- The Jetsons（杰森一家）
+- Tom and Jerry（猫和老鼠）
+- The Powerpuff Girls（飞天小女警）
+- Courage the Cowardly Dog（胆小狗英雄）
+- Ed, Edd n Eddy（艾德，艾迪和艾德）
+- Johnny Bravo（强尼布拉沃）
+- Samurai Jack（武士杰克）
+- Star Wars: The Clone Wars（星球大战：克隆人战争）
+- Avatar: The Legend of Korra（科拉传奇）
+- Regular Show（普通秀）
+- Archer（间谍亚契）
+- Final Space（终空）
+- The Venture Bros.（冒险兄弟）
+- Aqua Teen Hunger Force（水少年特攻队）
+- Sealab 2021（2021海底实验室）
+- Harvey Birdman, Attorney at Law（哈维·伯德曼律师）
+- Space Ghost Coast to Coast（太空幽灵海岸到海岸）
+- Villainous（反派本色）
