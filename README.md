@@ -308,7 +308,7 @@ server {
     # 定义基础路径变量
     set $base_path /home/work/dongman;
     
-    # SSL 配置（保持不变）
+    # SSL 配置
     ssl_certificate /etc/letsencrypt/live/xueximeng.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/xueximeng.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -318,7 +318,7 @@ server {
     ssl_session_cache shared:SSL:10m;
     ssl_session_tickets off;
     
-    # 安全头部（保持不变）
+    # 安全头部
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
     add_header X-Content-Type-Options nosniff;
     add_header X-Frame-Options SAMEORIGIN;
@@ -348,7 +348,7 @@ server {
         alias $base_path/frontend/dist/apple-touch-icon.png;
     }
 
-    # API 请求转发到后端（无 /home/work/dongman，无需修改）
+    # API 请求转发到后端
     location /api/ {
         proxy_pass http://127.0.0.1:8000/;
         proxy_set_header Host $host;
@@ -382,7 +382,7 @@ server {
     # 限制文件上传大小
     client_max_body_size 50M;
     
-    # 日志配置（保持不变）
+    # 日志配置
     access_log /home/work/logs/dongman.access.log;
     error_log /home/work/logs/dongman.error.log;
 }
