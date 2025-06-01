@@ -74,6 +74,20 @@ const routes = [
       description: '了解美漫资源共建平台的宗旨、团队和发展历程。我们致力于为动漫爱好者提供优质的资源共享环境。',
       keywords: '关于我们, 平台介绍, 团队介绍, 美漫共建'
     }
+  },
+  {
+    path: '/streams',
+    name: 'StreamsPage',
+    component: () => import('../views/StreamsPage.vue'),
+    props: route => ({ 
+      id: route.query.id,
+      direct_url: route.query.direct_url 
+    }),
+    meta: {
+      title: '流媒体内容 - 美漫资源共建平台',
+      description: '浏览和观看各种高质量的动漫流媒体内容，包括动画、电影和连续剧。',
+      keywords: '流媒体内容, 动漫视频, 在线观看, 美漫共建'
+    }
   }
 ]
 

@@ -1,5 +1,7 @@
 <template>
   <div class="resource-detail">
+    <!-- 删除返回按钮区域代码 -->
+
     <div v-if="loading" class="text-center my-5">
       <div class="spinner-border" role="status">
         <span class="visually-hidden">加载中...</span>
@@ -355,6 +357,14 @@
             <div class="links-card" v-if="hasLinks">
               <div class="card-header">
                 <h3>资源链接</h3>
+                <!-- 添加点播图标按钮 -->
+                <button 
+                  class="stream-button" 
+                  title="点播此资源" 
+                  @click="goToStreamPage"
+                >
+                  <i class="bi bi-play-circle"></i>
+                </button>
               </div>
               <div class="card-body">
                 <div class="links-tabs">
@@ -846,6 +856,25 @@ const goToSupplementResource = () => {
     query: {
       supplementId: resource.value.id,
       supplementMode: 'true'
+    }
+  })
+}
+
+// 跳转到播放页面并搜索当前资源
+const goToStreamPage = () => {
+  if (!resource.value?.title) return
+  
+  // 如果标题包含斜杠，只取斜杠前的部分
+  let searchTitle = resource.value.title
+  if (searchTitle.includes('/')) {
+    searchTitle = searchTitle.split('/')[0].trim()
+  }
+  
+  // 跳转到播放页面并带上搜索参数
+  router.push({
+    path: '/streams',
+    query: {
+      search: searchTitle
     }
   })
 }
@@ -1912,6 +1941,39 @@ onMounted(() => {
     line-height: 1.5;
     overflow-wrap: break-word;
     word-break: break-word;
+    transition: all 0.3s ease;
+  }
+  
+  .description-content.collapsed {
+    max-height: 4.5em; /* 约显示3行文字 */
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .description-content.collapsed:after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1.5em;
+    background: linear-gradient(transparent, var(--bg-color));
+  }
+  
+  .description-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+  
+  .description-toggle-btn:hover {
+    text-decoration: underline;
+    background-color: rgba(var(--primary-color-rgb), 0.1);
   }
   
   /* 优化资源链接区域 */
@@ -3039,4 +3101,88 @@ onMounted(() => {
     margin-right: 0.5rem !important;
   }
 }
+
+.description-content {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.description-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.description-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+/* 点播按钮样式 */
+.stream-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary-gradient, linear-gradient(45deg, #7c3aed, #8b5cf6));
+  color: white;
+  border: none;
+  box-shadow: 0 4px 8px rgba(124, 58, 237, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.stream-button:hover {
+  transform: translateY(-3px) scale(1.1);
+  box-shadow: 0 6px 12px rgba(124, 58, 237, 0.4);
+}
+
+.stream-button i {
+  font-size: 1.2rem;
+}
+
+/* 调整卡片标题布局以包含按钮 */
+.card-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 覆盖可能影响按钮文本显示的CSS规则 */
+@media (max-width: 768px) {
+  .dropzone-content .btn-custom {
+    width: auto !important;
+    height: auto !important;
+    border-radius: var(--border-radius) !important;
+  }
+  
+  .dropzone-content .btn-text,
+  .dropzone-content .file-btn-text {
+    display: inline !important;
+  }
+
+  .dropzone-content .btn-custom i {
+    margin-right: 0.5rem !important;
+  }
+}
+
+.description-content {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 </style> 

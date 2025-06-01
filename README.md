@@ -77,6 +77,9 @@
 ## 新增分页
 ![image|690x397](docs/21.jpg)
 
+## 新增在线点播功能
+![image|690x397](docs/22.gif)
+
 ---
 
 # 美漫资源共建平台部署
@@ -103,6 +106,7 @@
 │   │   └── database.go       # 数据库连接和初始化
 │   ├── handlers/             # HTTP处理器
 │   │   ├── auth_handlers.go  # 认证相关处理器
+│   │   ├── proxy_handler.go  # CORS代理功能
 │   │   ├── middleware.go     # 中间件
 │   │   ├── resource_handlers.go # 资源基本操作处理器
 │   │   ├── resource_approval.go # 资源审批和补充处理器
@@ -157,13 +161,6 @@ cd /home/work/dongman/frontend
 #### 安装依赖
 ```
 npm install
-```
-#### 创建生产环境变量文件
-```
-cat > .env.production << EOL
-NODE_ENV=production
-VUE_APP_BASE_API=/api
-EOL
 ```
 
 #### 修改`vite.config.js`文件
@@ -302,18 +299,24 @@ sudo vi /etc/nginx/conf.d/dongman.conf
 
 ```nginx
 server {
+    listen 80;
+    server_name dm.xueximeng.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
     listen 443 ssl;
     server_name dm.xueximeng.com;
     
-    # 定义基础路径变量
+    # 基础路径
     set $base_path /home/work/dongman;
     
-    # SSL 配置
+    # SSL配置
     ssl_certificate /etc/letsencrypt/live/xueximeng.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/xueximeng.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_session_timeout 1d;
     ssl_session_cache shared:SSL:10m;
     ssl_session_tickets off;
@@ -323,32 +326,33 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-Frame-Options SAMEORIGIN;
     add_header X-XSS-Protection "1; mode=block";
-
-    # 上传的资源文件
-    location /assets/ {
-        alias $base_path/assets/;
-        expires 30d;
-        add_header Cache-Control "public, max-age=2592000";
+    
+    # CORS代理端点 - 注意这与前端请求的路径完全匹配 /proxy
+    location = /proxy {
+        # 重要：这里没有以 /api 开头，与前端代码中的路径保持一致
+        proxy_pass http://127.0.0.1:8000/proxy;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 处理大型响应
+        proxy_buffer_size 16k;
+        proxy_buffers 8 32k;
+        proxy_busy_buffers_size 64k;
+        
+        # 超时设置
+        proxy_connect_timeout 15s;
+        proxy_read_timeout 45s;
+        proxy_send_timeout 15s;
+        proxy_ssl_server_name on;
+        
+        # 日志设置
+        access_log /var/log/nginx/proxy_access.log;
+        error_log /var/log/nginx/proxy_error.log;
     }
-
-    # 前端静态资源
-    location /static/ {
-        alias $base_path/frontend/dist/;
-        expires 30d;
-        add_header Cache-Control "public, max-age=2592000";
-        access_log off;
-    }
-
-    # 特定文件处理
-    location = /static/favicon.ico {
-        alias $base_path/frontend/dist/favicon.ico;
-    }
-   
-    location = /static/apple-touch-icon.png {
-        alias $base_path/frontend/dist/apple-touch-icon.png;
-    }
-
-    # API 请求转发到后端
+    
+    # API请求 - 代理到Go后端
     location /api/ {
         proxy_pass http://127.0.0.1:8000/;
         proxy_set_header Host $host;
@@ -356,35 +360,45 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
-        proxy_redirect off;
-        proxy_read_timeout 120s;
     }
     
-    # 前端静态文件
+    # 静态资源
+    location /static/ {
+        alias $base_path/frontend/dist/;
+        expires 30d;
+    }
+    
+    location /assets/ {
+        alias $base_path/assets/;
+        expires 30d;
+    }
+    
+    # 特定文件
+    location = /favicon.ico {
+        alias $base_path/frontend/dist/favicon.ico;
+    }
+    
+    location = /robots.txt {
+        alias $base_path/frontend/dist/robots.txt;
+    }
+    
+    location = /sitemap.xml {
+        alias $base_path/frontend/dist/sitemap.xml;
+    }
+    
+    # 前端应用
     location / {
         root $base_path/frontend/dist;
         index index.html;
         try_files $uri $uri/ /index.html;
-        
-        # 缓存策略
-        location ~* \.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$ {
-            expires 30d;
-            add_header Cache-Control "public, max-age=2592000";
-        }
-        
-        # 不缓存 HTML 文件
-        location ~* \.html$ {
-            expires -1;
-            add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
-        }
     }
     
-    # 限制文件上传大小
+    # 限制上传大小
     client_max_body_size 50M;
     
-    # 日志配置
-    access_log /home/work/logs/dongman.access.log;
-    error_log /home/work/logs/dongman.error.log;
+    # 日志
+    access_log /var/log/nginx/dongman.access.log;
+    error_log /var/log/nginx/dongman.error.log;
 }
 ```
 
@@ -465,9 +479,14 @@ sudo systemctl status nginx
 - Brickleberry（脆莓公园）✅
 - Pokémon（宝可梦 / 宠物小精灵）✅
 - Common Side Effects（常见副作用）✅
+- The Legend of Vox Machina（机械之声的传奇）✅
+- Danny Phantom（幻影丹尼）✅
+- Smiling Friends（微笑朋友）✅
+- DuckTales（唐老鸭俱乐部）✅
+- The Amazing World of Gumball（阿甘妙世界）✅
+- Invincible（无敌少侠）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
-- Invincible（无敌少侠）
 - Harley Quinn（哈莉·奎茵）
 - The Owl House（猫头鹰魔法社）
 - Guardians of Ga’Hoole（守护者）
@@ -476,12 +495,10 @@ sudo systemctl status nginx
 - Arcane（奥术）
 - Castlevania（恶魔城）
 - Teen Titans Go!（少年泰坦出击）
-- DuckTales（鸭子历险记）
 - Dexter's Laboratory（德克斯特的实验室）
 - Hey Arnold!（嘿！阿诺德）
 - Robot Chicken（机器鸡）
 - Krapopolis（克拉波利斯）
-- Smiling Friends（微笑朋友）
 - Teenage Mutant Ninja Turtles（忍者神龟）
 - Gargoyles（夜行神龙）
 - Camp Snoopy（史努比营地）
@@ -497,7 +514,6 @@ sudo systemctl status nginx
 - Clerks: The Animated Series（店员动画系列）
 - Static Shock（静电侠）
 - Scavengers Reign（拾荒者统治）
-- The Amazing World of Gumball（阿甘妙世界）
 - Paradise PD（天堂镇警局）
 - Ugly Americans（俗世乐土）
 - Primal（史前战纪）

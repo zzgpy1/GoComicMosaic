@@ -179,12 +179,12 @@ const error = ref(null)
 const deleteSuccess = ref(false)
 const sortBy = ref('created_at') // 默认按创建时间排序
 const currentPage = ref(1)
-const pageSize = ref(24) // 默认每页24条
+const pageSize = ref(6) // 默认每页6条
 const totalItems = ref(0)
 
 // 添加用于自定义每页显示数量的变量
 const showCustomPageSize = ref(false)
-const customPageSize = ref(24)
+const customPageSize = ref(6)
 
 // 检测是否为移动设备
 const isMobile = computed(() => {
