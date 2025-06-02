@@ -109,6 +109,7 @@
       <div class="pagination-wrapper">
         <div class="pagination-controls">
           <button 
+            aria-label="上一页"
             @click="goToPage(currentPage - 1)" 
             class="pagination-btn"
             :disabled="currentPage === 1"
@@ -133,6 +134,7 @@
           </div>
           
           <button 
+            aria-label="下一页"
             @click="goToPage(currentPage + 1)" 
             class="pagination-btn"
             :disabled="currentPage === totalPages || totalPages <= 1"
@@ -179,12 +181,12 @@ const error = ref(null)
 const deleteSuccess = ref(false)
 const sortBy = ref('created_at') // 默认按创建时间排序
 const currentPage = ref(1)
-const pageSize = ref(6) // 默认每页6条
+const pageSize = ref(12) // 默认每页12条
 const totalItems = ref(0)
 
 // 添加用于自定义每页显示数量的变量
 const showCustomPageSize = ref(false)
-const customPageSize = ref(6)
+const customPageSize = ref(12)
 
 // 检测是否为移动设备
 const isMobile = computed(() => {
@@ -413,10 +415,10 @@ onMounted(() => {
   if (savedPageSize) {
     pageSize.value = parseInt(savedPageSize, 10)
   } else if (isMobile.value) {
-    // 移动端默认每页显示12条
-    pageSize.value = 12
+    // 移动端默认每页显示6条
+    pageSize.value = 6
     // 保存到localStorage
-    localStorage.setItem('resourcesPageSize', '12')
+    localStorage.setItem('resourcesPageSize', '6')
   }
   
   // 从localStorage获取用户首选的排序方式

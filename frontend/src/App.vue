@@ -32,10 +32,10 @@
           </template>
           <template v-else>
             <div class="button-group">
-              <router-link to="/login" class="btn-custom btn-outline">
+              <router-link to="/login" class="btn-custom btn-outline" aria-label="管理员登录">
                 <i class="bi bi-shield-lock me-1"></i><span class="btn-text">管理员登录</span>
               </router-link>
-              <router-link to="/submit" class="btn-custom btn-primary">
+              <router-link to="/submit" class="btn-custom btn-primary" aria-label="提交资源">
                 <i class="bi bi-plus-circle me-1"></i><span class="btn-text">提交资源</span>
               </router-link>
             </div>
@@ -685,13 +685,20 @@ body {
   width: 60%;
 }
 
-.copyright {
+/* .copyright {
   text-align: center;
   font-size: 0.9rem;
   color: var(--gray-color);
   margin-top: 1rem;
   padding: 0 1rem;
   opacity: 0.8;
+} */
+.copyright {
+  text-align: center;
+  font-size: 1rem; /* 提高到 16px，提升可讀性 */
+  color: #333333; /* 深灰色，假設背景為白色，對比度約 12:1 */
+  margin-top: 1rem;
+  padding: 0 1rem;
 }
 
 /* 悬浮按钮样式 */

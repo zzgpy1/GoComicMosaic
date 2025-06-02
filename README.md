@@ -99,8 +99,8 @@
 │   ├── cmd/                  # 应用入口点
 │   └── api/                  # API服务入口
 │   │   └── main.go           # 主程序
-│   ├── config/                   # 配置文件目录
-│   ├── internal/                 # 内部包
+│   ├── config/               # 配置文件目录
+│   ├── internal/             # 内部包
 │   ├── models/               # 数据模型
 │   │   ├── models.go         # 数据模型结构定义
 │   │   └── database.go       # 数据库连接和初始化
@@ -116,36 +116,56 @@
 │   │   └── auth.go           # JWT认证相关功能
 │   └── utils/                # 工具函数
 │   │   └── image_utils.go    # 图像处理工具
-│   ├── go.mod                    # Go模块定义
-│   └── README.md                 # 项目说明文件
+│   ├── go.mod                # Go模块定义
+│   └── README.md             # 项目说明文件
 ├── frontend/                 # 前端代码目录
-│   ├── assets/               # 静态资源
-│   ├── node_modules/         # npm包
-│   ├── src/
-│   │   ├── assets/           # 前端静态资源
-│   │   ├── components/
-│   │   │   └── LocalSearch.vue # 本地搜索组件
-│   │   ├── router/
-│   │   │   └── index.js      # Vue路由配置
-│   │   ├── utils/
-│   │   │   ├── auth.js       # 认证相关工具
-│   │   │   └── imageUtils.js # 图像处理工具
-│   │   ├── views/
-│   │   │   ├── About.vue     # 关于页面
-│   │   │   ├── Admin.vue     # 管理员控制台
-│   │   │   ├── Home.vue      # 首页
-│   │   │   ├── Login.vue     # 登录页
-│   │   │   ├── ResourceDetail.vue # 资源详情页
-│   │   │   ├── ResourceReview.vue # 资源审核页
-│   │   │   └── SubmitResource.vue # 资源提交页面
-│   │   ├── App.vue           # 根组件
-│   │   └── main.js           # Vue应用入口点
+│   ├── .env.production       # 生产环境配置
 │   ├── .eslintrc.json        # ESLint配置
-│   ├── index.html            # HTML入口
-│   ├── package-lock.json     # npm依赖锁定
-│   ├── package.json          # npm项目配置
-│   ├── README.md             # 前端文档
-│   └── vite.config.js        # Vite构建配置
+│   ├── README.md             # 项目说明文档
+│   ├── assets/               # 静态资产目录
+│   ├── index.html            # 项目入口HTML文件
+│   ├── node_modules/         # 依赖包目录
+│   ├── package-lock.json     # 依赖包锁定文件
+│   ├── package.json          # 项目配置和依赖管理
+│   ├── public/               # 公共资源目录
+│   │   ├── apple-touch-icon.png # iOS设备图标
+│   │   ├── favicon.ico       # 网站图标
+│   │   ├── robots.txt        # 搜索引擎爬虫规则文件
+│   │   └── sitemap.xml       # 网站地图
+│   ├── scripts/              # 项目脚本目录
+│   │   └── generate-sitemap.js # 生成网站地图的脚本
+│   ├── src/                  # 源代码目录
+│   │   ├── App.vue           # 根组件
+│   │   ├── assets/           # 项目内部资源
+│   │   │   └── streamsPage.css # 视频流页面样式
+│   │   ├── components/       # 组件目录
+│   │   │   ├── EpisodeSelector.vue # 集数选择器组件
+│   │   │   ├── LocalSearch.vue # 本地搜索组件
+│   │   │   └── VideoPlayer.vue # 视频播放器组件
+│   │   ├── main.js           # 应用程序入口文件
+│   │   ├── router/           # 路由配置
+│   │   │   └── index.js      # 路由定义文件
+│   │   ├── styles/           # 样式目录
+│   │   ├── utils/            # 工具函数目录
+│   │   │   ├── api.js        # API请求工具
+│   │   │   ├── auth.js       # 身份验证工具
+│   │   │   ├── corsProxy.js  # CORS代理工具
+│   │   │   ├── dataSourceManager.js # 数据源管理工具
+│   │   │   ├── dataSources/  # 数据源实现
+│   │   │   │   ├── heimuer.js # 黑幕数据源
+│   │   │   │   ├── mockSource.js # 模拟数据源
+│   │   │   │   └── testApi.js # 测试API数据源
+│   │   │   └── imageUtils.js # 图片处理工具
+│   │   └── views/            # 页面视图
+│   │       ├── About.vue     # 关于页面
+│   │       ├── Admin.vue     # 管理后台页面
+│   │       ├── Home.vue      # 首页
+│   │       ├── Login.vue     # 登录页面
+│   │       ├── ResourceDetail.vue # 资源详情页面
+│   │       ├── ResourceReview.vue # 资源审核页面
+│   │       ├── StreamsPage.vue # 视频流页面
+│   │       └── SubmitResource.vue # 资源提交页面
+│   └── vite.config.js        # Vite配置文件
 ├── migrations/               # 数据库迁移脚本
 └── prompt.md                 # 项目概述文档
 ``` 
@@ -485,6 +505,7 @@ sudo systemctl status nginx
 - DuckTales（唐老鸭俱乐部）✅
 - The Amazing World of Gumball（阿甘妙世界）✅
 - Invincible（无敌少侠）✅
+- Panty & Stocking with Garterbelt（吊带袜天使 / 婊子天使）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
