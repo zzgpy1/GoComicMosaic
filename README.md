@@ -490,31 +490,33 @@ sudo systemctl status nginx
 ```
 
 ### 美漫资源共建进度
-- The Simpsons（辛普森一家）✅
-- South Park（南方公园）✅
 - Rick and Morty（瑞克和莫蒂）✅
+- South Park（南方公园）✅
+- Brickleberry（脆莓公园）✅
 - Family Guy（恶搞之家）✅
 - American Dad!（美国老爹）✅
-- BoJack Horseman（马男波杰克）✅
-- Adventure Time（探险活宝 / 探险时光）✅
+- Happy Tree Friends（欢乐树的朋友们）✅
+- Superjail!（暴力监狱 / 超级监狱）✅
+- Mr. Pickles（腌黄瓜先生）✅
+- Hazbin Hotel（地狱客栈）✅
+- Solar Opposites（外星也难民）✅
 - Futurama（飞出个未来）✅
 - Inside Job（阴谋职场 / 阴谋办公室）✅
-- The Boondocks（乡下人）✅
-- Superjail!（暴力监狱 / 超级监狱）✅
-- Hazbin Hotel（地狱客栈）✅
-- Mr. Pickles（腌黄瓜先生）✅
-- Solar Opposites（外星也难民）✅
-- King of the Hill（山丘之王 / 乡巴佬希尔一家的幸福生活）✅
-- Brickleberry（脆莓公园）✅
-- Pokémon（宝可梦 / 宠物小精灵）✅
-- Common Side Effects（常见副作用）✅
+- Invincible（无敌少侠）✅
+- Villainous（反派本色）✅
 - The Legend of Vox Machina（机械之声的传奇）✅
+- Panty & Stocking with Garterbelt（吊带袜天使 / 婊子天使）✅
+- BoJack Horseman（马男波杰克）✅
+- Adventure Time（探险活宝 / 探险时光）✅
+- Common Side Effects（常见副作用）✅
+- The Boondocks（乡下人）✅
+- King of the Hill（山丘之王 / 乡巴佬希尔一家的幸福生活）✅
+- The Amazing World of Gumball（阿甘妙世界）✅
+- The Simpsons（辛普森一家）✅
+- Pokémon（宝可梦 / 宠物小精灵）✅
 - Danny Phantom（幻影丹尼）✅
 - Smiling Friends（微笑朋友）✅
 - DuckTales（唐老鸭俱乐部）✅
-- The Amazing World of Gumball（阿甘妙世界）✅
-- Invincible（无敌少侠）✅
-- Panty & Stocking with Garterbelt（吊带袜天使 / 婊子天使）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
@@ -598,4 +600,3 @@ sudo systemctl status nginx
 - Sealab 2021（2021海底实验室）
 - Harvey Birdman, Attorney at Law（哈维·伯德曼律师）
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
-- Villainous（反派本色）
