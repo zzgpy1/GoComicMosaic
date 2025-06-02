@@ -10,9 +10,11 @@ import (
 	"strconv"
 	"time"
 	"strings"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 
 	"dongman/internal/models"
+	"dongman/internal/utils"
 )
 
 // ApproveResource 审批资源 - 仅管理员可访问
@@ -176,6 +178,12 @@ func ApproveResource(c *gin.Context) {
 			
 			resource.Images = newImagePaths
 			log.Printf("[INFO] 变为 %v", resource.Images)
+			
+			// 异步调用WebP转换工具处理批准的图片
+			go func(paths []string) {
+				log.Printf("[INFO] 开始异步转换批准的图片为WebP格式，图片数量: %d", len(paths))
+				convertImagesToWebP(paths)
+			}(newImagePaths)
 		}
 
 		// 处理海报图片
@@ -188,6 +196,15 @@ func ApproveResource(c *gin.Context) {
 			newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
 			log.Printf("[INFO] 更新资源海报图片路径，从 %v 变为 %s", resource.PosterImage, newPosterPath)
 			resource.PosterImage = &newPosterPath
+			
+			// 异步调用WebP转换工具处理海报图片
+			if resource.PosterImage != nil {
+				posterPaths := []string{*resource.PosterImage}
+				go func(paths []string) {
+					log.Printf("[INFO] 开始异步转换海报图片为WebP格式")
+					convertImagesToWebP(paths)
+				}(posterPaths)
+			}
 		}
 	}
 
@@ -541,6 +558,12 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 			log.Printf("[INFO] 更新资源图片路径，从 %v", resource.Images)
 			resource.Images = append(currentImages, newImagePaths...)
 			log.Printf("[INFO] 变为 %v（追加而非覆盖）", resource.Images)
+			
+			// 异步调用WebP转换工具处理批准的图片
+			go func(paths []string) {
+				log.Printf("[INFO] 开始异步转换批准的补充图片为WebP格式，图片数量: %d", len(paths))
+				convertImagesToWebP(paths)
+			}(newImagePaths)
 		}
 		
 		// 处理海报图片，如果补充内容中设置了新的海报图片
@@ -555,6 +578,15 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 			newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
 			log.Printf("[INFO] 更新资源海报图片，从 %v 变为 %s", resource.PosterImage, newPosterPath)
 			resource.PosterImage = &newPosterPath
+			
+			// 异步调用WebP转换工具处理海报图片
+			if resource.PosterImage != nil {
+				posterPaths := []string{*resource.PosterImage}
+				go func(paths []string) {
+					log.Printf("[INFO] 开始异步转换补充资源的海报图片为WebP格式")
+					convertImagesToWebP(paths)
+				}(posterPaths)
+			}
 		}
 		
 		// 处理批准的链接，将它们追加到原始资源的Links字段中
@@ -695,6 +727,59 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 	} else {
 		c.JSON(http.StatusOK, updatedResource)
 	}
+}
+
+// convertImagesToWebP 将批准的图片转换成WebP格式
+func convertImagesToWebP(imagePaths []string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[ERROR] WebP转换过程中发生严重错误: %v", r)
+		}
+	}()
+
+	if len(imagePaths) == 0 {
+		log.Printf("[INFO] 没有需要转换为WebP的图片")
+		return
+	}
+	
+	log.Printf("[INFO] 开始将 %d 张批准的图片转换为WebP格式", len(imagePaths))
+	startTime := time.Now()
+	
+	// 将图片路径调整为相对路径格式 ../assets/...
+	adjustedPaths := make([]string, 0, len(imagePaths))
+	for _, path := range imagePaths {
+		// 将 /assets/... 转换为 ../assets/...
+		if strings.HasPrefix(path, "/assets/") {
+			adjustedPath := "../" + strings.TrimPrefix(path, "/")
+			adjustedPaths = append(adjustedPaths, adjustedPath)
+		} else {
+			log.Printf("[WARN] 图片路径格式不符合预期: %s，跳过处理", path)
+		}
+	}
+	
+	if len(adjustedPaths) == 0 {
+		log.Printf("[WARN] 没有有效的图片路径可供转换")
+		return
+	}
+	
+	// 将路径转换为JSON字符串
+	pathsJSON, err := json.Marshal(adjustedPaths)
+	if err != nil {
+		log.Printf("[ERROR] 无法将图片路径转为JSON: %v", err)
+		return
+	}
+	
+	log.Printf("[DEBUG] 准备调用WebP转换工具，处理以下图片: %s", string(pathsJSON))
+	
+	// 调用WebP转换工具
+	resultPaths, err := utils.ConvertMultipleImages(string(pathsJSON), true, false, 4)
+	if err != nil {
+		log.Printf("[ERROR] 转换WebP过程中发生错误: %v", err)
+		return
+	}
+	
+	elapsedTime := time.Since(startTime)
+	log.Printf("[INFO] 成功将 %d 张图片转换为WebP格式，耗时: %v", len(resultPaths), elapsedTime)
 }
 
 // DeleteApprovalRecord 删除审批记录 - 仅管理员可访问

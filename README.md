@@ -100,25 +100,31 @@
 │   └── uploads/
 ├── gobackend/
 │   ├── cmd/                  # 应用入口点
-│   └── api/                  # API服务入口
-│   │   └── main.go           # 主程序
+│   │   ├── api/              # API服务入口
+│   │   │   └── main.go       # 主程序
+│   │   ├── diagnostic/       # 诊断工具
+│   │   ├── test/             # 测试工具
+│   │   └── webp/             # WebP图片转换工具
+│   │       └── main.go       # WebP转换命令行工具
 │   ├── config/               # 配置文件目录
 │   ├── internal/             # 内部包
-│   ├── models/               # 数据模型
-│   │   ├── models.go         # 数据模型结构定义
-│   │   └── database.go       # 数据库连接和初始化
-│   ├── handlers/             # HTTP处理器
-│   │   ├── auth_handlers.go  # 认证相关处理器
-│   │   ├── proxy_handler.go  # CORS代理功能
-│   │   ├── middleware.go     # 中间件
-│   │   ├── resource_handlers.go # 资源基本操作处理器
-│   │   ├── resource_approval.go # 资源审批和补充处理器
-│   │   ├── upload_handlers.go # 图片上传处理器
-│   │   └── routes.go         # 路由定义
-│   ├── auth/                 # 认证工具
-│   │   └── auth.go           # JWT认证相关功能
-│   └── utils/                # 工具函数
-│   │   └── image_utils.go    # 图像处理工具
+│   │   ├── auth/             # 认证工具
+│   │   │   └── auth.go       # JWT认证相关功能
+│   │   ├── models/           # 数据模型
+│   │   │   ├── models.go     # 数据模型结构定义
+│   │   │   └── database.go   # 数据库连接和初始化
+│   │   ├── handlers/         # HTTP处理器
+│   │   │   ├── auth_handlers.go  # 认证相关处理器
+│   │   │   ├── proxy_handler.go  # CORS代理功能
+│   │   │   ├── middleware.go     # 中间件
+│   │   │   ├── resource_handlers.go # 资源基本操作处理器
+│   │   │   ├── resource_approval.go # 资源审批和补充处理器
+│   │   │   ├── upload_handlers.go # 图片上传处理器
+│   │   │   └── routes.go         # 路由定义
+│   │   ├── services/         # 业务逻辑服务
+│   │   └── utils/            # 工具函数
+│   │       ├── image_utils.go # 图像处理工具
+│   │       └── webp_utils.go  # WebP图像转换工具
 │   ├── go.mod                # Go模块定义
 │   └── README.md             # 项目说明文件
 ├── frontend/                 # 前端代码目录

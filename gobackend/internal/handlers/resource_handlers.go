@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 
@@ -461,6 +462,39 @@ func CreateResource(c *gin.Context) {
 	c.JSON(http.StatusCreated, resource)
 }
 
+// 添加一个辅助函数，用于转换资源的所有图片为WebP格式
+func convertResourceImagesToWebP(images []string, resourceID int) ([]string, error) {
+	if len(images) == 0 {
+		return images, nil
+	}
+	
+	webpImages := make([]string, 0, len(images))
+	
+	for _, imgPath := range images {
+		// 只处理JPG和PNG图片
+		ext := strings.ToLower(filepath.Ext(imgPath))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+			// 不是支持的格式，保持原样
+			webpImages = append(webpImages, imgPath)
+			continue
+		}
+		
+		// 转换为WebP，保持宽高比，最大尺寸600x900
+		webpPath, err := utils.ConvertToWebPWithRatio(imgPath[7:], 600, 900, true)  // 去掉"/assets"前缀
+		if err != nil {
+			log.Printf("将图片 %s 转换为WebP失败: %v", imgPath, err)
+			// 如果转换失败，保留原始图片
+			webpImages = append(webpImages, imgPath)
+		} else {
+			// 转换成功，使用WebP图片路径
+			webpImages = append(webpImages, "/assets/"+webpPath)
+			log.Printf("成功将图片 %s 转换为WebP: %s", imgPath, "/assets/"+webpPath)
+		}
+	}
+	
+	return webpImages, nil
+}
+
 // UpdateResource 更新资源 - 仅管理员可访问
 func UpdateResource(c *gin.Context) {
 	// 获取路径参数
@@ -547,21 +581,39 @@ func UpdateResource(c *gin.Context) {
 			
 			// 更新图片路径（保留不需要移动的图片）
 			finalImages := make([]string, 0)
+			
 			for _, img := range resourceUpdate.Images {
 				if !strings.Contains(img, "/assets/uploads/") {
 					finalImages = append(finalImages, img)
 				}
 			}
+			
+			// 添加移动后的图片路径
 			finalImages = append(finalImages, newImagePaths...)
-			log.Printf("最终图片列表: %v", finalImages)
+			
+			// 尝试将图片转换为WebP格式
+			webpImages, err := convertResourceImagesToWebP(finalImages, resourceID)
+			if err != nil {
+				log.Printf("转换图片为WebP格式时出错: %v", err)
+				// 发生错误时继续使用原始图片
+			} else {
+				finalImages = webpImages
+			}
+			
 			resource.Images = finalImages
+			updated = true
 		} else {
-			// 不需要移动，直接更新
-			log.Printf("无需移动图片，直接更新")
-			resource.Images = resourceUpdate.Images
+			// 如果没有需要移动的图片，直接尝试转换为WebP
+			webpImages, err := convertResourceImagesToWebP(resourceUpdate.Images, resourceID)
+			if err != nil {
+				log.Printf("转换图片为WebP格式时出错: %v", err)
+				// 发生错误时继续使用原始图片
+				resource.Images = resourceUpdate.Images
+			} else {
+				resource.Images = webpImages
+			}
+			updated = true
 		}
-		
-		updated = true
 	}
 
 	// 处理海报图片更新
