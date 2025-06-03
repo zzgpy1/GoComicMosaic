@@ -16,7 +16,7 @@ func main() {
 	imgPath := flag.String("img", "", "要转换的图片路径，可以是相对路径或绝对路径")
 	dirPath := flag.String("dir", "", "要批量处理的目录路径")
 	jsonList := flag.String("json", "", "图片路径的JSON列表，例如：[\"img1.jpg\",\"img2.png\"]")
-	recursive := flag.Bool("recursive", false, "是否递归处理子目录")
+	recursive := flag.Bool("recursive", true, "是否递归处理子目录")
 	keepRatio := flag.Bool("ratio", true, "是否保持原始宽高比")
 	maxWidth := flag.Int("w", 0, "最大宽度(0表示自动判断：横图1280px，竖图600px)")
 	maxHeight := flag.Int("h", 0, "最大高度(0表示自动判断：横图720px，竖图900px)")

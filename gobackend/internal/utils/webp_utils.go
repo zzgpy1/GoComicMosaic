@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"bytes"
@@ -474,6 +475,234 @@ func ConvertMultipleImages(imageList string, keepOriginal bool, useWebpExt bool,
 	return validPaths, nil
 }
 
+// isAnimatedGif 检查GIF是否包含多个帧（是否为动画GIF）
+func isAnimatedGif(path string) (bool, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return false, fmt.Errorf("打开GIF文件失败: %w", err)
+	}
+	defer file.Close()
+
+	// 解码整个GIF文件
+	gifData, err := gif.DecodeAll(file)
+	if err != nil {
+		return false, fmt.Errorf("解码GIF文件失败: %w", err)
+	}
+
+	// 如果图像数量大于1，则为动画GIF
+	return len(gifData.Image) > 1, nil
+}
+
+// convertAnimatedGif 使用gif2webp将动画GIF转换为动画WebP
+func convertAnimatedGif(srcPath, outputPath string, quality float32) error {
+	// 确保输出目录存在
+	outputDir := filepath.Dir(outputPath)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("创建输出目录失败: %w", err)
+	}
+
+	// 创建临时输出路径
+	tempOutput := outputPath + ".tmp"
+
+	// 检查gif2webp命令是否存在
+	_, err := exec.LookPath("gif2webp")
+	if err != nil {
+		log.Printf("无法找到gif2webp命令: %v", err)
+		log.Printf("请确保已安装libwebp-tools包，可以通过系统包管理器安装，例如：")
+		log.Printf("Ubuntu/Debian: sudo apt-get install webp")
+		log.Printf("CentOS/RHEL: sudo yum install libwebp-tools")
+		log.Printf("MacOS: brew install webp")
+		
+		// 尝试使用内置的GIF解码和WebP编码逻辑进行转换
+		log.Printf("尝试使用内置方法转换动画GIF...")
+		return convertAnimatedGifUsingGoLibs(srcPath, outputPath, quality)
+	}
+
+	// 检查源文件是否存在且可读
+	if _, err := os.Stat(srcPath); err != nil {
+		return fmt.Errorf("源文件检查失败: %w", err)
+	}
+	
+	// 获取绝对路径
+	srcAbsPath, err := filepath.Abs(srcPath)
+	if err != nil {
+		log.Printf("获取源文件绝对路径失败: %v，使用原路径", err)
+		srcAbsPath = srcPath
+	}
+	
+	tempAbsOutput, err := filepath.Abs(tempOutput)
+	if err != nil {
+		log.Printf("获取临时文件绝对路径失败: %v，使用原路径", err)
+		tempAbsOutput = tempOutput
+	}
+
+	// 准备gif2webp命令
+	log.Printf("使用gif2webp命令转换动画GIF: %s -> %s", srcAbsPath, tempAbsOutput)
+	
+	// 尝试两种命令行参数组合
+	success := false
+	
+	// 参数组合1: 标准方式
+	args1 := []string{
+		"-q", fmt.Sprintf("%.0f", quality),  // 质量参数
+		"-mixed",                            // 混合无损/有损
+		srcAbsPath,                          // 源文件路径
+		"-o", tempAbsOutput,                 // 输出路径
+	}
+	
+	log.Printf("尝试参数组合1: gif2webp %s", strings.Join(args1, " "))
+	cmd1 := exec.Command("gif2webp", args1...)
+	var stdout1, stderr1 bytes.Buffer
+	cmd1.Stdout = &stdout1
+	cmd1.Stderr = &stderr1
+	
+	if err := cmd1.Run(); err == nil {
+		log.Printf("参数组合1执行成功")
+		success = true
+	} else {
+		log.Printf("参数组合1执行失败: %v", err)
+		log.Printf("标准输出: %s", stdout1.String())
+		log.Printf("错误输出: %s", stderr1.String())
+		
+		// 如果第一种参数组合失败，尝试第二种
+		args2 := []string{
+			"-q", fmt.Sprintf("%.0f", quality),  // 质量参数
+			srcAbsPath,                          // 源文件路径
+			"-o", tempAbsOutput,                 // 输出路径
+		}
+		
+		log.Printf("尝试参数组合2: gif2webp %s", strings.Join(args2, " "))
+		cmd2 := exec.Command("gif2webp", args2...)
+		var stdout2, stderr2 bytes.Buffer
+		cmd2.Stdout = &stdout2
+		cmd2.Stderr = &stderr2
+		
+		if err := cmd2.Run(); err == nil {
+			log.Printf("参数组合2执行成功")
+			success = true
+		} else {
+			log.Printf("参数组合2执行失败: %v", err)
+			log.Printf("标准输出: %s", stdout2.String())
+			log.Printf("错误输出: %s", stderr2.String())
+			
+			// 第三种组合：尝试直接调用系统命令
+			commandStr := fmt.Sprintf("gif2webp -q %.0f '%s' -o '%s'", 
+				quality, srcAbsPath, tempAbsOutput)
+			log.Printf("尝试通过系统shell执行: %s", commandStr)
+			
+			shellCmd := exec.Command("sh", "-c", commandStr)
+			var stdoutShell, stderrShell bytes.Buffer
+			shellCmd.Stdout = &stdoutShell
+			shellCmd.Stderr = &stderrShell
+			
+			if err := shellCmd.Run(); err == nil {
+				log.Printf("Shell执行成功")
+				success = true
+			} else {
+				log.Printf("Shell执行失败: %v", err)
+				log.Printf("标准输出: %s", stdoutShell.String())
+				log.Printf("错误输出: %s", stderrShell.String())
+			}
+		}
+	}
+	
+	// 检查是否有任何一种方法成功
+	if !success {
+		log.Printf("所有参数组合都失败，尝试备用方法")
+		// 尝试备选方法
+		return convertAnimatedGifUsingGoLibs(srcPath, outputPath, quality)
+	}
+
+	// 检查临时文件是否存在且大小合理
+	fileInfo, err := os.Stat(tempOutput)
+	if err != nil {
+		log.Printf("无法获取临时文件信息: %v", err)
+		return fmt.Errorf("临时文件检查失败: %w", err)
+	}
+	
+	log.Printf("生成的临时文件大小: %.2f KB", float64(fileInfo.Size())/1024)
+	
+	// 如果文件太小，可能转换不成功
+	if fileInfo.Size() < 100 {
+		log.Printf("警告：生成的文件过小，可能转换不完整")
+	}
+
+	// 重命名临时文件为目标文件名，实现原子替换
+	log.Printf("重命名临时文件 %s -> %s", tempOutput, outputPath)
+	if err := os.Rename(tempOutput, outputPath); err != nil {
+		return fmt.Errorf("替换原文件失败: %w", err)
+	}
+
+	log.Printf("成功将动画GIF %s 转换为动画WebP %s", srcPath, outputPath)
+	return nil
+}
+
+// convertAnimatedGifUsingGoLibs 使用Go库将动画GIF转换为动画WebP
+// 这是一个备选方法，当外部gif2webp命令不可用时使用
+func convertAnimatedGifUsingGoLibs(srcPath, outputPath string, quality float32) error {
+	// 打开GIF文件
+	file, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("打开GIF文件失败: %w", err)
+	}
+	defer file.Close()
+
+	// 解码GIF
+	gifImg, err := gif.DecodeAll(file)
+	if err != nil {
+		return fmt.Errorf("解码GIF文件失败: %w", err)
+	}
+
+	log.Printf("成功解码GIF文件，帧数: %d", len(gifImg.Image))
+
+	// 确保至少有一帧
+	if len(gifImg.Image) == 0 {
+		return fmt.Errorf("GIF文件没有帧")
+	}
+
+	// 创建临时输出路径
+	tempOutput := outputPath + ".tmp"
+
+	// 创建临时文件
+	outFile, err := os.Create(tempOutput)
+	if err != nil {
+		return fmt.Errorf("创建临时文件失败: %w", err)
+	}
+	defer func() {
+		outFile.Close()
+		if err != nil {
+			os.Remove(tempOutput)
+		}
+	}()
+
+	// 获取第一帧
+	firstFrame := gifImg.Image[0]
+	
+	// 准备WebP选项
+	options := webp.Options{
+		Lossless: false,
+		Quality:  quality,
+	}
+
+	// 转换第一帧
+	err = webp.Encode(outFile, firstFrame, &options)
+	if err != nil {
+		return fmt.Errorf("编码第一帧失败: %w", err)
+	}
+
+	log.Printf("警告：内置方法目前只能转换第一帧，结果将是静态WebP")
+	log.Printf("要获得完整的动画支持，请安装并使用gif2webp命令行工具")
+
+	// 关闭文件并重命名
+	outFile.Close()
+	if err := os.Rename(tempOutput, outputPath); err != nil {
+		return fmt.Errorf("替换原文件失败: %w", err)
+	}
+
+	log.Printf("成功将GIF首帧转换为静态WebP %s", outputPath)
+	return nil
+}
+
 // ConvertToWebPWithRatio 将图片转换为WebP格式，并保持原始宽高比调整尺寸
 // 参数:
 //   - imgPath: 图片路径，可以是：
@@ -527,13 +756,6 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 		return "", fmt.Errorf("源文件不存在: %s", srcPath)
 	}
 	
-	// 读取源图片文件
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return "", fmt.Errorf("打开源图片失败: %w", err)
-	}
-	defer srcFile.Close()
-	
 	// 首先尝试检测真实的图片类型
 	imageType, typeErr := detectImageType(srcPath)
 	if typeErr != nil {
@@ -541,6 +763,74 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 	} else {
 		log.Printf("检测到图片真实类型: %s", imageType)
 	}
+	
+	// 特殊处理GIF动画文件
+	if imageType == "gif" || strings.ToLower(filepath.Ext(srcPath)) == ".gif" {
+		// 检查是否为动画GIF
+		isAnimated, err := isAnimatedGif(srcPath)
+		if err != nil {
+			log.Printf("检查GIF动画状态失败: %v，将作为普通图像处理", err)
+		} else if isAnimated {
+			log.Printf("检测到动画GIF，将使用特殊处理将其转换为动画WebP")
+			
+			// 确定输出路径
+			var outputPath string
+			var originalSaved bool = false
+			
+			if useWebp {
+				// 使用WebP扩展名
+				baseFilename := strings.TrimSuffix(filepath.Base(imgPath), filepath.Ext(imgPath))
+				
+				// 确定WebP输出的目录
+				var outputDir string
+				
+				if filepath.IsAbs(imgPath) || (!strings.Contains(imgPath, "/") && !strings.Contains(imgPath, "\\")) {
+					// 对于绝对路径或简单文件名，保存在同一目录下
+					outputDir = filepath.Dir(srcPath)
+					outputPath = filepath.Join(outputDir, baseFilename + ".webp")
+				} else {
+					// 对于相对于assets的路径，保持原有结构
+					baseDir := filepath.Dir(imgPath)
+					outputPath = filepath.Join(assetsDir, baseDir, baseFilename + ".webp")
+					outputDir = filepath.Dir(outputPath)
+				}
+				
+				// 确保目标目录存在
+				if err := os.MkdirAll(outputDir, 0755); err != nil {
+					return "", fmt.Errorf("创建目标目录失败: %w", err)
+				}
+				
+				// 当使用.webp扩展名时，原文件和新文件是不同的文件
+				originalSaved = true
+			} else {
+				// 保持原始扩展名，直接覆盖源文件
+				outputPath = srcPath
+			}
+			
+			// 使用特殊转换函数处理动画GIF
+			err = convertAnimatedGif(srcPath, outputPath, 80.0) // 使用80%的质量
+			if err != nil {
+				return "", fmt.Errorf("转换动画GIF失败: %w", err)
+			}
+			
+			// 如果不需要保留原始图片，且生成了新的WebP文件，则删除原图
+			if !keepOriginal && originalSaved {
+				log.Printf("删除原始图片: %s", srcPath)
+				if err := os.Remove(srcPath); err != nil {
+					log.Printf("警告：删除原始图片失败: %v", err)
+				}
+			}
+			
+			return outputPath, nil
+		}
+	}
+	
+	// 读取源图片文件
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return "", fmt.Errorf("打开源图片失败: %w", err)
+	}
+	defer srcFile.Close()
 	
 	// 将文件指针重置到开头
 	if _, err := srcFile.Seek(0, io.SeekStart); err != nil {
@@ -736,10 +1026,9 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 	
 	// 如果不需要保留原始图片，且生成了新的WebP文件，则删除原图
 	if !keepOriginal && originalSaved {
+		log.Printf("删除原始图片: %s", srcPath)
 		if err := os.Remove(srcPath); err != nil {
 			log.Printf("警告：删除原始图片失败: %v", err)
-		} else {
-			log.Printf("已删除原始图片: %s", imgPath)
 		}
 	}
 	
