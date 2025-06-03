@@ -315,7 +315,7 @@
         <div class="resource-content">
           <div class="media-section">
             <!-- 大图展示区 -->
-            <div class="main-image-container">
+            <div class="main-image-container" @click="previewEditImage(currentImage)">
               <img 
                 :src="getImageUrl(currentImage)" 
                 class="resource-poster" 
@@ -464,7 +464,7 @@
     <!-- 图片预览模态框 -->
     <div v-if="previewImageUrl" class="custom-modal" @click.self="closePreviewImage">
       <div class="modal-image-container">
-        <button type="button" class="btn-close image-close-btn" @click="closePreviewImage"></button>
+        <button type="button" class="btn-close image-close-btn bi bi-x-lg me-2" @click="closePreviewImage"></button>
         <img :src="getImageUrl(previewImageUrl)" class="preview-large-image" :alt="resource?.title || '图片预览'">
       </div>
     </div>
