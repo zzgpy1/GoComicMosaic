@@ -327,7 +327,7 @@
             <div class="thumbnails-container" v-if="resource.images && resource.images.length > 1">
               <div class="thumbnails-scroll">
                 <div 
-                  v-for="(image, index) in resource.images" 
+                  v-for="(image, index) in resource.images.filter(img => img !== resource.poster_image)" 
                   :key="index" 
                   class="thumbnail" 
                   :class="{ active: currentImage === image }"
@@ -594,8 +594,14 @@ const fetchResource = async () => {
     
     // 初始化当前图片
     if (resource.value.images && resource.value.images.length > 0) {
-      if (resource.value.images.length > 1){
-        currentImage.value = resource.value.images[1]; // 图片数量大于1，显示第2张
+      if (resource.value.images.length > 1) {
+        // 选择非海报图片作为当前图片
+        const nonPosterImages = resource.value.images.filter(img => img !== resource.value.poster_image);
+        if (nonPosterImages.length > 0) {
+          currentImage.value = nonPosterImages[0];
+        } else {
+          currentImage.value = resource.value.images[0];
+        }
       } else {
         currentImage.value = resource.value.images[0]; // 只有1张图片，显示第1张
       } 
