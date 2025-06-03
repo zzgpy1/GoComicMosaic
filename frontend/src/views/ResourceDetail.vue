@@ -594,13 +594,12 @@ const fetchResource = async () => {
     
     // 初始化当前图片
     if (resource.value.images && resource.value.images.length > 0) {
-      // 如果有海报图片，优先显示海报图片
-      if (resource.value.poster_image) {
-        currentImage.value = resource.value.poster_image
+      if (resource.value.images.length > 1){
+        currentImage.value = resource.value.images[1]; // 图片数量大于1，显示第2张
       } else {
-        currentImage.value = resource.value.images[0]
-      }
-    }
+        currentImage.value = resource.value.images[0]; // 只有1张图片，显示第1张
+      } 
+    } 
   } catch (err) {
     console.error('获取资源详情失败:', err)
     error.value = '获取资源详情失败，请稍后重试'
