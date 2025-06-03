@@ -14,7 +14,6 @@ gobackend/
 │   ├── diagnostic/             # 诊断工具
 │   │   └── main.go             # 数据库诊断程序
 │   └── test/                   # 测试工具
-├── config/                     # 配置文件
 ├── internal/                   # 内部包
 │   ├── models/                 # 数据模型
 │   │   ├── models.go           # 定义数据模型结构
