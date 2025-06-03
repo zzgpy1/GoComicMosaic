@@ -70,7 +70,7 @@
             <i class="bi bi-github"></i>
           </a>
           <a href="/streams" target="_blank" class="footer-link">在线点播</a>
-          <a href="https://mdsub.top/" target="_blank" class="footer-link">曼迪小站</a>
+          <a href="https://mdsub.top/" target="_blank" class="footer-link">漫迪小站</a>
           <a href="https://www.kangfuzhongx.in/" target="_blank" class="footer-link">三次元成瘾者康复中心</a>
           <span class="footer-link">总访问量 <span id="busuanzi_value_site_pv">0</span></span>
         </div>
