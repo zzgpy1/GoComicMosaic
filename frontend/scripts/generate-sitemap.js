@@ -11,6 +11,13 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
+import { config as dotenvConfig } from 'dotenv'; // 使用别名避免冲突
+
+// 加载 .env.production
+dotenvConfig({ path: path.resolve('.env.production') });
+
+// 调试：检查 BASE_URL 是否正确加载
+console.log('BASE_URL:', process.env.BASE_URL);
 
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url);
@@ -23,11 +30,11 @@ const TEST_MODE = args.includes('--test') || args.includes('-t');
 // 配置项
 const config = {
   // 网站基础URL
-  baseUrl: 'https://dm.xueximeng.com',
+  baseUrl: process.env.BASE_URL,
   // 输出目录
   outputDir: path.resolve(__dirname, '../public'),
   // API基础URL - 注意这里使用了环境变量或开发环境的默认值
-  apiBaseUrl: process.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  apiBaseUrl: `${process.env.BASE_URL}/api` || 'http://localhost:8000/api',
   // 是否为测试模式
   testMode: TEST_MODE,
   // 每次API请求的资源数量限制
@@ -104,7 +111,7 @@ const generateStaticUrls = () => {
 
 // 发起单个批次请求
 const fetchResourceBatch = async (skip, limit, sort_by = 'likes_count', sort_order = 'desc') => {
-  const apiUrl = `${config.apiBaseUrl}/resources/public?skip=${skip}&limit=${limit}&sort_by=${sort_by}&sort_order=${sort_order}`;
+  const apiUrl = `${config.apiBaseUrl}/api/resources/public?skip=${skip}&limit=${limit}&sort_by=${sort_by}&sort_order=${sort_order}`;
   console.log(`请求资源数据: skip=${skip}, limit=${limit}`);
   
   try {
