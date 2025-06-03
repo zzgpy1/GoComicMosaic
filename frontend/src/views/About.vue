@@ -58,7 +58,7 @@
           </div>
           <div class="contact-item">
                 <i class="bi bi-github"></i>
-                <span>GitHub: <a href="https://github.com/fish2018" target="_blank" style="color: white;">fish2018</a></span>
+                <span>GitHub: fish2018</span>
               </div>
             </div>
           </div>

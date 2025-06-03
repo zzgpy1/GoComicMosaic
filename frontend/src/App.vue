@@ -60,17 +60,25 @@
     
     <footer class="app-footer">
       <div class="container footer-inner">
-        <div class="footer-content">
-          <div class="footer-brand">
-            <i class="bi bi-collection-play brand-icon"></i>
-            <span class="brand-text">美漫资源共建</span>
-          </div>
-          <div class="footer-links">
-            <router-link to="/" class="footer-link">主页</router-link>
-            <router-link to="/submit" class="footer-link">提交资源</router-link>
-            <router-link to="/about" class="footer-link">关于我们</router-link>
-          </div>
+        <!-- 页脚布局 -->
+        <div class="footer-row">
+          <router-link to="/about" class="footer-link">关于我们</router-link>
+          <a href="https://t.me/xueximeng" target="_blank" class="footer-link" title="加入Telegram群组">
+            <i class="bi bi-telegram"></i>
+          </a>
+          <a href="https://github.com/fish2018/GoComicMosaic" target="_blank" class="footer-link" title="查看GitHub源码">
+            <i class="bi bi-github"></i>
+          </a>
+          <a href="/streams" target="_blank" class="footer-link">在线点播</a>
+          <a href="https://mdsub.top/" target="_blank" class="footer-link">曼迪小站</a>
+          <a href="https://www.kangfuzhongx.in/" target="_blank" class="footer-link">三次元成瘾者康复中心</a>
+          <span class="footer-link">总访问量 <span id="busuanzi_value_site_pv">0</span></span>
         </div>
+        
+        <!-- 分隔线 -->
+        <div class="footer-divider"></div>
+        
+        
         <div class="copyright">
           <p>&copy; 2025 美漫资源共建. 保留所有权利</p>
         </div>
@@ -273,6 +281,12 @@ onMounted(() => {
   
   // 添加beforeunload事件监听器
   window.addEventListener('beforeunload', clearPaginationStorage)
+
+  // 添加不蒜子访问统计脚本
+  const bszScript = document.createElement('script');
+  bszScript.async = true;
+  bszScript.src = "//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js";
+  document.head.appendChild(bszScript);
 })
 
 // 页面卸载时移除事件监听器
@@ -584,121 +598,158 @@ body {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   color: var(--dark-color);
-  padding: 3rem 0 1.5rem;
-  margin: 3rem 1rem 1rem;
+  padding: 1.8rem 0 1.2rem; /* 增加上下内边距 */
+  margin: 2rem 1rem 1rem; /* 减少上边距 */
   position: relative;
   overflow: hidden;
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.03);
+  box-shadow: 
+    0 -8px 25px rgba(0, 0, 0, 0.06), 
+    0 -2px 10px rgba(124, 58, 237, 0.04),
+    0 -15px 40px rgba(0, 0, 0, 0.03); /* 增强阴影效果 */
   border: var(--glass-border);
   border-radius: var(--border-radius);
-  /* 预渲染页脚，防止闪烁 */
   will-change: transform;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
 
+/* 添加顶部光晕效果增强立体感 */
 .app-footer::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 2px;
   background: linear-gradient(90deg, 
-    rgba(124, 58, 237, 0.05) 0%, 
-    rgba(124, 58, 237, 0.3) 50%, 
-    rgba(124, 58, 237, 0.05) 100%
+    rgba(255, 255, 255, 0.05), 
+    rgba(255, 255, 255, 0.8), 
+    rgba(255, 255, 255, 0.05)
   );
-  z-index: 1;
   opacity: 0.6;
+  z-index: 1;
 }
 
+/* 简化页脚内部容器样式 */
 .footer-inner {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  position: relative;
-  z-index: 2;
+  align-items: center;
+  gap: 0.7rem; /* 增加行间距 */
+  padding: 0 0.8rem; /* 增加左右内边距 */
 }
 
-.footer-content {
+/* 页脚一行式布局 */
+.footer-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* 居中显示所有元素 */
   align-items: center;
   flex-wrap: wrap;
-  gap: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid rgba(124, 58, 237, 0.07);
-  margin-right: 5rem;
+  width: 100%;
+  padding: 0.6rem 0; /* 增加内边距 */
+  gap: 0.6rem; /* 元素之间的间距 */
 }
 
-.footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.footer-links {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
+/* 统一链接风格 */
 .footer-link {
-  color: var(--dark-color);
+  color: var(--secondary-text);
   text-decoration: none;
-  font-weight: 600;
-  transition: var(--transition);
-  position: relative;
-  padding: 0.4rem 1rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 100px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.4));
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.08);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  background-color: rgba(255, 255, 255, 0.3);
+  /* border: 1px solid rgba(255, 255, 255, 0.5); //增强边框可见度 */
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04); 添加轻微阴影 */
 }
 
-.footer-link::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 3px;
-  bottom: -3px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--primary-gradient);
-  transition: width 0.3s ease;
-  border-radius: 3px;
+.footer-link i {
+  font-size: 0.95rem;
 }
 
 .footer-link:hover {
-  color: var(--primary-color);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.15);
+  background-color: var(--selection-bg);
+  color: var(--primary-text);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); /* 悬停时增加阴影 */
 }
 
-.footer-link:hover::after {
-  width: 60%;
+/* 分隔线样式 */
+.footer-divider {
+  width: 100%;
+  height: 1px;
+  /* background: linear-gradient(90deg, 
+    transparent, 
+    rgba(124, 58, 237, 0.2), 
+    rgba(124, 58, 237, 0.3), 
+    rgba(124, 58, 237, 0.2), 
+    transparent
+  ); */
+  border-bottom: 1px solid rgba(124, 58, 237, 0.07);
+  margin: 0.6rem 0; /* 增加上下边距 */
 }
 
-/* .copyright {
-  text-align: center;
-  font-size: 0.9rem;
-  color: var(--gray-color);
-  margin-top: 1rem;
-  padding: 0 1rem;
-  opacity: 0.8;
-} */
+/* 版权信息 */
 .copyright {
   text-align: center;
-  font-size: 1rem; /* 提高到 16px，提升可讀性 */
-  color: #333333; /* 深灰色，假設背景為白色，對比度約 12:1 */
-  margin-top: 1rem;
-  padding: 0 1rem;
+  color: var(--secondary-text);
+  font-size: 0.8rem;
+  padding: 0.3rem 0;
+}
+
+.copyright p {
+  margin: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .app-footer {
+    padding: 1.4rem 0 1rem;
+  }
+  
+  .footer-row {
+    padding: 0.5rem 0;
+    gap: 0.4rem;
+  }
+  
+  .footer-link {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.7rem;
+  }
+  
+  .footer-divider {
+    margin: 0.5rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-footer {
+    padding: 1.2rem 0 0.8rem;
+    margin: 1.5rem 0.5rem 0.5rem;
+  }
+  
+  .footer-inner {
+    padding: 0 0.3rem;
+  }
+  
+  .footer-row {
+    padding: 0.3rem 0;
+    gap: 0.3rem;
+  }
+  
+  .footer-link {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .footer-divider {
+    margin: 0.4rem 0;
+  }
 }
 
 /* 悬浮按钮样式 */
@@ -1293,5 +1344,50 @@ body {
     height: 45px;
     font-size: 1.1rem;
   }
+}
+
+/* 删除不再使用的页脚相关样式 */
+.friend-link {
+  display: none; /* 这个不再使用 */
+}
+
+.site-stats {
+  display: none; /* 这个不再使用 */
+}
+
+.site-stats span {
+  display: none; /* 这个不再使用 */
+}
+
+.social-links {
+  display: none; /* 这个不再使用 */
+}
+
+.social-link {
+  display: none; /* 这个不再使用 */
+}
+
+.left-section {
+  display: none; /* 这个不再使用 */
+}
+
+.links-section {
+  display: none; /* 这个不再使用 */
+}
+
+.links-container {
+  display: none; /* 这个不再使用 */
+}
+
+.footer-section {
+  display: none; /* 这个不再使用 */
+}
+
+.footer-button {
+  display: none; /* 这个不再使用 */
+}
+
+.visit-count {
+  display: none; /* 这个不再使用 */
 }
 </style> 
