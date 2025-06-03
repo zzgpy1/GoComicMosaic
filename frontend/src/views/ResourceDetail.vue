@@ -364,6 +364,7 @@
                   @click="goToStreamPage"
                 >
                   <i class="bi bi-play-circle"></i>
+                  <span>点播</span>
                 </button>
               </div>
               <div class="card-body">
@@ -3127,9 +3128,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
   background: var(--primary-gradient, linear-gradient(45deg, #7c3aed, #8b5cf6));
   color: white;
   border: none;
@@ -3141,12 +3141,13 @@ onMounted(() => {
 }
 
 .stream-button:hover {
-  transform: translateY(-3px) scale(1.1);
+  transform: translateY(-3px);
   box-shadow: 0 6px 12px rgba(124, 58, 237, 0.4);
 }
 
 .stream-button i {
   font-size: 1.2rem;
+  margin-right: 0.25rem;
 }
 
 /* 调整卡片标题布局以包含按钮 */
