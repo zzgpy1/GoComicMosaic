@@ -524,6 +524,8 @@ sudo systemctl status nginx
 - Danny Phantom（幻影丹尼）✅
 - Smiling Friends（微笑朋友）✅
 - DuckTales（唐老鸭俱乐部）✅
+- Amphibia（奇幻沼泽）✅
+- Mighty Magiswords（超级魔剑 / 神剑变变变）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
@@ -560,7 +562,6 @@ sudo systemctl status nginx
 - Hilda（希尔达）
 - HouseBroken（一家之主）
 - Star vs. the Forces of Evil（星蝶公主）
-- Amphibia（奇幻沼泽）
 - Helluva Boss（极恶老大）
 - The Great North（东倒西歪）
 - Murder Drones（无机杀手）

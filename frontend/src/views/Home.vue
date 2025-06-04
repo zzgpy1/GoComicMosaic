@@ -4,6 +4,12 @@
       <!-- <h1 class="hero-title">精选美漫资源库</h1> -->
       <!-- <p class="hero-subtitle">资源共建，共享精彩</p> -->
       
+      <!-- 搜索结果标题 -->
+      <h2 v-if="route.query.search" class="search-results-title">
+        <i class="bi bi-search me-2"></i>
+        "{{ route.query.search }}" 的搜索结果
+      </h2>
+      
       <!-- 添加排序选项 -->
       <div class="sort-options">
         <button 
@@ -253,15 +259,21 @@ const fetchResources = async () => {
     // 计算跳过的条目数
     const skip = (currentPage.value - 1) * pageSize.value
     
+    // 构建查询参数对象
+    const params = {
+      skip: skip,
+      limit: pageSize.value,
+      sort_by: sortBy.value,
+      sort_order: 'desc'
+    }
+    
+    // 如果URL中有搜索参数，添加到请求中
+    if (route.query.search) {
+      params.search = route.query.search
+    }
+    
     // 使用公共API获取已审批的资源，添加分页和排序参数
-    const response = await axios.get('/api/resources/public', {
-      params: {
-        skip: skip,
-        limit: pageSize.value,
-        sort_by: sortBy.value,
-        sort_order: 'desc'
-      }
-    })
+    const response = await axios.get('/api/resources/public', { params })
     
     resources.value = response.data
     
@@ -401,9 +413,12 @@ const applyCustomPageSize = () => {
 // 监听URL参数中的搜索词
 watch(() => route.query.search, (newSearch) => {
   if (newSearch) {
-    // 实现搜索功能
-    // 这里可以增加搜索相关代码
+    // 有搜索参数时，重置到第一页并获取资源
     currentPage.value = 1 // 重置到第一页
+    fetchResources()
+  } else if (route.fullPath === '/') {
+    // 当回到主页且没有搜索参数时，也需要重新获取资源（清除搜索）
+    currentPage.value = 1
     fetchResources()
   }
 }, { immediate: true })
@@ -497,6 +512,22 @@ onUnmounted(() => {
     0 30px 60px rgba(0, 0, 0, 0.15),
     inset 0 -2px 6px rgba(255, 255, 255, 0.7),
     inset 2px 2px 6px rgba(255, 255, 255, 1);
+}
+
+/* 搜索结果标题样式 */
+.search-results-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.search-results-title i {
+  color: var(--primary-color);
 }
 
 /* 添加炫彩背景元素 */

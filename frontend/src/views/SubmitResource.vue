@@ -63,7 +63,7 @@
               <span>搜索中...</span>
             </div>
             <div v-else-if="searchResults.length > 0" class="search-results">
-              <h5>找到以下相似资源:</h5>
+              <h5>找到以下相似资源: <span class="result-count">({{ searchResults.length }}个结果)</span></h5>
               <div class="results-list">
                 <div 
                   v-for="result in searchResults" 
@@ -77,7 +77,7 @@
                     <small class="result-subtitle">{{ result.title_en || '无英文标题' }}</small>
                   </div>
                   <span class="result-type">{{ result.resource_type }}</span>
-              </div>
+                </div>
               </div>
               <div class="results-actions">
                 <button type="button" class="btn-custom btn-outline" @click="clearSearch">
@@ -227,7 +227,7 @@
               </div>
               
               <!-- 已添加的链接 -->
-              <div class="links-list">
+              <div class="results-list">
                 <div class="link-item" v-for="(link, index) in resourceLinks[category]" :key="index">
                   <div class="link-inputs">
                     <div class="input-group">
@@ -1061,11 +1061,35 @@ const resetForm = () => {
   font-weight: 600;
 }
 
+.result-count {
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: var(--gray-color);
+}
+
 .results-list {
   margin-bottom: 1.5rem;
   border-radius: var(--border-radius);
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) rgba(99, 102, 241, 0.1);
+}
+
+.results-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.results-list::-webkit-scrollbar-track {
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 10px;
+}
+
+.results-list::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color);
+  border-radius: 10px;
 }
 
 .result-item {
@@ -1821,7 +1845,7 @@ const resetForm = () => {
   }
   
   .hero-title {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
   
   .hero-subtitle {
@@ -1832,11 +1856,27 @@ const resetForm = () => {
     padding: 1.5rem;
   }
   
-  .results-actions {
-    flex-direction: column;
+  .results-list {
+    max-height: 250px; /* 移动端略微减小高度 */
   }
   
-  .results-actions button {
+  .result-item {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .result-type {
+    margin-top: 0.5rem;
+    align-self: flex-start;
+  }
+  
+  .results-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .results-actions .btn-custom {
     width: 100%;
   }
   
