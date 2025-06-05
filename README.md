@@ -495,6 +495,8 @@ sudo systemctl status nginx
 - Steven Universe（宇宙小子）✅
 - Rapunzel's Tangled Adventure（魔发奇缘）✅
 - Teenage Mutant Ninja Turtles（忍者神龟）✅
+- Carmen Sandiego（大神偷卡门）✅
+- RWBY（红白黑黄）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）

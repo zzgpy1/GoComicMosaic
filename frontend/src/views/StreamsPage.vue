@@ -20,7 +20,6 @@
     <div class="streams-filter">
       <div class="filter-options">
         <select v-model="selectedDataSource" @change="changeDataSource">
-          <option value="">默认数据源</option>
           <option v-for="(name, id) in dataSources" :key="id" :value="id">{{ name }}</option>
         </select>
       </div>

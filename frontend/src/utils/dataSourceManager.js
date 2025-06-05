@@ -1,6 +1,5 @@
-import heimuerDataSource from './dataSources/heimuer';
-import mockDataSource from './dataSources/mockSource';
-import testApiDataSource from './dataSources/testApi';
+// 导入数据源索引文件
+import dataSources from './dataSources';
 
 // 数据源管理器类
 class DataSourceManager {
@@ -20,13 +19,27 @@ class DataSourceManager {
   
   // 注册内置的数据源
   registerBuiltinDataSources() {
-    this.register('heimuer', heimuerDataSource);
-    this.register('mock', mockDataSource);
-    this.register('testapi', testApiDataSource);
+    // 自动注册所有数据源
+    Object.keys(dataSources).forEach(id => {
+      this.register(id, dataSources[id]);
+    });
     
-    // 默认使用黑木耳数据源
+    // 检查是否有可用的数据源
+    const availableDataSources = Object.keys(this.dataSources);
+    console.log(`已注册 ${availableDataSources.length} 个数据源`);
+    
+    // 如果没有设置当前数据源，则设置默认数据源
     if (!this.currentDataSourceId) {
-      this.setCurrentDataSource('heimuer');
+      // 优先使用黑木耳数据源，如果不存在则使用第一个可用的数据源
+      if (this.dataSources['heimuer']) {
+        this.setCurrentDataSource('heimuer');
+        console.log('已设置默认数据源: heimuer');
+      } else if (availableDataSources.length > 0) {
+        this.setCurrentDataSource(availableDataSources[0]);
+        console.log(`已设置默认数据源: ${availableDataSources[0]}`);
+      } else {
+        console.warn('没有可用的数据源！');
+      }
     }
   }
   
@@ -46,7 +59,13 @@ class DataSourceManager {
     
     const dataSource = this.dataSources[id];
     if (!dataSource) {
-      throw new Error(`未找到数据源: ${id}`);
+      const availableDataSources = Object.keys(this.dataSources);
+      if (availableDataSources.length > 0) {
+        console.warn(`未找到数据源: ${id}，将使用第一个可用的数据源: ${availableDataSources[0]}`);
+        return this.dataSources[availableDataSources[0]];
+      } else {
+        throw new Error(`未找到数据源: ${id}，且没有可用的数据源`);
+      }
     }
     
     return dataSource;
