@@ -466,21 +466,19 @@
                   <img :src="image" :alt="`预览图片 ${index+1}`">
                 </div>
               </div>
-              
-              <!-- 大图预览 -->
-              <div v-if="largeImageUrl" class="large-image-overlay" @click="closeLargeImage">
-                <div class="large-image-container">
-                <img :src="largeImageUrl" class="large-image" alt="大图预览">
-                  <button class="close-large-img" @click.stop="closeLargeImage">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                </div>
-              </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn-custom btn-outline" @click="closeImagePreview">关闭</button>
             </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- 大图预览 - 修改为与ResourceDetail.vue相同的风格 -->
+      <div v-if="largeImageUrl" class="custom-modal" @click.self="closeLargeImage">
+        <div class="modal-image-container">
+          <button type="button" class="image-close-btn bi bi-x-lg me-2" @click="closeLargeImage"></button>
+          <img :src="largeImageUrl" class="preview-large-image" alt="图片预览">
         </div>
       </div>
       
@@ -1908,59 +1906,66 @@ onMounted(async () => {
   object-fit: cover;
 }
 
-.large-image-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
-  z-index: 1100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  cursor: zoom-out;
-  animation: fadeIn 0.3s ease;
-}
-
-.large-image-container {
+/* 新的大图预览样式 - 与ResourceDetail.vue保持一致 */
+.modal-image-container {
   position: relative;
   max-width: 90vw;
   max-height: 90vh;
+  animation: zoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.large-image {
+.preview-large-image {
   max-width: 100%;
   max-height: 90vh;
-  object-fit: contain;
-  border-radius: var(--border-radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border-radius: var(--card-radius);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  border: 3px solid rgba(255, 255, 255, 0.8);
 }
 
-.close-large-img {
+.image-close-btn {
   position: absolute;
   top: -15px;
   right: -15px;
-  width: 36px;
-  height: 36px;
+  background: white;
+  color: var(--dark-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: white;
-  border: none;
-  color: var(--accent-color);
-  font-size: 1.2rem;
   cursor: pointer;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  opacity: 0.8;
   transition: all 0.3s ease;
+  border: none;
 }
 
-.close-large-img:hover {
+.image-close-btn:hover {
+  opacity: 1;
   transform: rotate(90deg);
-  background: var(--accent-color);
-  color: white;
+}
+
+/* 删除旧的大图预览样式 */
+.large-image-overlay,
+.large-image-container,
+.large-image,
+.close-large-img {
+  /* 这些旧样式将被移除，由新样式替代 */
+}
+
+/* 新增动画效果 */
+@keyframes zoomIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.9); 
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1); 
+  }
 }
 
 /* 动画 */

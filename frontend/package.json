@@ -19,6 +19,7 @@
     "@videojs/http-streaming": "^3.17.0",
     "axios": "^1.6.5",
     "dotenv": "^16.5.0",
+    "express": "^5.1.0",
     "video.js": "^8.22.0",
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"

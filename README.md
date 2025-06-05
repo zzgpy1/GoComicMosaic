@@ -199,47 +199,11 @@ cd /home/work/dongman/frontend
 npm install
 ```
 
-#### 修改`vite.config.js`文件
-```
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-// 其他导入...
+#### 修改`.env.production`文件
 
-export default defineConfig({
-  plugins: [vue()],
-  base: '/static/', // 修改静态资源基础路径
-  // 其他配置...
-})
 ```
-完整配置
-```
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import path from 'path'
-
-export default defineConfig({
-  plugins: [vue()],
-  base: '/static/', // 修改静态资源基础路径
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
-      },
-      '/assets': {
-        target: 'http://localhost:8000',
-        changeOrigin: true
-      }
-    }
-  }
-}) 
+BASE_URL=https://dm.xueximeng.com // 生成sitemap会用，不指定则访问 'http://localhost:80000'
+ASSETS_PATH=../assets // 使用express代理访问本地图片路径，不指定默认为 '../assets'
 ```
 
 #### 编译
@@ -292,6 +256,7 @@ sudo nano /etc/supervisor/conf.d/dongman.conf
 
 ```ini
 [program:dm]
+environment=ASSETS_PATH="/home/work/dongman/assets",DB_PATH="/home/work/dongman/gobackend/resource_hub.db" ;支持环境变量指定assets和数据库路径(默认assets和frontend、gobackend同级，数据库默认在gobackend/resource_hub.db)
 command=/home/work/dongman/gobackend/app 
 directory=/home/work/dongman/gobackend        ; 项目的文件夹路径
 autostart=true                              ; 是否在 Supervisor 启动时自动启动该程序
@@ -405,7 +370,7 @@ server {
     }
     
     location /assets/ {
-        alias $base_path/assets/;
+        alias $base_path/assets/; # 如果修改了默认的assets路径，这里也要一同修改 
         expires 30d;
     }
     
@@ -526,6 +491,10 @@ sudo systemctl status nginx
 - DuckTales（唐老鸭俱乐部）✅
 - Amphibia（奇幻沼泽）✅
 - Mighty Magiswords（超级魔剑 / 神剑变变变）✅
+- Helluva Boss（极恶老大）✅
+- Steven Universe（宇宙小子）✅
+- Rapunzel's Tangled Adventure（魔发奇缘）✅
+- Teenage Mutant Ninja Turtles（忍者神龟）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
@@ -540,7 +509,6 @@ sudo systemctl status nginx
 - Hey Arnold!（嘿！阿诺德）
 - Robot Chicken（机器鸡）
 - Krapopolis（克拉波利斯）
-- Teenage Mutant Ninja Turtles（忍者神龟）
 - Gargoyles（夜行神龙）
 - Camp Snoopy（史努比营地）
 - Batman: The Animated Series（蝙蝠侠动画系列）
@@ -562,12 +530,10 @@ sudo systemctl status nginx
 - Hilda（希尔达）
 - HouseBroken（一家之主）
 - Star vs. the Forces of Evil（星蝶公主）
-- Helluva Boss（极恶老大）
 - The Great North（东倒西歪）
 - Murder Drones（无机杀手）
 - House of Demons（恶魔之家）
 - The Amazing Digital Circus（神奇数字马戏团）
-- Steven Universe（宇宙小子）
 - Summer Camp Island（夏令营岛）
 - OK K.O.! Let's Be Heroes（超级科学伙伴）
 - The Midnight Gospel（午夜福音）
@@ -608,3 +574,12 @@ sudo systemctl status nginx
 - Sealab 2021（2021海底实验室）
 - Harvey Birdman, Attorney at Law（哈维·伯德曼律师）
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
+
+# 更新日志
+- 2020506051132
+✅ 增加golang版动态生成sitemap工具`sitemap-generator`，为将来容器化做准备
+✅ 允许通过环境变量指定assets和数据库路径，为将来容器化做准备
+✅ 自动判断vite.config.js中是否需要启用`base: '/static/',`，只有正式编译时启用，本地开发不会启用，避免每次编译手动修改一遍 
+✅ 使用express代理访问本地静态资源路径，根据.env.production配置中的ASSETS_PATH自动设置，默认路径'../assets'
+✅ 调整后台所有图片预览模态框，保持全站风格一致，审批通过的图片，点击也可以放大看
+✅ 优化搜索框样式

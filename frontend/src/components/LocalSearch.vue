@@ -98,6 +98,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import { getPosterImage } from '@/utils/imageUtils'
 
 const router = useRouter()
 const searchText = ref('')
@@ -158,17 +159,6 @@ const getResourceTypes = (resource) => {
   return resource.resource_type.split(',').slice(0, 2) // 最多显示2个标签
 }
 
-// 获取海报图片
-const getPosterImage = (resource) => {
-  if (resource.poster_image) {
-    return resource.poster_image
-  } else if (resource.images && resource.images.length > 0) {
-    return resource.images[0]
-  } else {
-    return 'https://via.placeholder.com/300x400'
-  }
-}
-
 // 清除搜索
 const clearSearch = () => {
   searchText.value = ''
@@ -217,28 +207,29 @@ onMounted(() => {
 }
 
 .search-wrapper.active {
-  width: 100%;
+  width: 95%;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.3);  
+  /* background: rgba(255, 255, 255, 0.3);   */
   border-radius: 100px;
   padding: 0.48rem 0.85rem;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(8px);
+  /* box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.6); */
+  /* border: 1px solid rgba(255, 255, 255, 0.5); */
+  /* transition: all 0.3s ease; */
+  /* backdrop-filter: blur(8px); */
+  /* border-color: var(--primary-color); */
 }
 
-.search-box:hover {
+/* .search-box:hover { 
   background: rgba(255, 255, 255, 0.4);
   box-shadow: 0 6px 15px rgba(124, 58, 237, 0.2), 0 0 0 1px rgba(124, 58, 237, 0.3);
   transform: translateY(-2px);
   border-color: rgba(124, 58, 237, 0.4);
   backdrop-filter: blur(10px);
-}
+} */
 
 .search-wrapper.active .search-box {
   background: rgba(255, 255, 255, 0.95);
@@ -266,7 +257,7 @@ onMounted(() => {
   font-size: 0.95rem;
   color: white;
   padding: 0.25rem;
-  width: 100%;
+  width: 95%;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   font-weight: 500;
 }
@@ -281,7 +272,7 @@ onMounted(() => {
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 1);
   opacity: 0.85;
 }
 
@@ -321,7 +312,7 @@ onMounted(() => {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 100%;
+  width: 95%;
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -517,7 +508,7 @@ onMounted(() => {
 
 /* 当页面加载时显示一次脉冲效果，然后每隔30秒轻微闪烁一次 */
 .search-box {
-  animation: subtle-pulse 2s ease-in-out 1s, subtle-pulse 3s ease-in-out 30s infinite;
+  animation: subtle-pulse 2s ease-in-out 1s, subtle-pulse 3s ease-in-out 3s infinite;
 }
 
 /* 响应式样式 */
@@ -533,67 +524,8 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .header-search-container {
-    width: 40px;
-    overflow: hidden;
-    transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  
-  .header-search-container:hover,
-  .header-search-container:focus-within {
     width: 220px;
-    overflow: visible;
-  }
-  
-  .header-search-container:focus-within .search-box {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: var(--primary-color);
-    box-shadow: 0 5px 20px rgba(124, 58, 237, 0.3), 0 0 0 2px rgba(124, 58, 237, 0.2);
-    transform: translateY(-4px) scale(1.02);
-  }
-  
-  .header-search-container:focus-within .search-icon {
-    color: var(--primary-color);
-    text-shadow: none;
-    animation: pulse 1s infinite;
-  }
-  
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-  }
-  
-  .search-box {
-    padding: 0.35rem;
-    width: 40px;
-    justify-content: center;
-  }
-  
-  .header-search-container:hover .search-box,
-  .header-search-container:focus-within .search-box {
-    width: auto;
-    padding: 0.35rem 0.75rem;
-    justify-content: flex-start;
-  }
-  
-  .search-icon {
-    margin-right: 0;
-  }
-  
-  .header-search-container:hover .search-icon,
-  .header-search-container:focus-within .search-icon {
-    margin-right: 0.5rem;
-  }
-  
-  .search-input {
-    width: 0;
-    padding: 0;
-  }
-  
-  .header-search-container:hover .search-input,
-  .header-search-container:focus-within .search-input {
-    width: 100%;
-    padding: 0.25rem;
+    /* 保持搜索框完全可见，不再折叠为图标 */
   }
   
   /* 搜索结果弹出框在移动设备上的样式 */
@@ -612,12 +544,8 @@ onMounted(() => {
 /* 小屏幕手机 */
 @media (max-width: 480px) {
   .header-search-container {
-    margin-left: auto;
-  }
-  
-  .header-search-container:hover,
-  .header-search-container:focus-within {
     width: 180px;
+    margin-left: auto;
   }
   
   .search-results-popup {

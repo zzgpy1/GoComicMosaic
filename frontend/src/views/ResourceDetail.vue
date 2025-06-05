@@ -476,6 +476,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { isAdmin } from '../utils/auth'
+import { getImageUrl } from '@/utils/imageUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -529,10 +530,10 @@ const selectedImage = ref(null)
 const isUserAdmin = computed(() => isAdmin())
 
 // 处理不同状态的图片路径 (审批前的uploads路径和审批后的imgs路径)
-const getImageUrl = (imagePath) => {
-  if (!imagePath) return 'https://via.placeholder.com/300x400';
-  return imagePath;
-}
+// const getImageUrl = (imagePath) => {
+//   if (!imagePath) return 'https://via.placeholder.com/300x400';
+//   return imagePath;
+// }
 
 // 选择图片展示在大图区域
 const selectImage = (image) => {

@@ -178,6 +178,7 @@
 import { ref, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import axios from 'axios'
+import { getPosterImage } from '@/utils/imageUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -297,22 +298,6 @@ const fetchResources = async () => {
 
 const goToDetail = (id) => {
   router.push(`/resource/${id}`)
-}
-
-// 获取海报图片
-const getPosterImage = (resource) => {
-  // 优先使用指定的海报图片
-  if (resource.poster_image) {
-    return resource.poster_image
-  }
-  // 如果没有指定海报，则使用第一张图片
-  else if (resource.images && resource.images.length > 0) {
-    return resource.images[0]
-  } 
-  // 都没有则使用占位图
-  else {
-    return 'https://via.placeholder.com/300x400'
-  }
 }
 
 // 截断描述文本
