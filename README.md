@@ -576,10 +576,11 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
-- 2020506051132
-✅ 增加golang版动态生成sitemap工具`sitemap-generator`，为将来容器化做准备
-✅ 允许通过环境变量指定assets和数据库路径，为将来容器化做准备
-✅ 自动判断vite.config.js中是否需要启用`base: '/static/',`，只有正式编译时启用，本地开发不会启用，避免每次编译手动修改一遍 
-✅ 使用express代理访问本地静态资源路径，根据.env.production配置中的ASSETS_PATH自动设置，默认路径'../assets'
-✅ 调整后台所有图片预览模态框，保持全站风格一致，审批通过的图片，点击也可以放大看
-✅ 优化搜索框样式
+- 2020506051132  
+
+✅ 增加golang版动态生成sitemap工具`sitemap-generator`，为将来容器化做准备  
+✅ 允许通过环境变量指定assets和数据库路径，为将来容器化做准备  
+✅ 自动判断vite.config.js中是否需要启用`base: '/static/',`，只有正式编译时启用，本地开发不会启用，避免每次编译手动修改一遍   
+✅ 使用express代理访问本地静态资源路径，根据.env.production配置中的ASSETS_PATH自动设置，默认路径'../assets'  
+✅ 调整后台所有图片预览模态框，保持全站风格一致，审批通过的图片，点击也可以放大看  
+✅ 优化搜索框样式  
