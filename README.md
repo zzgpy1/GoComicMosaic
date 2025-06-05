@@ -97,7 +97,7 @@
 ![image|690x397](docs/26.gif)
 
 目前内置了8个解析采集
-![image|690x397](docs/27.gif)
+![image|690x397](docs/27.jpg)
 
 ---
 
