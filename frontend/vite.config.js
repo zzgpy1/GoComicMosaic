@@ -48,18 +48,6 @@ export default defineConfig(({ command, mode }) => {
             });
           }
         },
-        '/proxy': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          configure: (proxy, options) => {
-            proxy.on('error', (err, req, res) => {
-              console.log('Proxy error:', err);
-            });
-            proxy.on('proxyReq', (proxyReq, req, res) => {
-              console.log('请求代理:', req.method, req.url, '->', options.target + proxyReq.path);
-            });
-          }
-        }
       }
     }
   }

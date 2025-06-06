@@ -1,5 +1,4 @@
 import { getDataSourceManager } from './dataSourceManager';
-import axios from 'axios';
 
 // 是否启用离线模式（当API不可用时）
 const OFFLINE_MODE = false; // 设置为false使用在线API
@@ -150,39 +149,4 @@ export const parseEpisodes = (playUrl) => {
   }
   
   return episodesArray;
-};
-
-// 获取指定key的网站设置
-export const getSiteSettings = async (key) => {
-  try {
-    const response = await axios.get(`/api/settings/${key}`);
-    return response.data;
-  } catch (error) {
-    console.error(`获取网站设置 [${key}] 失败:`, error);
-    throw error;
-  }
-};
-
-// 获取所有网站设置
-export const getAllSiteSettings = async () => {
-  try {
-    const response = await axios.get('/api/settings/');
-    return response.data;
-  } catch (error) {
-    console.error('获取所有网站设置失败:', error);
-    throw error;
-  }
-};
-
-// 更新网站设置 (需要管理员权限)
-export const updateSiteSettings = async (key, settingValue) => {
-  try {
-    const response = await axios.put(`/api/settings/${key}`, {
-      setting_value: settingValue
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`更新网站设置 [${key}] 失败:`, error);
-    throw error;
-  }
 }; 
