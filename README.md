@@ -504,10 +504,22 @@ sudo systemctl status nginx
 - Teenage Mutant Ninja Turtles（忍者神龟）✅
 - Carmen Sandiego（大神偷卡门）✅
 - RWBY（红白黑黄）✅
+- Avatar: The Last Airbender（降世神通：最后的气宗）✅
+- Avatar: The Legend of Korra（降世神通：科拉传奇）✅
+- Bluey（布鲁伊）✅
+- Hilda（希尔达）✅
+- The Owl House（猫头鹰魔法社）✅
+- Clarence（小胖克莱伦斯 / 我爱阿噗）✅
+- Heroes of Pure Heart（猫猫：纯心之谷的英雄们）✅
+- Sym-Bionic Titan（合神泰坦）✅
+- Generator Rex（变形小雷 / 机械战士REX）✅
+- Di-Gata Defenders（迪卡塔卫士）✅
+- Over the Garden Wall（花园墙外）✅
+- The Dragon Prince（龙王子）✅
+- OK K.O.! Let's Be Heroes（成为英雄吧）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
-- The Owl House（猫头鹰魔法社）
 - Guardians of Ga’Hoole（守护者）
 - Gravity Falls（怪诞小镇）
 - We Bare Bears（咱们裸熊）
@@ -536,7 +548,6 @@ sudo systemctl status nginx
 - Ugly Americans（俗世乐土）
 - Primal（史前战纪）
 - Blue Eye Samurai（蓝眼武士）
-- Hilda（希尔达）
 - HouseBroken（一家之主）
 - Star vs. the Forces of Evil（星蝶公主）
 - The Great North（东倒西歪）
@@ -544,7 +555,6 @@ sudo systemctl status nginx
 - House of Demons（恶魔之家）
 - The Amazing Digital Circus（神奇数字马戏团）
 - Summer Camp Island（夏令营岛）
-- OK K.O.! Let's Be Heroes（超级科学伙伴）
 - The Midnight Gospel（午夜福音）
 - Pantheon（万神殿）
 - Ten Year Old Tom（十岁的汤姆）
@@ -557,7 +567,6 @@ sudo systemctl status nginx
 - My Adventures with Superman（我亲爱的怪物伙伴）
 - Ben 10（少年骇客）
 - She-Ra and the Princesses of Power（神勇战士）
-- Over the Garden Wall（花园墙外）
 - Central Park（中央公园）
 - The Age of the Chip and the Amazing Animals（奇波和神奇动物的时代）
 - Daria（拽妹黛薇儿）
@@ -574,7 +583,6 @@ sudo systemctl status nginx
 - Johnny Bravo（强尼布拉沃）
 - Samurai Jack（武士杰克）
 - Star Wars: The Clone Wars（星球大战：克隆人战争）
-- Avatar: The Legend of Korra（科拉传奇）
 - Regular Show（普通秀）
 - Archer（间谍亚契）
 - Final Space（终空）
@@ -585,8 +593,13 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
-- 2020506051132  
+- 202506061607
+✅ 优化悬浮按钮样式问题
+✅ 修复最近播放恢复播放失败问题
+✅ 新增的资源，如果没有批准任何图片和链接，则代表审核不通过，直接删除该条数据
+✅ 修复编辑资源时，将新上传的图片设置为海报失败问题
 
+- 2020506051132  
 ✅ 增加golang版动态生成sitemap工具`sitemap-generator`，为将来容器化做准备  
 ✅ 允许通过环境变量指定assets和数据库路径，为将来容器化做准备  
 ✅ 自动判断vite.config.js中是否需要启用`base: '/static/',`，只有正式编译时启用，本地开发不会启用，避免每次编译手动修改一遍   

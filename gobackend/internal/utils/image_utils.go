@@ -71,20 +71,14 @@ func SaveUploadedFile(file io.Reader, filename string) (string, error) {
 	return filepath.Join("/assets/uploads", time.Now().Format("20060102"), uniqueFilename), nil
 }
 
-// MoveApprovedImages 将图片从uploads目录移动到imgs/resourceID目录
+// MoveApprovedImages 移动已批准的图片到资源目录
 func MoveApprovedImages(resourceID int, imagePaths []string) ([]string, error) {
 	if len(imagePaths) == 0 {
 		return []string{}, nil
 	}
 
-	// 获取工作目录
-	workDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("获取工作目录失败: %w", err)
-	}
-
-	// 构建assets目录路径
-	assetsDir := filepath.Join(workDir, "..", "assets")
+	// 获取资源目录
+	assetsDir := GetAssetsDir()
 
 	// 创建目标目录
 	imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
@@ -138,14 +132,8 @@ func MoveApprovedImage(resourceID int, imagePath string) (string, error) {
 		return "", nil
 	}
 
-	// 获取工作目录
-	workDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("获取工作目录失败: %w", err)
-	}
-
-	// 构建assets目录路径
-	assetsDir := filepath.Join(workDir, "..", "assets")
+	// 获取资源目录
+	assetsDir := GetAssetsDir()
 
 	// 创建目标目录
 	imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
@@ -227,14 +215,8 @@ func moveFile(src, dst string) error {
 
 // ensureUploadDir 确保上传目录存在
 func ensureUploadDir() (string, error) {
-	// 获取工作目录
-	workDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("获取工作目录失败: %w", err)
-	}
-
-	// 构建assets目录路径
-	assetsDir := filepath.Join(workDir, "..", "assets")
+	// 获取资源目录
+	assetsDir := GetAssetsDir()
 
 	// 按日期创建上传目录
 	dateDir := time.Now().Format("20060102")

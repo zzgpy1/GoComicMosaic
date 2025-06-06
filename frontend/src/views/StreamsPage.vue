@@ -506,13 +506,17 @@ export default {
         playHistory.value.splice(existingItemIndex, 1);
       }
       
+      // 获取当前数据源ID
+      const currentDataSourceId = selectedDataSource.value || '';
+      
       // 添加到开头
       playHistory.value.unshift({
         id: item.id,
         title: item.title || '自定义流媒体',
         src: item.src,
         poster: item.poster || '',
-        timestamp: new Date().getTime()
+        timestamp: new Date().getTime(),
+        dataSourceId: currentDataSourceId // 保存数据源ID
       });
       
       // 限制历史记录数量
@@ -530,6 +534,20 @@ export default {
     
     // 播放历史记录中的项目
     const playHistoryItem = (item) => {
+      // 先检查并切换到记录对应的数据源
+      if (item.dataSourceId && item.dataSourceId !== selectedDataSource.value) {
+        try {
+          const dataSourceManager = getDataSourceManager();
+          if (dataSourceManager.getAllDataSources()[item.dataSourceId]) {
+            console.log(`切换到历史记录对应的数据源: ${item.dataSourceId}`);
+            selectedDataSource.value = item.dataSourceId;
+            dataSourceManager.setCurrentDataSource(item.dataSourceId);
+          }
+        } catch (error) {
+          console.error('切换数据源失败:', error);
+        }
+      }
+
       if (item.id) {
         // 这是预设的视频
         loadStreamById(item.id);

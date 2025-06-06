@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
+	"dongman/internal/utils"
 )
 
 // DB 是全局数据库连接
@@ -75,16 +75,10 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 // InitDB 初始化数据库连接
 func InitDB() (*sqlx.DB, error) {
-	// 获取当前工作目录
-	workDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("获取工作目录失败: %w", err)
-	}
-
-	// 数据库文件路径
-	dbPath := filepath.Join(workDir, "resource_hub.db")
-	log.Printf("使用数据库: %s", dbPath)
-
+	// 从utils包获取数据库路径
+	dbPath := utils.GetDbPath()
+	log.Printf("连接数据库: %s", dbPath)
+	
 	// 连接SQLite数据库
 	db, err := sqlx.Connect("sqlite3", fmt.Sprintf("file:%s?_journal=WAL&_foreign_keys=on", dbPath))
 	if err != nil {
@@ -161,15 +155,9 @@ func RestoreImagesPath() error {
 		return fmt.Errorf("查询资源失败: %w", err)
 	}
 
-	// 获取工作目录
-	workDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("获取工作目录失败: %w", err)
-	}
-
-	// 构建assets目录路径
-	assetsDir := filepath.Join(workDir, "..", "assets")
-	log.Printf("assets目录: %s", assetsDir)
+	// 获取资源目录
+	assetsDir := utils.GetAssetsDir()
+	log.Printf("资源目录: %s", assetsDir)
 
 	// 扫描所有图片文件
 	allImages := make(map[string]string)

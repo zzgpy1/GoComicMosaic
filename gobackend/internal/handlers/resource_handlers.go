@@ -560,6 +560,17 @@ func UpdateResource(c *gin.Context) {
 		log.Printf("处理图片更新，收到 %d 张图片", len(resourceUpdate.Images))
 		// 检查图片是否在临时目录中，如果是则移动到永久目录
 		imagesToMove := make([]string, 0)
+		var posterImageInUpload bool
+		var posterImageOriginalPath string
+		
+		// 检查海报图片是否在待上传图片中
+		if resourceUpdate.PosterImage != nil && *resourceUpdate.PosterImage != "" && 
+		   strings.Contains(*resourceUpdate.PosterImage, "/assets/uploads/") {
+			posterImageInUpload = true
+			posterImageOriginalPath = *resourceUpdate.PosterImage
+			log.Printf("海报图片在上传图片中: %s", posterImageOriginalPath)
+		}
+		
 		for _, img := range resourceUpdate.Images {
 			// 检查图片是否在uploads目录中
 			if strings.Contains(img, "/assets/uploads/") {
@@ -578,6 +589,21 @@ func UpdateResource(c *gin.Context) {
 				return
 			}
 			log.Printf("图片移动完成，新路径: %v", newImagePaths)
+			
+			// 如果海报图片在待移动图片中，更新其路径
+			if posterImageInUpload {
+				// 在移动后的图片中查找对应海报的新路径
+				for i, oldPath := range imagesToMove {
+					if oldPath == posterImageOriginalPath {
+						if i < len(newImagePaths) {
+							newPosterPath := newImagePaths[i]
+							log.Printf("更新海报图片路径: %s -> %s", posterImageOriginalPath, newPosterPath)
+							resource.PosterImage = &newPosterPath
+						}
+						break
+					}
+				}
+			}
 			
 			// 更新图片路径（保留不需要移动的图片）
 			finalImages := make([]string, 0)
@@ -598,6 +624,19 @@ func UpdateResource(c *gin.Context) {
 				// 发生错误时继续使用原始图片
 			} else {
 				finalImages = webpImages
+				
+				// 如果海报图片被转换为WebP，也需要更新海报路径
+				if posterImageInUpload && resource.PosterImage != nil {
+					originalPosterPath := *resource.PosterImage
+					for i, oldPath := range finalImages {
+						if oldPath == originalPosterPath && i < len(webpImages) {
+							webpPosterPath := webpImages[i]
+							log.Printf("更新海报图片WebP路径: %s -> %s", originalPosterPath, webpPosterPath)
+							resource.PosterImage = &webpPosterPath
+							break
+						}
+					}
+				}
 			}
 			
 			resource.Images = finalImages
@@ -616,33 +655,19 @@ func UpdateResource(c *gin.Context) {
 		}
 	}
 
-	// 处理海报图片更新
-	if resourceUpdate.PosterImage != nil {
+	// 处理海报图片更新，但仅当它不是来自上述已处理的上传图片
+	if resourceUpdate.PosterImage != nil && !strings.Contains(*resourceUpdate.PosterImage, "/assets/uploads/") {
 		log.Printf("处理海报图片更新: %s", *resourceUpdate.PosterImage)
 		if *resourceUpdate.PosterImage != "" {
-			// 检查海报图片是否在临时目录中
-			if strings.Contains(*resourceUpdate.PosterImage, "/assets/uploads/") {
-				log.Printf("海报图片需要移动: %s", *resourceUpdate.PosterImage)
-				// 移动海报图片到永久目录
-				newPosterPath, err := utils.MoveApprovedImage(resourceID, *resourceUpdate.PosterImage)
-				if err != nil {
-					log.Printf("移动海报图片失败: %v", err)
-					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动海报图片失败: %v", err)})
-					return
-				}
-				log.Printf("海报图片移动完成，新路径: %s", newPosterPath)
-				resource.PosterImage = &newPosterPath
-			} else {
-				log.Printf("海报图片无需移动")
-				resource.PosterImage = resourceUpdate.PosterImage
-			}
+			// 无需再次移动已经处理过的上传图片
+			resource.PosterImage = resourceUpdate.PosterImage
 		} else {
 			log.Printf("清除海报图片设置")
 			resource.PosterImage = resourceUpdate.PosterImage
 		}
 		updated = true
 	} else {
-		log.Printf("未更新海报图片")
+		log.Printf("海报图片已在图片处理逻辑中处理或未更新")
 	}
 
 	if resourceUpdate.Links != nil {

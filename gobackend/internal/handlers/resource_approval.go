@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"dongman/internal/models"
+	"dongman/internal/utils"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -8,35 +11,33 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 	"strings"
-	"encoding/json"
-	"github.com/gin-gonic/gin"
+	"time"
 
-	"dongman/internal/models"
-	"dongman/internal/utils"
+	"github.com/gin-gonic/gin"
 )
 
 // ApproveResource 审批资源 - 仅管理员可访问
 func ApproveResource(c *gin.Context) {
-	// 获取路径参数
-	resourceID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	// 获取资源ID
+	resourceID, errParse := strconv.Atoi(c.Param("id"))
+	if errParse != nil {
+		log.Printf("[ERROR] 无效的资源ID: %v", errParse)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
 		return
 	}
 
 	// 解析请求
 	var approval models.ResourceApproval
-	if err := c.ShouldBindJSON(&approval); err != nil {
+	if errBind := c.ShouldBindJSON(&approval); errBind != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
 
 	// 检查资源是否存在
 	var resource models.Resource
-	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
+	errGet := models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if errGet != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
 		return
 	}
@@ -60,31 +61,42 @@ func ApproveResource(c *gin.Context) {
 	// 保存所有新路径
 	newImagePaths := make([]string, 0, len(approval.ApprovedImages))
 	if strings.ToLower(string(approval.Status)) == strings.ToLower(string(models.ResourceStatusApproved)){
+		// 检查是否没有批准任何图片和链接
+		if len(approval.ApprovedImages) == 0 && len(approval.ApprovedLinks) == 0 {
+			log.Printf("[INFO] 资源ID: %d 被批准但没有批准任何图片和链接，将直接删除该资源", resourceID)
+			
+			// 删除资源
+			_, errDelete := models.DB.Exec(`DELETE FROM resources WHERE id = ?`, resourceID)
+			if errDelete != nil {
+				log.Printf("[ERROR] 删除资源失败: %v", errDelete)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("删除资源失败: %v", errDelete)})
+				return
+			}
+			
+			// 返回成功消息
+			c.JSON(http.StatusOK, gin.H{
+				"message": "资源已删除，因为没有批准任何图片和链接",
+				"deleted": true,
+				"resource_id": resourceID,
+			})
+			return
+		}
+		
 		// 移动已批准的图片
 		if len(approval.ApprovedImages) > 0 {
 			log.Printf("[DEBUG] 开始移动已批准的图片，资源ID: %d, 图片数量: %d", resource.ID, len(approval.ApprovedImages))
 			log.Printf("[DEBUG] 原始图片路径: %v", approval.ApprovedImages)
 
-			// 获取工作目录
-			workDir, err := os.Getwd()
-			if err != nil {
-				log.Printf("[ERROR] 获取工作目录失败: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取工作目录失败"})
-				return
-			}
-			
-			log.Printf("[DEBUG] 当前工作目录: %s", workDir)
-			
-			// 构建assets目录路径
-			assetsDir := filepath.Join(workDir, "..", "assets")
+			// 获取assets目录路径
+			assetsDir := utils.GetAssetsDir()
 			log.Printf("[DEBUG] Assets目录路径: %s", assetsDir)
 			
 			// 创建目标目录
 			imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
 			log.Printf("[DEBUG] 创建目标目录: %s", imgsDir)
-			if err := os.MkdirAll(imgsDir, 0755); err != nil {
-				log.Printf("[ERROR] 创建目录失败: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建图片目录失败: %v", err)})
+			if errMkdir := os.MkdirAll(imgsDir, 0755); errMkdir != nil {
+				log.Printf("[ERROR] 创建目录失败: %v", errMkdir)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建图片目录失败: %v", errMkdir)})
 				return
 			}
 			
@@ -107,7 +119,7 @@ func ApproveResource(c *gin.Context) {
 				log.Printf("[DEBUG] 移动图片: %s -> %s", sourcePath, destPath)
 				
 				// 检查源文件是否存在
-				if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+				if _, errStat := os.Stat(sourcePath); os.IsNotExist(errStat) {
 					log.Printf("[ERROR] 源文件不存在: %s", sourcePath)
 					continue
 				} else {
@@ -115,40 +127,49 @@ func ApproveResource(c *gin.Context) {
 				}
 				
 				// 确保目标目录存在
-				err = os.MkdirAll(filepath.Dir(destPath), 0755)
-				if err != nil {
-					log.Printf("[ERROR] 创建目标目录失败: %v", err)
+				errDir := os.MkdirAll(filepath.Dir(destPath), 0755)
+				if errDir != nil {
+					log.Printf("[ERROR] 创建目标目录失败: %v", errDir)
 					continue
 				}
 				
 				// 移动文件（复制后删除）
 				// 1. 复制文件
-				sourceFile, err := os.Open(sourcePath)
-				if err != nil {
-					log.Printf("[ERROR] 打开源文件失败: %v", err)
+				sourceFile, errOpen := os.Open(sourcePath)
+				if errOpen != nil {
+					log.Printf("[ERROR] 打开源文件失败: %v", errOpen)
 					continue
 				}
-				
-				destFile, err := os.Create(destPath)
-				if err != nil {
-					log.Printf("[ERROR] 创建目标文件失败: %v", err)
-					sourceFile.Close()
+				defer sourceFile.Close()
+
+				// 创建目标文件
+				destFile, errCreate := os.Create(destPath)
+				if errCreate != nil {
+					log.Printf("[ERROR] 创建目标文件失败: %v", errCreate)
 					continue
 				}
-				
+				defer destFile.Close()
+
 				// 复制内容
-				bytesWritten, err := io.Copy(destFile, sourceFile)
-				sourceFile.Close()
-				destFile.Close()
-				
-				if err != nil {
-					log.Printf("[ERROR] 复制文件内容失败: %v", err)
+				_, errCopy := io.Copy(destFile, sourceFile)
+				if errCopy != nil {
+					log.Printf("[ERROR] 复制文件内容失败: %v", errCopy)
 					continue
 				}
-				log.Printf("[DEBUG] 复制了 %d 字节数据", bytesWritten)
-				
+
+				// 关闭文件以确保所有内容都已写入
+				errSource := sourceFile.Close()
+				if errSource != nil {
+					log.Printf("[ERROR] 关闭源文件失败: %v", errSource)
+				}
+
+				errDest := destFile.Close()
+				if errDest != nil {
+					log.Printf("[ERROR] 关闭目标文件失败: %v", errDest)
+				}
+
 				// 验证目标文件已创建
-				if _, err := os.Stat(destPath); os.IsNotExist(err) {
+				if _, errStat := os.Stat(destPath); os.IsNotExist(errStat) {
 					log.Printf("[ERROR] 复制后目标文件不存在: %s", destPath)
 					continue
 				} else {
@@ -156,11 +177,11 @@ func ApproveResource(c *gin.Context) {
 				}
 				
 				// 2. 删除原文件
-				if err := os.Remove(sourcePath); err != nil {
-					log.Printf("[WARN] 删除源文件失败，将重试: %v", err)
+				if errRemove := os.Remove(sourcePath); errRemove != nil {
+					log.Printf("[WARN] 删除源文件失败，将重试: %v", errRemove)
 					time.Sleep(100 * time.Millisecond)
-					if err := os.Remove(sourcePath); err != nil {
-						log.Printf("[ERROR] 第二次删除源文件失败: %v", err)
+					if errRetry := os.Remove(sourcePath); errRetry != nil {
+						log.Printf("[ERROR] 第二次删除源文件失败: %v", errRetry)
 					} else {
 						log.Printf("[DEBUG] 第二次尝试删除源文件成功")
 					}
@@ -269,7 +290,7 @@ func ApproveResource(c *gin.Context) {
 	log.Printf("[DEBUG] 资源海报图片: %v", resource.PosterImage)
 	
 	// approval_records插入审批记录
-	result, err := models.DB.Exec(
+	result, errInsert := models.DB.Exec(
 		`INSERT INTO approval_records (
 			resource_id, status, field_approvals, field_rejections,
 			approved_images, rejected_images, poster_image, notes,
@@ -283,18 +304,19 @@ func ApproveResource(c *gin.Context) {
 		approvalRecord.CreatedAt,
 	)
 
-		if err != nil {
-			log.Printf("创建审批记录失败: %v", err)
-			// 继续处理，不要因为审批记录创建失败而中断流程
-		} else {
-			id, _ := result.LastInsertId()
-			log.Printf("已创建审批记录，ID: %d", id)
-		}
+	if errInsert != nil {
+		log.Printf("创建审批记录失败: %v", errInsert)
+		// 继续处理，不要因为审批记录创建失败而中断流程
+	} else {
+		id, _ := result.LastInsertId()
+		log.Printf("已创建审批记录，ID: %d", id)
+	}
 
 		
 	
 	// resources 更新资源
-	_, err = models.DB.Exec(
+	var errUpdate error
+	_, errUpdate = models.DB.Exec(
 		`UPDATE resources SET 
 			status = ?, images = ?, poster_image = ?, 
 			approval_history = ?, updated_at = ?
@@ -303,18 +325,18 @@ func ApproveResource(c *gin.Context) {
 		resource.ApprovalHistory, resource.UpdatedAt, resource.ID,
 	)
 
-	if err != nil {
-		log.Printf("[ERROR] 更新资源失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源失败: %v", err)})
+	if errUpdate != nil {
+		log.Printf("[ERROR] 更新资源失败: %v", errUpdate)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源失败: %v", errUpdate)})
 		return
 	}
 	
 	log.Printf("[INFO] 成功更新资源，ID: %d", resourceID)
 
 	// 再次从数据库获取资源，确保返回最新数据
-	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
-		log.Printf("警告：获取更新后的资源失败，但资源已更新: %v", err)
+	errGet = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if errGet != nil {
+		log.Printf("警告：获取更新后的资源失败，但资源已更新: %v", errGet)
 	}
 
 	c.JSON(http.StatusOK, resource)
@@ -437,26 +459,16 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 			log.Printf("[DEBUG] 开始移动已批准的补充图片，资源ID: %d, 图片数量: %d", resource.ID, len(approval.ApprovedImages))
 			log.Printf("[DEBUG] 原始图片路径: %v", approval.ApprovedImages)
 
-			// 获取工作目录
-			workDir, err := os.Getwd()
-			if err != nil {
-				log.Printf("[ERROR] 获取工作目录失败: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "获取工作目录失败"})
-				return
-			}
-			
-			log.Printf("[DEBUG] 当前工作目录: %s", workDir)
-			
-			// 构建assets目录路径
-			assetsDir := filepath.Join(workDir, "..", "assets")
+			// 获取assets目录路径
+			assetsDir := utils.GetAssetsDir()
 			log.Printf("[DEBUG] Assets目录路径: %s", assetsDir)
 			
 			// 创建目标目录
 			imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
 			log.Printf("[DEBUG] 创建目标目录: %s", imgsDir)
-			if err := os.MkdirAll(imgsDir, 0755); err != nil {
-				log.Printf("[ERROR] 创建目录失败: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建图片目录失败: %v", err)})
+			if errMkdir := os.MkdirAll(imgsDir, 0755); errMkdir != nil {
+				log.Printf("[ERROR] 创建目录失败: %v", errMkdir)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("创建图片目录失败: %v", errMkdir)})
 				return
 			}
 			
@@ -479,7 +491,7 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 				log.Printf("[DEBUG] 移动图片: %s -> %s", sourcePath, destPath)
 				
 				// 检查源文件是否存在
-				if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+				if _, errStat := os.Stat(sourcePath); os.IsNotExist(errStat) {
 					log.Printf("[ERROR] 源文件不存在: %s", sourcePath)
 					continue
 				} else {
@@ -487,40 +499,49 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 				}
 				
 				// 确保目标目录存在
-				err = os.MkdirAll(filepath.Dir(destPath), 0755)
-				if err != nil {
-					log.Printf("[ERROR] 创建目标目录失败: %v", err)
+				errDir := os.MkdirAll(filepath.Dir(destPath), 0755)
+				if errDir != nil {
+					log.Printf("[ERROR] 创建目标目录失败: %v", errDir)
 					continue
 				}
 				
 				// 移动文件（复制后删除）
 				// 1. 复制文件
-				sourceFile, err := os.Open(sourcePath)
-				if err != nil {
-					log.Printf("[ERROR] 打开源文件失败: %v", err)
+				sourceFile, errOpen := os.Open(sourcePath)
+				if errOpen != nil {
+					log.Printf("[ERROR] 打开源文件失败: %v", errOpen)
 					continue
 				}
-				
-				destFile, err := os.Create(destPath)
-				if err != nil {
-					log.Printf("[ERROR] 创建目标文件失败: %v", err)
-					sourceFile.Close()
+				defer sourceFile.Close()
+
+				// 创建目标文件
+				destFile, errCreate := os.Create(destPath)
+				if errCreate != nil {
+					log.Printf("[ERROR] 创建目标文件失败: %v", errCreate)
 					continue
 				}
-				
+				defer destFile.Close()
+
 				// 复制内容
-				bytesWritten, err := io.Copy(destFile, sourceFile)
-				sourceFile.Close()
-				destFile.Close()
-				
-				if err != nil {
-					log.Printf("[ERROR] 复制文件内容失败: %v", err)
+				_, errCopy := io.Copy(destFile, sourceFile)
+				if errCopy != nil {
+					log.Printf("[ERROR] 复制文件内容失败: %v", errCopy)
 					continue
 				}
-				log.Printf("[DEBUG] 复制了 %d 字节数据", bytesWritten)
-				
+
+				// 关闭文件以确保所有内容都已写入
+				errSource := sourceFile.Close()
+				if errSource != nil {
+					log.Printf("[ERROR] 关闭源文件失败: %v", errSource)
+				}
+
+				errDest := destFile.Close()
+				if errDest != nil {
+					log.Printf("[ERROR] 关闭目标文件失败: %v", errDest)
+				}
+
 				// 验证目标文件已创建
-				if _, err := os.Stat(destPath); os.IsNotExist(err) {
+				if _, errStat := os.Stat(destPath); os.IsNotExist(errStat) {
 					log.Printf("[ERROR] 复制后目标文件不存在: %s", destPath)
 					continue
 				} else {
@@ -528,11 +549,11 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 				}
 				
 				// 2. 删除原文件
-				if err := os.Remove(sourcePath); err != nil {
-					log.Printf("[WARN] 删除源文件失败，将重试: %v", err)
+				if errRemove := os.Remove(sourcePath); errRemove != nil {
+					log.Printf("[WARN] 删除源文件失败，将重试: %v", errRemove)
 					time.Sleep(100 * time.Millisecond)
-					if err := os.Remove(sourcePath); err != nil {
-						log.Printf("[ERROR] 第二次删除源文件失败: %v", err)
+					if errRetry := os.Remove(sourcePath); errRetry != nil {
+						log.Printf("[ERROR] 第二次删除源文件失败: %v", errRetry)
 					} else {
 						log.Printf("[DEBUG] 第二次尝试删除源文件成功")
 					}
@@ -655,7 +676,8 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 		}
 		
 		// 更新数据库中的资源信息
-		_, err := models.DB.Exec(
+		var errUpdate error
+		_, errUpdate = models.DB.Exec(
 			`UPDATE resources SET 
 				images = ?, poster_image = ?, links = ?,
 				updated_at = ?
@@ -664,9 +686,9 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 			time.Now(), resourceID,
 		)
 		
-		if err != nil {
-			log.Printf("[ERROR] 更新资源图片失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源图片失败: %v", err)})
+		if errUpdate != nil {
+			log.Printf("[ERROR] 更新资源图片失败: %v", errUpdate)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源图片失败: %v", errUpdate)})
 			return
 		}
 		
@@ -679,22 +701,23 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 	resource.UpdatedAt = time.Now()
 
 	// 更新资源
-	_, err := models.DB.Exec(
+	var errUpdate error
+	_, errUpdate = models.DB.Exec(
 		`UPDATE resources SET is_supplement_approval = 'True', supplement = NULL, updated_at = ? WHERE id = ?`,
 		resource.UpdatedAt, resourceID,
 	)
 
 	// 检查错误
-	if err != nil {
-		log.Printf("更新资源is_supplement_approval失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源is_supplement_approval失败: %v", err)})
+	if errUpdate != nil {
+		log.Printf("更新资源is_supplement_approval失败: %v", errUpdate)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源is_supplement_approval失败: %v", errUpdate)})
 		return
 	}
 
 	log.Printf("资源ID: %d 的is_supplement_approval已成功更新为True，supplement已清空", resourceID)
 
 	// 插入审批记录
-	result, err := models.DB.Exec(
+	result, errInsert := models.DB.Exec(
 		`INSERT INTO approval_records (
 			resource_id, status, field_approvals, field_rejections,
 			approved_images, rejected_images, poster_image, notes,
@@ -709,8 +732,8 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 	)
 	
 
-	if err != nil {
-		log.Printf("创建补充内容审批记录失败: %v", err)
+	if errInsert != nil {
+		log.Printf("创建补充内容审批记录失败: %v", errInsert)
 		// 继续处理，不要因为审批记录创建失败而中断流程
 	} else {
 		id, _ := result.LastInsertId()
@@ -720,9 +743,9 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 	
 	// 返回更新后的资源
 	var updatedResource models.Resource
-	err = models.DB.Get(&updatedResource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
-		log.Printf("警告：获取更新后的资源失败，但资源已更新: %v", err)
+	errGet := models.DB.Get(&updatedResource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if errGet != nil {
+		log.Printf("警告：获取更新后的资源失败，但资源已更新: %v", errGet)
 		c.JSON(http.StatusOK, resource)
 	} else {
 		c.JSON(http.StatusOK, updatedResource)
@@ -763,18 +786,18 @@ func convertImagesToWebP(imagePaths []string) {
 	}
 	
 	// 将路径转换为JSON字符串
-	pathsJSON, err := json.Marshal(adjustedPaths)
-	if err != nil {
-		log.Printf("[ERROR] 无法将图片路径转为JSON: %v", err)
+	pathsJSON, errJSON := json.Marshal(adjustedPaths)
+	if errJSON != nil {
+		log.Printf("[ERROR] 无法将图片路径转为JSON: %v", errJSON)
 		return
 	}
 	
 	log.Printf("[DEBUG] 准备调用WebP转换工具，处理以下图片: %s", string(pathsJSON))
 	
 	// 调用WebP转换工具
-	resultPaths, err := utils.ConvertMultipleImages(string(pathsJSON), true, false, 4)
-	if err != nil {
-		log.Printf("[ERROR] 转换WebP过程中发生错误: %v", err)
+	resultPaths, errConvert := utils.ConvertMultipleImages(string(pathsJSON), true, false, 4)
+	if errConvert != nil {
+		log.Printf("[ERROR] 转换WebP过程中发生错误: %v", errConvert)
 		return
 	}
 	
@@ -785,9 +808,9 @@ func convertImagesToWebP(imagePaths []string) {
 // DeleteApprovalRecord 删除审批记录 - 仅管理员可访问
 func DeleteApprovalRecord(c *gin.Context) {
 	// 获取路径参数
-	recordID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		log.Printf("解析审批记录ID失败: %v, 参数: %s", err, c.Param("id"))
+	recordID, errParse := strconv.Atoi(c.Param("id"))
+	if errParse != nil {
+		log.Printf("解析审批记录ID失败: %v, 参数: %s", errParse, c.Param("id"))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的审批记录ID"})
 		return
 	}
@@ -796,9 +819,9 @@ func DeleteApprovalRecord(c *gin.Context) {
 
 	// 检查记录是否存在
 	var record models.ApprovalRecord
-	err = models.DB.Get(&record, `SELECT * FROM approval_records WHERE id = ?`, recordID)
-	if err != nil {
-		log.Printf("未找到ID为%d的审批记录: %v", recordID, err)
+	errGet := models.DB.Get(&record, `SELECT * FROM approval_records WHERE id = ?`, recordID)
+	if errGet != nil {
+		log.Printf("未找到ID为%d的审批记录: %v", recordID, errGet)
 		c.JSON(http.StatusNotFound, gin.H{"error": "未找到审批记录"})
 		return
 	}
@@ -806,17 +829,17 @@ func DeleteApprovalRecord(c *gin.Context) {
 	log.Printf("找到ID为%d的审批记录，资源ID: %d", recordID, record.ResourceID)
 
 	// 删除记录
-	result, err := models.DB.Exec(`DELETE FROM approval_records WHERE id = ?`, recordID)
-	if err != nil {
-		log.Printf("删除ID为%d的审批记录失败: %v", recordID, err)
+	result, errDelete := models.DB.Exec(`DELETE FROM approval_records WHERE id = ?`, recordID)
+	if errDelete != nil {
+		log.Printf("删除ID为%d的审批记录失败: %v", recordID, errDelete)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除审批记录失败"})
 		return
 	}
 
 	// 检查是否真的删除了记录
-	affected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("获取影响行数失败: %v", err)
+	affected, errAffected := result.RowsAffected()
+	if errAffected != nil {
+		log.Printf("获取影响行数失败: %v", errAffected)
 	} else if affected == 0 {
 		log.Printf("ID为%d的审批记录未被删除", recordID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除审批记录失败，没有记录被删除"})
@@ -830,23 +853,23 @@ func DeleteApprovalRecord(c *gin.Context) {
 // SupplementResource 为资源添加补充内容
 func SupplementResource(c *gin.Context) {
 	// 获取路径参数
-	resourceID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	resourceID, errParse := strconv.Atoi(c.Param("id"))
+	if errParse != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
 		return
 	}
 
 	// 解析请求
 	var supplement models.SupplementCreate
-	if err := c.ShouldBindJSON(&supplement); err != nil {
+	if errBind := c.ShouldBindJSON(&supplement); errBind != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
 
 	// 检查资源是否存在并且是已批准的
 	var resource models.Resource
-	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
+	errGet := models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if errGet != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
 		return
 	}
@@ -927,13 +950,13 @@ func SupplementResource(c *gin.Context) {
 				}
 				
 				// 更新资源，添加补充内容
-				_, err = models.DB.Exec(
+				_, errUpdate := models.DB.Exec(
 					`UPDATE resources SET supplement = ?, is_supplement_approval = ?, updated_at = ? WHERE id = ?`,
 					supplementData, false, time.Now(), resourceID,
 				)
 				
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("添加补充内容失败: %v", err)})
+				if errUpdate != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("添加补充内容失败: %v", errUpdate)})
 					return
 				}
 				
@@ -956,13 +979,13 @@ func SupplementResource(c *gin.Context) {
 	}
 
 	// 更新资源，添加补充内容
-	_, err = models.DB.Exec(
+	_, errUpdate := models.DB.Exec(
 		`UPDATE resources SET supplement = ?, is_supplement_approval = ?, updated_at = ? WHERE id = ?`,
 		supplementData, false, time.Now(), resourceID,
 	)
 
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("添加补充内容失败: %v", err)})
+	if errUpdate != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("添加补充内容失败: %v", errUpdate)})
 		return
 	}
 
@@ -976,16 +999,16 @@ func SupplementResource(c *gin.Context) {
 // GetResourceSupplement 获取资源的补充内容 - 仅管理员可访问
 func GetResourceSupplement(c *gin.Context) {
 	// 获取路径参数
-	resourceID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	resourceID, errParse := strconv.Atoi(c.Param("id"))
+	if errParse != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
 		return
 	}
 
 	// 查询资源
 	var resource models.Resource
-	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
+	errGet := models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if errGet != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
 		return
 	}
@@ -1006,10 +1029,10 @@ func GetPendingSupplementResources(c *gin.Context) {
 
 	// 查询所有包含补充内容的资源
 	var resources []models.Resource
-	err := models.DB.Select(&resources, 
+	errSelect := models.DB.Select(&resources, 
 		`SELECT * FROM resources WHERE supplement IS NOT NULL LIMIT ? OFFSET ?`,
 		limit, skip)
-	if err != nil {
+	if errSelect != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询待审批补充内容资源失败"})
 		return
 	}
@@ -1048,8 +1071,8 @@ func DeleteApprovalRecords(c *gin.Context) {
 		IDs []int `json:"ids" binding:"required"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil {
-		log.Printf("解析请求体失败: %v", err)
+	if errBind := c.ShouldBindJSON(&request); errBind != nil {
+		log.Printf("解析请求体失败: %v", errBind)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
@@ -1068,23 +1091,23 @@ func DeleteApprovalRecords(c *gin.Context) {
 	for _, id := range request.IDs {
 		// 检查记录是否存在
 		var count int
-		err := models.DB.Get(&count, `SELECT COUNT(*) FROM approval_records WHERE id = ?`, id)
-		if err != nil || count == 0 {
+		errCount := models.DB.Get(&count, `SELECT COUNT(*) FROM approval_records WHERE id = ?`, id)
+		if errCount != nil || count == 0 {
 			log.Printf("未找到ID为%d的审批记录", id)
 			failedIDs = append(failedIDs, id)
 			continue
 		}
 
 		// 删除记录
-		result, err := models.DB.Exec(`DELETE FROM approval_records WHERE id = ?`, id)
-		if err != nil {
-			log.Printf("删除ID为%d的审批记录失败: %v", id, err)
+		result, errDelete := models.DB.Exec(`DELETE FROM approval_records WHERE id = ?`, id)
+		if errDelete != nil {
+			log.Printf("删除ID为%d的审批记录失败: %v", id, errDelete)
 			failedIDs = append(failedIDs, id)
 			continue
 		}
 
-		affected, err := result.RowsAffected()
-		if err != nil || affected == 0 {
+		affected, errAffected := result.RowsAffected()
+		if errAffected != nil || affected == 0 {
 			log.Printf("ID为%d的审批记录未被删除", id)
 			failedIDs = append(failedIDs, id)
 			continue
@@ -1110,9 +1133,9 @@ func GetApprovalRecords(c *gin.Context) {
 
 	// 获取审批记录总数
 	var count int
-	err := models.DB.Get(&count, "SELECT COUNT(*) FROM approval_records")
-	if err != nil {
-		log.Printf("获取审批记录总数失败: %v", err)
+	errCount := models.DB.Get(&count, "SELECT COUNT(*) FROM approval_records")
+	if errCount != nil {
+		log.Printf("获取审批记录总数失败: %v", errCount)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取审批记录总数失败"})
 		return
 	}
@@ -1136,9 +1159,9 @@ func GetApprovalRecords(c *gin.Context) {
 		LIMIT ? OFFSET ?
 	`
 	
-	rows, err := models.DB.Queryx(query, limit, skip)
-	if err != nil {
-		log.Printf("查询审批记录失败: %v", err)
+	rows, errQuery := models.DB.Queryx(query, limit, skip)
+	if errQuery != nil {
+		log.Printf("查询审批记录失败: %v", errQuery)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询审批记录失败"})
 		return
 	}
@@ -1156,15 +1179,15 @@ func GetApprovalRecords(c *gin.Context) {
 	records := []ApprovalRecordResponse{}
 	for rows.Next() {
 		var record ApprovalRecordResponse
-		if err := rows.StructScan(&record); err != nil {
-			log.Printf("扫描审批记录失败: %v", err)
+		if errScan := rows.StructScan(&record); errScan != nil {
+			log.Printf("扫描审批记录失败: %v", errScan)
 			continue
 		}
 		records = append(records, record)
 	}
 
-	if err := rows.Err(); err != nil {
-		log.Printf("遍历审批记录结果集失败: %v", err)
+	if errRows := rows.Err(); errRows != nil {
+		log.Printf("遍历审批记录结果集失败: %v", errRows)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "处理审批记录失败"})
 		return
 	}
@@ -1179,27 +1202,27 @@ func GetApprovalRecords(c *gin.Context) {
 // GetResourceApprovalRecords 获取单个资源的审批记录 - 仅管理员可访问
 func GetResourceApprovalRecords(c *gin.Context) {
 	// 获取资源ID
-	resourceID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		log.Printf("无效的资源ID: %v", err)
+	resourceID, errParse := strconv.Atoi(c.Param("id"))
+	if errParse != nil {
+		log.Printf("无效的资源ID: %v", errParse)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
 		return
 	}
 
 	// 检查资源是否存在
 	var resource models.Resource
-	err = models.DB.Get(&resource, "SELECT * FROM resources WHERE id = ?", resourceID)
-	if err != nil {
-		log.Printf("资源未找到: %v", err)
+	errGet := models.DB.Get(&resource, "SELECT * FROM resources WHERE id = ?", resourceID)
+	if errGet != nil {
+		log.Printf("资源未找到: %v", errGet)
 		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
 		return
 	}
 
 	// 查询该资源的审批记录
 	var records []models.ApprovalRecord
-	err = models.DB.Select(&records, "SELECT * FROM approval_records WHERE resource_id = ? ORDER BY created_at DESC", resourceID)
-	if err != nil {
-		log.Printf("查询资源审批记录失败: %v", err)
+	errSelect := models.DB.Select(&records, "SELECT * FROM approval_records WHERE resource_id = ? ORDER BY created_at DESC", resourceID)
+	if errSelect != nil {
+		log.Printf("查询资源审批记录失败: %v", errSelect)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "查询资源审批记录失败"})
 		return
 	}
