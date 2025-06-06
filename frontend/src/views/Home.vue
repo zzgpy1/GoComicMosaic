@@ -195,6 +195,9 @@ const totalItems = ref(0)
 const showCustomPageSize = ref(false)
 const customPageSize = ref(12)
 
+// 添加一个reactive变量来跟踪初始加载状态
+const initialLoadDone = ref(false)
+
 // 检测是否为移动设备
 const isMobile = computed(() => {
   return window.innerWidth < 768
@@ -273,6 +276,8 @@ const fetchResources = async () => {
       params.search = route.query.search
     }
     
+    console.log(`Fetching resources with params:`, params);
+    
     // 使用公共API获取已审批的资源，添加分页和排序参数
     const response = await axios.get('/api/resources/public', { params })
     
@@ -288,6 +293,7 @@ const fetchResources = async () => {
     }
     
     console.log(`Fetched resources: ${resources.value.length} items, page ${currentPage.value}/${totalPages.value}`)
+    initialLoadDone.value = true // 标记初始加载已完成
   } catch (err) {
     console.error('获取资源失败:', err)
     error.value = '获取资源列表失败，请稍后重试'
@@ -396,17 +402,20 @@ const applyCustomPageSize = () => {
 }
 
 // 监听URL参数中的搜索词
-watch(() => route.query.search, (newSearch) => {
-  if (newSearch) {
-    // 有搜索参数时，重置到第一页并获取资源
-    currentPage.value = 1 // 重置到第一页
-    fetchResources()
-  } else if (route.fullPath === '/') {
-    // 当回到主页且没有搜索参数时，也需要重新获取资源（清除搜索）
-    currentPage.value = 1
-    fetchResources()
+watch(() => route.query.search, (newSearch, oldSearch) => {
+  // 只有当搜索条件变化时才触发请求，避免初始化时重复调用
+  if (newSearch !== oldSearch) {
+    if (newSearch) {
+      // 有搜索参数时，重置到第一页并获取资源
+      currentPage.value = 1 // 重置到第一页
+      fetchResources()
+    } else if (route.fullPath === '/') {
+      // 当回到主页且没有搜索参数时，重新获取资源（清除搜索）
+      currentPage.value = 1
+      fetchResources()
+    }
   }
-}, { immediate: true })
+})
 
 onMounted(() => {
   // 根据设备类型确定初始的每页显示数量
@@ -449,6 +458,14 @@ onMounted(() => {
   
   // 监听窗口大小变化，更新页码显示
   window.addEventListener('resize', handleResize)
+  
+  // 添加路由事件监听，确保在页面重新激活时不会重复加载资源
+  const removeRouterListener = router.afterEach((to, from) => {
+    // 如果是从详情页回到首页，且已经加载过资源，则不重新加载
+    if (to.path === '/' && from.name === 'ResourceDetail' && initialLoadDone.value) {
+      console.log('从详情页返回主页，保持当前资源列表状态');
+    }
+  });
 })
 
 // 处理窗口大小变化，更新页码显示
@@ -460,6 +477,9 @@ const handleResize = () => {
 // 组件卸载时移除事件监听
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  if (typeof removeRouterListener === 'function') {
+    removeRouterListener()
+  }
 })
 </script>
 

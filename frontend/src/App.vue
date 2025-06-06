@@ -62,25 +62,44 @@
       <div class="container footer-inner">
         <!-- 页脚布局 -->
         <div class="footer-row">
-          <router-link to="/about" class="footer-link">关于我们</router-link>
-          <a href="https://t.me/xueximeng" target="_blank" class="footer-link" title="加入Telegram群组">
-            <i class="bi bi-telegram"></i>
-          </a>
-          <a href="https://github.com/fish2018/GoComicMosaic" target="_blank" class="footer-link" title="查看GitHub源码">
-            <i class="bi bi-github"></i>
-          </a>
-          <a href="/streams" target="_blank" class="footer-link">在线点播</a>
-          <a href="https://mdsub.top/" target="_blank" class="footer-link">漫迪小站</a>
-          <a href="https://www.kangfuzhongx.in/" target="_blank" class="footer-link">三次元成瘾者康复中心</a>
-          <span class="footer-link">总访问量 <span id="busuanzi_value_site_pv">0</span></span>
+          <template v-if="footerSettings">
+            <!-- 动态生成链接 -->
+            <template v-for="(link, index) in footerSettings.links" :key="index">
+              <!-- 内部链接 -->
+              <router-link v-if="link.type === 'internal'" :to="link.url" class="footer-link" :title="link.title">
+                <i v-if="link.icon" :class="link.icon"></i>
+                <span>{{ link.text }}</span>
+              </router-link>
+              
+              <!-- 外部链接 -->
+              <a v-else :href="link.url" target="_blank" class="footer-link" :title="link.title">
+                <i v-if="link.icon" :class="link.icon"></i>
+                <span v-if="!link.icon">{{ link.text }}</span>
+              </a>
+            </template>
+            
+            <!-- 访问统计 -->
+            <span class="footer-link" v-if="footerSettings.show_visitor_count">总访问量 <span id="busuanzi_value_site_pv">0</span></span>
+          </template>
+          
+          <!-- 在设置加载前的默认链接，或加载失败时的回退链接 -->
+          <template v-else>
+            <router-link to="/about" class="footer-link">关于我们</router-link>
+            <a href="https://t.me/xueximeng" target="_blank" class="footer-link" title="加入Telegram群组">
+              <i class="bi bi-telegram"></i>
+            </a>
+            <a href="https://github.com/fish2018/GoComicMosaic" target="_blank" class="footer-link" title="查看GitHub源码">
+              <i class="bi bi-github"></i>
+            </a>
+          </template>
         </div>
         
         <!-- 分隔线 -->
         <div class="footer-divider"></div>
         
-        
+        <!-- 版权信息 -->
         <div class="copyright">
-          <p>&copy; 2025 美漫资源共建. 保留所有权利</p>
+          <p>{{ footerSettings?.copyright || '&copy; 2025 美漫资源共建. 保留所有权利' }}</p>
         </div>
       </div>
     </footer>
@@ -106,12 +125,14 @@ import { isAuthenticated, getCurrentUser, logout, setupAxiosInterceptors } from 
 import { useRoute, useRouter } from 'vue-router'
 import LocalSearch from './components/LocalSearch.vue'
 import axios from 'axios'
+import { getSiteSettings } from './utils/api'
 
 const route = useRoute()
 const router = useRouter()
 const isLoggedIn = ref(false)
 const currentUser = ref({})
 const footerPreloaded = ref(false)
+const footerSettings = ref(null)
 
 // 计算当前是否在管理员页面
 const isAdminPage = computed(() => {
@@ -128,6 +149,30 @@ const checkAuthState = () => {
 const handleLogout = () => {
   logout()
   checkAuthState()
+}
+
+// 获取页脚设置
+const loadFooterSettings = async () => {
+  try {
+    const response = await getSiteSettings('footer')
+    footerSettings.value = response.setting_value
+    console.log('页脚设置加载成功:', footerSettings.value)
+  } catch (error) {
+    console.error('获取页脚设置失败:', error)
+    // 使用默认设置
+    footerSettings.value = {
+      links: [
+        { text: "关于我们", url: "/about", type: "internal" },
+        { text: "Telegram", url: "https://t.me/xueximeng", icon: "bi bi-telegram", type: "external", title: "加入Telegram群组" },
+        { text: "GitHub", url: "https://github.com/fish2018/GoComicMosaic", icon: "bi bi-github", type: "external", title: "查看GitHub源码" },
+        { text: "在线点播", url: "/streams", type: "internal" },
+        { text: "漫迪小站", url: "https://mdsub.top/", type: "external" },
+        { text: "三次元成瘾者康复中心", url: "https://www.kangfuzhongx.in/", type: "external" },
+      ],
+      copyright: "© 2025 美漫资源共建. 保留所有权利",
+      show_visitor_count: true
+    }
+  }
 }
 
 // 滚动到页面顶部
@@ -267,6 +312,9 @@ onMounted(() => {
     logout()
     isLoggedIn.value = false
   })
+  
+  // 加载页脚设置
+  loadFooterSettings()
   
   // 监听滚动事件
   window.addEventListener('scroll', handleScroll, { passive: true })

@@ -106,6 +106,141 @@
         </div>
       </div>
       
+      <!-- 网站设置卡片 -->
+      <div class="admin-card">
+        <div class="card-header">
+          <h4><i class="bi bi-gear-fill"></i> 网站设置</h4>
+          <button 
+            type="button" 
+            class="btn-custom btn-outline toggle-btn" 
+            @click="showSiteSettings = !showSiteSettings"
+          >
+            <i :class="showSiteSettings ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+            <span class="btn-text">{{ showSiteSettings ? '收起' : '展开' }}</span>
+          </button>
+        </div>
+        <div class="card-body" v-if="showSiteSettings">
+          <div v-if="settingsSuccess" class="success-message">
+            <i class="bi bi-check-circle-fill"></i>
+            网站设置更新成功
+          </div>
+          <div v-if="settingsError" class="error-message">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {{ settingsError }}
+          </div>
+          
+          <!-- 页脚设置部分 -->
+          <div class="settings-section">
+            <h5 class="section-title">页脚设置</h5>
+            
+            <!-- 版权信息 -->
+            <div class="form-group">
+              <label class="form-label">版权信息</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-c-circle"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="footerSettings.copyright" 
+                  placeholder="版权信息文本"
+                >
+              </div>
+            </div>
+            
+            <!-- 显示访问统计 -->
+            <div class="form-group">
+              <div class="checkbox-wrapper">
+                <input id="show_visitor_count" class="custom-checkbox" type="checkbox" v-model="footerSettings.show_visitor_count">
+                <label for="show_visitor_count" class="checkbox-label">显示访问统计</label>
+              </div>
+            </div>
+            
+            <!-- 页脚链接列表 -->
+            <div class="form-group">
+              <label class="form-label">页脚链接</label>
+              <div class="links-container">
+                <div v-for="(link, index) in footerSettings.links" :key="index" class="link-item">
+                  <div class="link-fields">
+                    <!-- 链接文本 -->
+                    <div class="link-field">
+                      <label>显示文本</label>
+                      <input type="text" v-model="link.text" class="custom-input" placeholder="文本">
+                    </div>
+                    
+                    <!-- 链接URL -->
+                    <div class="link-field">
+                      <label>URL</label>
+                      <input type="text" v-model="link.url" class="custom-input" placeholder="链接地址">
+                    </div>
+                    
+                    <!-- 链接类型 -->
+                    <div class="link-field">
+                      <label>类型</label>
+                      <select v-model="link.type" class="custom-input">
+                        <option value="internal">内部链接</option>
+                        <option value="external">外部链接</option>
+                      </select>
+                    </div>
+                    
+                    <!-- 图标 (可选) -->
+                    <div class="link-field">
+                      <label>图标 (可选)</label>
+                      <div class="input-group">
+                        <div class="input-prefix" v-if="link.icon">
+                          <i :class="link.icon"></i>
+                        </div>
+                        <input type="text" v-model="link.icon" class="custom-input" placeholder="Bootstrap图标类名 (如: bi-github)">
+                      </div>
+                    </div>
+                    
+                    <!-- 提示文本 -->
+                    <div class="link-field">
+                      <label>提示文本 (可选)</label>
+                      <input type="text" v-model="link.title" class="custom-input" placeholder="鼠标悬停提示文本">
+                    </div>
+                  </div>
+                  
+                  <!-- 删除按钮 -->
+                  <button 
+                    type="button" 
+                    class="btn-custom btn-accent btn-sm" 
+                    @click="removeLink(index)"
+                    title="删除此链接"
+                  >
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+                
+                <!-- 添加新链接按钮 -->
+                <button 
+                  type="button" 
+                  class="btn-custom btn-outline btn-sm mt-2" 
+                  @click="addNewLink"
+                >
+                  <i class="bi bi-plus-circle"></i> 添加链接
+                </button>
+              </div>
+            </div>
+            
+            <!-- 保存按钮 -->
+            <div class="form-actions">
+              <button 
+                type="button" 
+                class="btn-custom btn-primary" 
+                @click="saveFooterSettings"
+                :disabled="settingsLoading"
+              >
+                <div v-if="settingsLoading" class="spinner"></div>
+                <i class="bi bi-save"></i>
+                <span class="btn-text">{{ settingsLoading ? '保存中...' : '保存设置' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- 待审批资源卡片 -->
       <div class="admin-card">
         <div class="card-header">
@@ -2326,6 +2461,70 @@ onMounted(async () => {
   .modal-actions .btn-custom i {
     margin: 0;
     font-size: 1.25rem;
+  }
+}
+
+/* 网站设置相关样式 */
+.settings-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--gray-color);
+  color: var(--primary-color);
+}
+
+.links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.link-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.link-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  flex: 1;
+}
+
+.link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.link-field label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-color);
+}
+
+.checkbox-label {
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .link-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .link-item {
+    flex-direction: column;
   }
 }
 </style> 
