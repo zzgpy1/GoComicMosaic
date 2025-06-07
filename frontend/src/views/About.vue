@@ -8,38 +8,18 @@
     <div class="about-content">
       <div class="about-section">
         <div class="section-icon">
-          <i class="bi bi-collection-fill"></i>
+          <i :class="`bi bi-${aboutConfig.siteIntro.icon || 'collection-fill'}`"></i>
         </div>
-        <h2 class="section-title">本站介绍</h2>
-        <p class="section-text">
-          欢迎来到美漫资源共建平台，我们致力于为美漫爱好者提供一个便捷、高效、安全的资源分享平台。
-        </p>
+        <h2 class="section-title">{{ aboutConfig.siteIntro.title || '本站介绍' }}</h2>
+        <p class="section-text" v-html="aboutConfig.siteIntro.description || '欢迎来到美漫资源共建平台，我们致力于为美漫爱好者提供一个便捷、高效、安全的资源分享平台。'"></p>
         
         <div class="feature-grid">
-          <div class="feature-item">
+          <div class="feature-item" v-for="item in aboutConfig.featureItems" :key="item.id">
             <div class="feature-icon">
-              <i class="bi bi-bullseye"></i>
+              <i :class="`bi bi-${item.icon || 'check-circle'}`"></i>
             </div>
-            <h3>我们的使命</h3>
-            <p>通过社区的力量，让优质资源得到更好的整理与传播，让每一位爱好者都能便捷地找到自己喜爱的内容。</p>
-          </div>
-          
-          <div class="feature-item">
-            <div class="feature-icon">
-              <i class="bi bi-stars"></i>
-            </div>
-            <h3>我们的价值观</h3>
-            <p><strong>开放共享</strong> - 鼓励用户分享优质资源<br>
-              <strong>品质保证</strong> - 筛选审核每个资源内容<br>
-              <strong>用户至上</strong> - 持续优化平台体验</p>
-          </div>
-          
-          <div class="feature-item">
-            <div class="feature-icon">
-              <i class="bi bi-people-fill"></i>
-            </div>
-            <h3>我们的团队</h3>
-            <p>我们是一群热爱动漫文化的技术爱好者，希望通过技术手段让资源分享变得更加简单高效。</p>
+            <h3>{{ item.title }}</h3>
+            <p v-html="item.description"></p>
           </div>
         </div>
       </div>
@@ -47,18 +27,12 @@
       <div class="contact-section">
         <div class="contact-container">
           <div class="contact-left">
-        <h2 class="section-title">联系我们</h2>
-        <p class="section-text">
-          如有任何问题、建议或合作意向，欢迎通过以下方式联系我们。我们非常重视每一位用户的反馈。
-        </p>
-        <div class="contact-methods">
-          <div class="contact-item">
-            <i class="bi bi-envelope-fill"></i>
-                <span>admin@xueximeng.com</span>
-          </div>
-          <div class="contact-item">
-                <i class="bi bi-github"></i>
-                <span>GitHub: fish2018</span>
+            <h2 class="section-title">{{ aboutConfig.contactSection.title || '联系我们' }}</h2>
+            <p class="section-text" v-html="aboutConfig.contactSection.description || '如有任何问题、建议或合作意向，欢迎通过以下方式联系我们。我们非常重视每一位用户的反馈。'"></p>
+            <div class="contact-methods">
+              <div class="contact-item" v-for="item in aboutConfig.contactItems" :key="item.id">
+                <i :class="`bi bi-${item.icon || 'envelope'}`"></i>
+                <span>{{ item.text }}</span>
               </div>
             </div>
           </div>
@@ -69,7 +43,7 @@
               <div class="circle circle-3"></div>
             </div>
             <div class="contact-icon">
-              <i class="bi bi-chat-text-fill"></i>
+              <i :class="`bi bi-${aboutConfig.contactSection.icon || 'chat-text-fill'}`"></i>
             </div>
           </div>
         </div>
@@ -77,6 +51,44 @@
     </div>
   </div>
 </template>
+
+<script>
+import infoManager from '../utils/InfoManager';
+
+export default {
+  name: 'AboutPage',
+  data() {
+    return {
+      aboutConfig: {
+        siteIntro: {
+          title: '',
+          description: '',
+          icon: ''
+        },
+        featureItems: [],
+        contactSection: {
+          title: '',
+          description: '',
+          icon: ''
+        },
+        contactItems: []
+      },
+      loading: true
+    };
+  },
+  async mounted() {
+    try {
+      // 加载About页面配置
+      const config = await infoManager.getAboutPageConfig();
+      this.aboutConfig = config;
+    } catch (error) {
+      console.error('加载About页面配置失败:', error);
+    } finally {
+      this.loading = false;
+    }
+  }
+};
+</script>
 
 <style scoped>
 .about-container {

@@ -119,6 +119,67 @@ class InfoManager {
       console.log('从服务器获取最新网站信息');
       const response = await getSiteSettings('info');
       this.cache = response.setting_value;
+      
+      // 为About页面配置设置默认值（如果不存在）
+      if (!this.cache.aboutPageConfig) {
+        this.cache.aboutPageConfig = {
+          // 本站介绍部分
+          siteIntro: {
+            title: '本站介绍',
+            description: '欢迎来到美漫资源共建平台，我们致力于为美漫爱好者提供一个便捷、高效、安全的资源分享平台。',
+            icon: 'collection-fill'
+          },
+          // 特性项目
+          featureItems: [
+            {
+              id: 1,
+              title: '我们的使命',
+              description: '通过社区的力量，让优质资源得到更好的整理与传播，让每一位爱好者都能便捷地找到自己喜爱的内容。',
+              icon: 'bullseye'
+            },
+            {
+              id: 2,
+              title: '我们的价值观',
+              description: '<strong>开放共享</strong> - 鼓励用户分享优质资源<br><strong>品质保证</strong> - 筛选审核每个资源内容<br><strong>用户至上</strong> - 持续优化平台体验',
+              icon: 'stars'
+            },
+            {
+              id: 3,
+              title: '我们的团队',
+              description: '我们是一群热爱动漫文化的技术爱好者，希望通过技术手段让资源分享变得更加简单高效。',
+              icon: 'people-fill'
+            }
+          ],
+          // 联系我们部分
+          contactSection: {
+            title: '联系我们',
+            description: '如有任何问题、建议或合作意向，欢迎通过以下方式联系我们。我们非常重视每一位用户的反馈。',
+            icon: 'chat-text-fill'
+          },
+          // 联系方式列表
+          contactItems: [
+            {
+              id: 1,
+              text: 'admin@xueximeng.com',
+              icon: 'envelope-fill'
+            },
+            {
+              id: 2,
+              text: 'GitHub: fish2018',
+              icon: 'github'
+            }
+          ]
+        };
+      } else {
+        // 确保关键数组存在
+        if (!this.cache.aboutPageConfig.featureItems) {
+          this.cache.aboutPageConfig.featureItems = [];
+        }
+        if (!this.cache.aboutPageConfig.contactItems) {
+          this.cache.aboutPageConfig.contactItems = [];
+        }
+      }
+      
       this.lastFetchTime = Date.now();
       
       // 保存到本地存储
@@ -219,6 +280,14 @@ class InfoManager {
     this.lastFetchTime = 0;
     localStorage.removeItem(STORAGE_KEY);
     console.log('网站信息缓存已清除');
+  }
+  
+  /**
+   * 获取About页面配置
+   */
+  async getAboutPageConfig() {
+    const info = await this.getInfo();
+    return info.aboutPageConfig || {};
   }
 }
 

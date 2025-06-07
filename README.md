@@ -100,7 +100,8 @@
 ![image|690x397](docs/27.jpg)
 
 ## 全面支持管理后台设置网站信息
-![image|690x397](docs/28.gif)
+![image|690x397](docs/28.gif)  
+![image|690x397](docs/29.gif)  
 
 ---
 
