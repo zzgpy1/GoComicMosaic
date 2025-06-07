@@ -190,13 +190,11 @@ const sortBy = ref('created_at') // 默认按创建时间排序
 const currentPage = ref(1)
 const pageSize = ref(12) // 默认每页12条
 const totalItems = ref(0)
+const initialLoadDone = ref(false) // 使用ref管理初始加载状态
 
 // 添加用于自定义每页显示数量的变量
 const showCustomPageSize = ref(false)
 const customPageSize = ref(12)
-
-// 添加一个reactive变量来跟踪初始加载状态
-const initialLoadDone = ref(false)
 
 // 检测是否为移动设备
 const isMobile = computed(() => {
@@ -293,7 +291,7 @@ const fetchResources = async () => {
     }
     
     console.log(`Fetched resources: ${resources.value.length} items, page ${currentPage.value}/${totalPages.value}`)
-    initialLoadDone.value = true // 标记初始加载已完成
+    initialLoadDone.value = true // 标记已完成初始加载
   } catch (err) {
     console.error('获取资源失败:', err)
     error.value = '获取资源列表失败，请稍后重试'
@@ -442,7 +440,10 @@ onMounted(() => {
     currentPage.value = parseInt(savedCurrentPage, 10)
   }
   
-  fetchResources()
+  // 只在组件首次挂载且未加载数据时获取资源
+  if (!initialLoadDone.value) {
+    fetchResources()
+  }
   
   // 检查URL查询参数，显示删除成功提示
   if (route.query.deleted === 'success') {

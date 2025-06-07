@@ -106,6 +106,420 @@
         </div>
       </div>
       
+      <!-- 网站设置卡片 -->
+      <div class="admin-card">
+        <div class="card-header">
+          <h4><i class="bi bi-gear-fill"></i> 网站设置</h4>
+          <button 
+            type="button" 
+            class="btn-custom btn-outline toggle-btn" 
+            @click="showSiteSettings = !showSiteSettings"
+          >
+            <i :class="showSiteSettings ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+            <span class="btn-text">{{ showSiteSettings ? '收起' : '展开' }}</span>
+          </button>
+        </div>
+        <div class="card-body" v-if="showSiteSettings">
+          <div v-if="settingsSuccess" class="success-message">
+            <i class="bi bi-check-circle-fill"></i>
+            网站设置更新成功
+          </div>
+          <div v-if="settingsError" class="error-message">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {{ settingsError }}
+          </div>
+          
+          <!-- 基本信息设置部分 -->
+          <div class="settings-section">
+            <h5 class="section-title">基本信息设置</h5>
+            
+            <!-- 网站图标 (favicon) -->
+            <div class="form-group">
+              <label class="form-label">网站图标 (favicon)</label>
+              <div class="favicon-uploader">
+                <!-- 文件输入框（隐藏） -->
+                <input 
+                  type="file" 
+                  id="faviconUpload" 
+                  ref="faviconUploadRef" 
+                  class="hidden-upload" 
+                  accept="image/x-icon,image/png,image/jpeg,image/svg+xml"
+                  @change="handleFaviconUpload"
+                />
+                
+                <!-- 上传区域 -->
+                <div 
+                  class="favicon-upload-area"
+                  :class="{'has-preview': siteFaviconPreview || (footerSettings.favicon && !siteFaviconFile)}"
+                  @click="triggerFileInput"
+                >
+                  <!-- 预览图片 -->
+                  <img 
+                    v-if="siteFaviconPreview || (footerSettings.favicon && !siteFaviconFile)" 
+                    :src="siteFaviconPreview || (footerSettings.favicon ? `${footerSettings.favicon}?t=${Date.now()}` : '')" 
+                    alt="网站图标预览"
+                    class="favicon-preview-img"
+                  />
+                  
+                  <!-- 空状态提示 -->
+                  <div v-else class="favicon-empty-state">
+                    <i class="bi bi-upload"></i>
+                    <span>点击上传图标</span>
+                  </div>
+                  
+                  <!-- 上传按钮 - 中央覆盖层 -->
+                  <div class="favicon-actions">
+                    <button 
+                      type="button" 
+                      class="favicon-action-btn upload-btn" 
+                      @click.stop="triggerFileInput" 
+                      title="上传新图标"
+                    >
+                      <i class="bi bi-arrow-up-circle"></i>
+                    </button>
+                  </div>
+                  </div>
+                
+                <div class="form-text">
+                  支持.ico、.png、.jpg和.svg格式，推荐尺寸为32x32或64x64像素。上传后的图标路径为：/assets/public/favicon.ico
+                </div>
+              </div>
+            </div>
+            
+            <!-- 网站标题 -->
+            <div class="form-group">
+              <label class="form-label">网站标题</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-type-h1"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="footerSettings.title" 
+                  placeholder="网站标题"
+                >
+              </div>
+              <div class="form-text">显示在浏览器标签页和搜索结果中的网站标题</div>
+            </div>
+            
+            <!-- Logo文本 -->
+            <div class="form-group">
+              <label class="form-label">Logo文本</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-card-heading"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="footerSettings.logoText" 
+                  placeholder="左上角Logo旁的文本"
+                >
+              </div>
+              <div class="form-text">网站左上角Logo旁边显示的文本</div>
+            </div>
+            
+            <!-- 网站描述 -->
+            <div class="form-group">
+              <label class="form-label">网站描述</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-file-text"></i>
+                </div>
+                <textarea 
+                  class="custom-input" 
+                  v-model="footerSettings.description" 
+                  placeholder="网站描述"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="form-text">用于SEO的网站描述，显示在搜索引擎结果中</div>
+            </div>
+            
+            <!-- 关键词 -->
+            <div class="form-group">
+              <label class="form-label">关键词</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-tags"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="footerSettings.keywords" 
+                  placeholder="关键词（用逗号分隔）"
+                >
+              </div>
+              <div class="form-text">用于SEO的关键词，使用逗号分隔</div>
+            </div>
+          </div>
+          
+          <!-- 路由Meta信息设置 -->
+          <div class="settings-section">
+            <h5 class="section-title">页面元信息设置</h5>
+            <div class="section-description">
+              设置各个页面的标题、描述和关键词。这些信息将显示在浏览器标签页和搜索引擎结果中。
+              如果不设置，将使用默认值。
+            </div>
+            
+            <!-- 页面选择器 -->
+            <div class="form-group">
+              <label class="form-label">选择页面</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-file-earmark-text"></i>
+                </div>
+                <select 
+                  class="custom-input" 
+                  v-model="selectedPage"
+                  @change="selectPage"
+                >
+                  <option value="home">首页</option>
+                  <option value="resource_detail">资源详情页</option>
+                  <option value="submit_resource">提交资源页</option>
+                  <option value="login">登录页</option>
+                  <option value="admin">管理后台页</option>
+                  <option value="resource_review">资源审核页</option>
+                  <option value="about">关于我们页</option>
+                  <option value="streams">流媒体内容页</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- 页面标题 -->
+            <div class="form-group">
+              <label class="form-label">页面标题</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-type-h2"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="currentPageMeta.title" 
+                  :placeholder="getDefaultPageMeta(selectedPage).title"
+                >
+              </div>
+              <div class="form-text">
+                在浏览器标签页显示的标题。留空则使用默认值：{{ getDefaultPageMeta(selectedPage).title }}
+              </div>
+            </div>
+            
+            <!-- 页面描述 -->
+            <div class="form-group">
+              <label class="form-label">页面描述</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-card-text"></i>
+                </div>
+                <textarea 
+                  class="custom-input" 
+                  v-model="currentPageMeta.description" 
+                  :placeholder="getDefaultPageMeta(selectedPage).description"
+                  rows="3"
+                ></textarea>
+              </div>
+              <div class="form-text">用于SEO的页面描述</div>
+            </div>
+            
+            <!-- 页面关键词 -->
+            <div class="form-group">
+              <label class="form-label">页面关键词</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-tag"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="currentPageMeta.keywords" 
+                  :placeholder="getDefaultPageMeta(selectedPage).keywords"
+                >
+              </div>
+              <div class="form-text">用于SEO的页面关键词，使用逗号分隔</div>
+            </div>
+          </div>
+          
+          <!-- 页脚设置部分 -->
+          <div class="settings-section">
+            <h5 class="section-title">页脚设置</h5>
+            
+            <!-- 显示访问统计 - 移到最上方 -->
+            <div class="form-group">
+              <label class="form-label">显示访问统计</label>
+              <div class="checkbox-wrapper horizontal-display">
+                <input id="show_visitor_count" class="custom-checkbox" type="checkbox" v-model="footerSettings.show_visitor_count">
+                <label for="show_visitor_count"></label>
+                <span class="checkbox-text">在网站底部显示访问人数统计</span>
+              </div>
+            </div>
+            
+            <!-- 版权信息 -->
+            <div class="form-group">
+              <label class="form-label">版权信息</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-c-circle"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="footerSettings.copyright" 
+                  placeholder="版权信息文本"
+                >
+              </div>
+            </div>
+            
+            <!-- 页脚链接列表 -->
+            <div class="form-group">
+              <label class="form-label">页脚链接</label>
+              <div class="scroll-container links-wrapper">
+                <div class="links-container">
+                  <!-- 标签头部，只显示一次 -->
+                  <div class="link-header">
+                    <div class="drag-handle-placeholder"></div>
+                    <div class="link-field-header">显示文本</div>
+                    <div class="link-field-header">URL</div>
+                    <div class="link-field-header">图标</div>
+                    <div class="link-field-header">提示文本</div>
+                    <div class="link-field-header actions-header"></div>
+                  </div>
+                  
+                  <!-- 链接列表，支持拖拽排序 -->
+                  <draggable
+                    v-model="footerSettings.links"
+                    item-key="id"
+                    handle=".drag-handle"
+                    ghost-class="ghost-item"
+                    @end="onDragEnd"
+                  >
+                    <template #item="{ element, index }">
+                      <div :key="index" class="link-item">
+                        <div class="drag-handle">
+                          <i class="bi bi-grip-vertical"></i>
+                        </div>
+                        <div class="link-fields">
+                          <!-- 链接文本 -->
+                          <div class="link-field" data-label="显示文本">
+                            <input type="text" v-model="element.text" class="custom-input" placeholder="文本">
+                          </div>
+                          
+                          <!-- 链接URL -->
+                          <div class="link-field" data-label="URL">
+                            <input type="text" v-model="element.url" class="custom-input" placeholder="链接地址">
+                          </div>
+                          
+                          <!-- 图标 (可选) -->
+                          <div class="link-field icon-field">
+                            <div class="icon-selector-button" @click="openIconSelector(index)" :title="element.icon ? '更改图标' : '选择图标'">
+                              <i v-if="element.icon" :class="element.icon"></i>
+                              <span v-else class="no-icon">无</span>
+                              <button v-if="element.icon" type="button" class="clear-icon-btn" @click.stop="clearIcon(index)" title="清除图标">
+                                <i class="bi bi-x"></i>
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <!-- 提示文本 -->
+                          <div class="link-field" data-label="提示文本">
+                            <input type="text" v-model="element.title" class="custom-input" placeholder="鼠标悬停提示">
+                          </div>
+                        </div>
+                        
+                        <!-- 删除按钮 - 更新类名和图标 -->
+                        <button 
+                          type="button" 
+                          class="remove-link-btn" 
+                          @click="removeLink(index)"
+                          title="删除此链接"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </template>
+                  </draggable>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 添加新链接按钮 - 添加包装器确保居中 -->
+            <div class="add-link-wrapper">
+              <button 
+                type="button" 
+                class="btn-custom btn-outline btn-sm add-link-btn" 
+                @click="addNewLink"
+              >
+                <i class="bi bi-plus-circle"></i>
+                <span class="btn-text">添加链接</span>
+              </button>
+            </div>
+            
+            <!-- 保存按钮 -->
+            <div class="form-actions">
+              <!-- 添加成功提示在按钮上方 -->
+              <div v-if="settingsSuccess" class="settings-success-message">
+                <i class="bi bi-check-circle-fill"></i> 设置保存成功！
+              </div>
+              
+              <button 
+                type="button" 
+                class="btn-custom btn-primary" 
+                @click="saveFooterSettings"
+                :disabled="settingsLoading"
+              >
+                <div v-if="settingsLoading" class="spinner"></div>
+                <i class="bi bi-save"></i>
+                <span class="btn-text">保存设置</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 图标选择器模态框 -->
+      <div v-if="showIconSelector" class="custom-modal" @click.self="closeIconSelector">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="bi bi-images"></i> 选择图标</h5>
+              <button type="button" class="close-btn" @click="closeIconSelector">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="search-box mb-3">
+                <div class="input-group">
+                  <div class="input-prefix">
+                    <i class="bi bi-search"></i>
+                  </div>
+                  <input 
+                    type="text" 
+                    class="custom-input" 
+                    v-model="iconSearch" 
+                    placeholder="搜索图标..."
+                    @input="filterIcons"
+                  >
+                </div>
+              </div>
+              
+              <div class="icon-grid">
+                <div 
+                  v-for="icon in filteredIcons" 
+                  :key="icon" 
+                  class="icon-item"
+                  :class="{ 'selected': currentIcon === icon }"
+                  @click="selectIcon(icon)"
+                >
+                  <i :class="`bi bi-${icon}`"></i>
+                  <span class="icon-name">{{ icon }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- 待审批资源卡片 -->
       <div class="admin-card">
         <div class="card-header">
@@ -184,9 +598,18 @@
           <div class="header-actions">
             <button 
               type="button" 
+              class="btn-custom btn-outline toggle-btn" 
+              @click="showApprovalRecords = !showApprovalRecords"
+            >
+              <i :class="showApprovalRecords ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+              <span class="btn-text">{{ showApprovalRecords ? '收起' : '展开' }}</span>
+            </button>
+            <button 
+              type="button" 
               class="btn-custom btn-accent btn-sm" 
               @click="confirmBatchDelete"
               :disabled="selectedResources.length === 0"
+              v-if="showApprovalRecords"
             >
               <i class="bi bi-trash"></i> 
               <span class="btn-text">批量删除</span> 
@@ -194,7 +617,7 @@
             </button>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" v-if="showApprovalRecords">
           <div class="table-container">
             <table class="custom-table">
               <thead>
@@ -514,10 +937,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
 import { isAdmin, debugAuth } from '../utils/auth'
 import { useRouter } from 'vue-router'
+import { updateSiteSettings, getSiteSettings } from '../utils/api'
+import draggable from 'vuedraggable'
 
 const router = useRouter()
 const resources = ref([])
@@ -545,6 +970,42 @@ const passwordForm = reactive({
   newPassword: '',
   confirmPassword: ''
 })
+
+// 网站设置相关状态
+const showSiteSettings = ref(false)
+const settingsLoading = ref(false)
+const settingsSuccess = ref(false)
+const settingsError = ref(null)
+const footerSettings = ref({
+  links: [],
+  copyright: '',
+  show_visitor_count: true
+})
+
+// 审批记录显示状态
+const showApprovalRecords = ref(false)
+
+// 图标选择器相关
+const showIconSelector = ref(false)
+const currentLinkIndex = ref(-1)
+const iconSearch = ref('')
+const currentIcon = ref('')
+const iconDisplay = ref({}) // 用于显示图标的简化名称
+const iconList = [
+  'github', 'twitter', 'facebook', 'instagram', 'telegram', 'discord', 'tiktok',
+  'youtube', 'chat', 'chat-fill', 'messenger', 'whatsapp', 'skype', 'reddit',
+  'pinterest', 'google', 'linkedin', 'globe', 'globe2', 'house', 'info-circle',
+  'question-circle', 'exclamation-circle', 'shield', 'hand-thumbs-up',
+  'envelope', 'envelope-fill', 'telephone', 'telephone-fill', 'people',
+  'person', 'journal-text', 'book', 'bookmark', 'bookmark-fill',
+  'heart', 'heart-fill', 'star', 'star-fill', 'bell', 'bell-fill',
+  'gear', 'gear-fill', 'tools', 'box', 'gift', 'cart', 'cart-fill',
+  'bag', 'bag-fill', 'basket', 'basket-fill', 'camera', 'camera-fill',
+  'music-note', 'music-note-list', 'film', 'play-circle', 'calendar',
+  'calendar-date', 'calendar-week', 'clock', 'clock-fill', 'award',
+  'briefcase', 'emoji-smile', 'emoji-laugh', 'emoji-sunglasses'
+]
+const filteredIcons = ref([...iconList])
 
 // 审批详情相关
 const showApprovalModal = ref(false)
@@ -967,6 +1428,224 @@ const batchDeleteResources = async () => {
   }
 }
 
+// 加载页脚设置
+const loadFooterSettings = async () => {
+  try {
+    // 使用InfoManager获取缓存的信息
+    const infoManager = (await import('../utils/InfoManager')).default;
+    footerSettings.value = await infoManager.getInfo();
+    console.log('网站设置加载成功:', footerSettings.value);
+    
+    // 确保基本设置字段存在
+    if (!footerSettings.value.title) footerSettings.value.title = '美漫资源共建';
+    if (!footerSettings.value.logoText) footerSettings.value.logoText = '美漫资源共建';
+    if (!footerSettings.value.description) footerSettings.value.description = '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。';
+    if (!footerSettings.value.keywords) footerSettings.value.keywords = '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建';
+    if (!footerSettings.value.routeMeta) footerSettings.value.routeMeta = {};
+    
+    // 如果存在favicon，显示预览
+    if (footerSettings.value.favicon) {
+      console.log('Found existing favicon:', footerSettings.value.favicon);
+      // 这里不需要设置siteFaviconPreview，因为我们在模板中直接使用footerSettings.value.favicon
+    }
+    
+    // 初始化图标显示名称
+    updateIconDisplay();
+    
+    // 初始化当前页面Meta信息
+    selectPage();
+  } catch (error) {
+    console.error('获取网站设置失败:', error);
+    // 使用默认设置
+    footerSettings.value = {
+      title: '美漫资源共建',
+      logoText: '美漫资源共建',
+      description: '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。',
+      keywords: '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建',
+      links: [
+        { id: 1, text: "关于我们", url: "/about", type: "internal" },
+        { id: 2, text: "Telegram", url: "https://t.me/xueximeng", icon: "bi bi-telegram", type: "external", title: "加入Telegram群组" },
+        { id: 3, text: "GitHub", url: "https://github.com/fish2018/GoComicMosaic", icon: "bi bi-github", type: "external", title: "查看GitHub源码" },
+        { id: 4, text: "在线点播", url: "/streams", type: "internal" },
+        { id: 5, text: "漫迪小站", url: "https://mdsub.top/", type: "external" },
+        { id: 6, text: "三次元成瘾者康复中心", url: "https://www.kangfuzhongx.in/", type: "external" },
+      ],
+      copyright: "© 2025 美漫资源共建. 保留所有权利",
+      show_visitor_count: true
+    };
+    
+    // 初始化图标显示名称
+    updateIconDisplay();
+  }
+};
+
+// 保存页脚设置
+const saveFooterSettings = async () => {
+  settingsLoading.value = true;
+  settingsError.value = null;
+  settingsSuccess.value = false;
+  
+  try {
+    // 获取令牌并验证
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      settingsError.value = '您的登录已过期，请重新登录';
+      console.error('保存设置失败: 未找到认证令牌');
+      return;
+    }
+    
+    // 如果有新上传的favicon，处理它
+    if (siteFaviconFile.value) {
+      try {
+        const formData = new FormData();
+        formData.append('favicon', siteFaviconFile.value);
+        
+        // 上传favicon
+        const response = await axios.post('/api/admin/upload/favicon', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && response.data.faviconPath) {
+          // 更新设置中的favicon路径
+          footerSettings.value.favicon = response.data.faviconPath;
+          console.log('Favicon上传成功:', response.data.faviconPath);
+        }
+      } catch (err) {
+        console.error('上传Favicon失败:', err);
+        settingsError.value = '上传图标失败，但其他设置仍将保存';
+      }
+    } else if (siteFaviconPreview.value === '') {
+      // 如果已经清除了favicon，从设置中移除
+      footerSettings.value.favicon = null;
+    }
+    
+    // 使用InfoManager更新信息
+    const infoManager = (await import('../utils/InfoManager')).default;
+    await infoManager.updateInfo(footerSettings.value);
+    
+    // 上传成功后清除临时文件和预览
+    siteFaviconFile.value = null;
+    siteFaviconPreview.value = '';
+    
+    // 显示成功消息
+    settingsSuccess.value = true;
+    
+    // 短暂显示成功消息后收起设置面板
+    setTimeout(() => {
+      // 收起设置面板
+      showSiteSettings.value = false;
+    }, 1500);
+    
+  } catch (error) {
+    console.error('保存页脚设置失败:', error);
+    
+    if (error.response && error.response.status === 401) {
+      settingsError.value = '认证失败，请刷新页面或重新登录';
+    } else {
+      settingsError.value = '保存设置失败，请稍后重试';
+    }
+  } finally {
+    settingsLoading.value = false;
+  }
+};
+
+// 添加新链接
+const addNewLink = () => {
+  if (!footerSettings.value.links) {
+    footerSettings.value.links = [];
+  }
+  
+  const newIndex = footerSettings.value.links.length;
+  const newId = Date.now() + Math.floor(Math.random() * 1000);
+  
+  // 为每个链接添加唯一ID，用于拖拽排序（注意：移除了type字段）
+  footerSettings.value.links.push({
+    id: newId,
+    text: '',
+    url: '',
+    icon: '',
+    title: ''
+  });
+  
+  // 初始化图标显示名称
+  iconDisplay.value[newIndex] = '';
+};
+
+// 移除链接
+const removeLink = (index) => {
+  if (footerSettings.value.links && index >= 0 && index < footerSettings.value.links.length) {
+    footerSettings.value.links.splice(index, 1);
+  }
+};
+
+// 获取图标的简化名称（不带bi bi-前缀）
+const getIconName = (iconClass) => {
+  if (!iconClass) return '';
+  return iconClass.replace('bi bi-', '');
+};
+
+// 打开图标选择器
+const openIconSelector = (index) => {
+  currentLinkIndex.value = index;
+  currentIcon.value = getIconName(footerSettings.value.links[index].icon);
+  iconSearch.value = '';
+  filteredIcons.value = [...iconList];
+  showIconSelector.value = true;
+  
+  // 更新显示的图标名称
+  updateIconDisplay();
+};
+
+// 关闭图标选择器
+const closeIconSelector = () => {
+  showIconSelector.value = false;
+  currentLinkIndex.value = -1;
+};
+
+// 选择图标
+const selectIcon = (icon) => {
+  if (currentLinkIndex.value !== -1) {
+    footerSettings.value.links[currentLinkIndex.value].icon = `bi bi-${icon}`;
+    iconDisplay.value[currentLinkIndex.value] = icon; // 更新显示名称
+    closeIconSelector();
+  }
+};
+
+// 清除图标
+const clearIcon = (index) => {
+  if (index >= 0 && index < footerSettings.value.links.length) {
+    footerSettings.value.links[index].icon = '';
+    iconDisplay.value[index] = '';
+  }
+};
+
+// 更新所有图标的显示名称
+const updateIconDisplay = () => {
+  footerSettings.value.links.forEach((link, index) => {
+    iconDisplay.value[index] = getIconName(link.icon);
+  });
+};
+
+// 过滤图标
+const filterIcons = () => {
+  const search = iconSearch.value.toLowerCase();
+  if (!search) {
+    filteredIcons.value = [...iconList];
+  } else {
+    filteredIcons.value = iconList.filter(icon => 
+      icon.toLowerCase().includes(search)
+    );
+  }
+};
+
+// 拖拽排序结束
+const onDragEnd = () => {
+  console.log('链接排序已更新');
+};
+
 onMounted(async () => {
   console.log('Admin component mounted')
   
@@ -986,7 +1665,7 @@ onMounted(async () => {
     return
   }
   
-  // 并行加载两个资源列表
+  // 并行加载资源列表和页脚设置
   loading.value = true
   loadingPending.value = true
   error.value = null
@@ -995,8 +1674,9 @@ onMounted(async () => {
     console.log('Starting to fetch resources and pending resources')
     const resourcesPromise = fetchResources()
     const pendingResourcesPromise = fetchPendingResources()
+    const footerSettingsPromise = loadFooterSettings()
     
-    const results = await Promise.allSettled([resourcesPromise, pendingResourcesPromise])
+    const results = await Promise.allSettled([resourcesPromise, pendingResourcesPromise, footerSettingsPromise])
     
     console.log('Fetch results:', results.map(r => r.status))
     
@@ -1030,6 +1710,178 @@ onMounted(async () => {
     loadingPending.value = false
   }
 })
+
+// 页面Meta信息设置
+const selectedPage = ref('home')
+const currentPageMeta = reactive({
+  title: '',
+  description: '',
+  keywords: ''
+})
+
+// 默认页面Meta信息
+const defaultPageMetaInfo = {
+  home: {
+    title: '美漫资源共建 - 动漫爱好者共同贡献的资源平台',
+    description: '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。',
+    keywords: '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建'
+  },
+  resource_detail: {
+    title: '资源详情 - 美漫资源共建平台',
+    description: '查看详细的动漫资源信息，包括简介、图片、下载链接等。在这里您可以浏览由社区贡献的美漫资源详情。',
+    keywords: '美漫资源, 动漫详情, 资源下载, 美漫共建'
+  },
+  submit_resource: {
+    title: '提交资源 - 美漫资源共建平台',
+    description: '在这里提交您收集的美漫资源，包括标题、简介、链接等信息，与社区共同构建完整的资源库。',
+    keywords: '提交资源, 分享美漫, 资源贡献, 美漫共建'
+  },
+  login: {
+    title: '用户登录 - 美漫资源共建平台',
+    description: '登录美漫资源共建平台，管理您的资源贡献并参与社区建设。',
+    keywords: '用户登录, 账号登录, 美漫共建'
+  },
+  admin: {
+    title: '管理后台 - 美漫资源共建平台',
+    description: '美漫资源共建平台管理后台，用于管理用户提交的资源和维护网站内容。',
+    keywords: '管理后台, 资源审核, 美漫共建'
+  },
+  resource_review: {
+    title: '资源审核 - 美漫资源共建平台',
+    description: '审核用户提交的美漫资源，确保内容质量和合规性。',
+    keywords: '资源审核, 内容审核, 美漫共建'
+  },
+  about: {
+    title: '关于我们 - 美漫资源共建平台',
+    description: '了解美漫资源共建平台的宗旨、团队和发展历程。我们致力于为动漫爱好者提供优质的资源共享环境。',
+    keywords: '关于我们, 平台介绍, 团队介绍, 美漫共建'
+  },
+  streams: {
+    title: '流媒体内容 - 美漫资源共建平台',
+    description: '浏览和观看各种高质量的动漫流媒体内容，包括动画、电影和连续剧。',
+    keywords: '流媒体内容, 动漫视频, 在线观看, 美漫共建'
+  }
+}
+
+// 获取默认页面Meta信息
+const getDefaultPageMeta = (page) => {
+  return defaultPageMetaInfo[page] || defaultPageMetaInfo.home
+}
+
+// 选择页面时更新当前页面Meta信息
+const selectPage = () => {
+  // 如果页面之前没有自定义设置，则使用空值
+  if (!footerSettings.value.routeMeta) {
+    footerSettings.value.routeMeta = {}
+  }
+  
+  const pageTitleKey = `${selectedPage.value}_title`
+  const pageDescKey = `${selectedPage.value}_description`
+  const pageKeywordsKey = `${selectedPage.value}_keywords`
+  
+  // 从已有设置中获取值，或者使用空字符串
+  currentPageMeta.title = footerSettings.value.routeMeta[pageTitleKey] || ''
+  currentPageMeta.description = footerSettings.value.routeMeta[pageDescKey] || ''
+  currentPageMeta.keywords = footerSettings.value.routeMeta[pageKeywordsKey] || ''
+}
+
+// 监听currentPageMeta变化，更新footerSettings
+const updateCurrentPageMeta = () => {
+  if (!footerSettings.value.routeMeta) {
+    footerSettings.value.routeMeta = {}
+  }
+  
+  const pageTitleKey = `${selectedPage.value}_title`
+  const pageDescKey = `${selectedPage.value}_description`
+  const pageKeywordsKey = `${selectedPage.value}_keywords`
+  
+  // 只有当值不为空时才设置，否则删除属性以使用默认值
+  if (currentPageMeta.title) {
+    footerSettings.value.routeMeta[pageTitleKey] = currentPageMeta.title
+  } else {
+    delete footerSettings.value.routeMeta[pageTitleKey]
+  }
+  
+  if (currentPageMeta.description) {
+    footerSettings.value.routeMeta[pageDescKey] = currentPageMeta.description
+  } else {
+    delete footerSettings.value.routeMeta[pageDescKey]
+  }
+  
+  if (currentPageMeta.keywords) {
+    footerSettings.value.routeMeta[pageKeywordsKey] = currentPageMeta.keywords
+  } else {
+    delete footerSettings.value.routeMeta[pageKeywordsKey]
+  }
+}
+
+// 监听currentPageMeta变化
+watch(currentPageMeta, () => {
+  updateCurrentPageMeta()
+}, { deep: true })
+
+// 页脚设置加载后初始化当前页面Meta信息
+watch(footerSettings, () => {
+  selectPage()
+}, { immediate: true })
+
+// Favicon上传功能变量
+const siteFaviconPreview = ref('');
+const siteFaviconFile = ref(null);
+const faviconUploadRef = ref(null);
+
+// 处理图标上传
+const handleFaviconUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // 检查文件扩展名，而不是MIME类型
+  const fileName = file.name.toLowerCase();
+  const validExtensions = ['.ico', '.png', '.jpg', '.jpeg', '.svg'];
+  const isValid = validExtensions.some(ext => fileName.endsWith(ext));
+  
+  if (!isValid) {
+    alert('请上传.ico、.png、.jpg或.svg格式的图标');
+    return;
+  }
+  
+  // 检查文件大小（限制为1MB）
+  if (file.size > 1024 * 1024) {
+    alert('图标文件大小不能超过1MB');
+    return;
+  }
+  
+  // 生成预览
+  siteFaviconFile.value = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    siteFaviconPreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// 清除已上传的图标
+const clearFaviconUpload = (event) => {
+  // 阻止事件冒泡和默认行为
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  
+  console.log('清除favicon触发');
+  siteFaviconPreview.value = '';
+  siteFaviconFile.value = null;
+  if (faviconUploadRef.value) {
+    faviconUploadRef.value.value = '';
+  }
+};
+
+// 触发文件输入控件
+const triggerFileInput = () => {
+  if (faviconUploadRef.value) {
+    faviconUploadRef.value.click();
+  }
+};
 </script>
 
 <style scoped>
@@ -1462,6 +2314,8 @@ onMounted(async () => {
   margin-top: 2rem;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
 }
 
 /* 按钮样式 */
@@ -2327,5 +3181,1126 @@ onMounted(async () => {
     margin: 0;
     font-size: 1.25rem;
   }
+}
+
+/* 网站设置相关样式 */
+.settings-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--gray-color);
+  color: var(--primary-color);
+}
+
+.links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.link-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.link-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  flex: 1;
+}
+
+.link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.link-field label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--gray-color);
+}
+
+.checkbox-label {
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .link-fields {
+    grid-template-columns: 1fr;
+  }
+  
+  .link-item {
+    flex-direction: column;
+  }
+}
+
+/* 链接项样式 */
+.link-header {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr 80px 1fr 60px;
+  gap: 8px;
+  padding: 0 10px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--primary-color);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  padding-bottom: 8px;
+}
+
+.link-field-header {
+  font-size: 0.85rem;
+  padding: 0 5px;
+}
+
+.drag-handle-placeholder {
+  width: 40px;
+}
+
+.link-item {
+  display: grid;
+  grid-template-columns: 40px 1fr 60px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius);
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+}
+
+.link-item:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: #aaa;
+  font-size: 1.2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.drag-handle:hover {
+  color: var(--primary-color);
+}
+
+.ghost-item {
+  opacity: 0.5;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px dashed var(--primary-color);
+}
+
+.link-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.link-field {
+  padding: 0 5px;
+}
+
+.icon-input-container {
+  position: relative;
+  flex: 1;
+}
+
+.clear-icon-btn {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 5px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.clear-icon-btn:hover {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--accent-color);
+}
+
+/* 图标选择器样式 */
+.icon-selector .input-prefix {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-selector .input-prefix:hover {
+  background-color: rgba(124, 58, 237, 0.1);
+  color: var(--primary-color);
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.icon-item:hover {
+  background-color: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.icon-item.selected {
+  background-color: rgba(124, 58, 237, 0.2);
+  border-color: var(--primary-color);
+}
+
+.icon-item i {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+  color: var(--dark-color);
+}
+
+.icon-name {
+  font-size: 0.7rem;
+  color: var(--dark-color);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* 水平显示的复选框 */
+.horizontal-display {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.horizontal-display label {
+  margin-right: 10px;
+}
+
+.checkbox-text {
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+/* 成功提示通知 */
+.toast-notification {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--dark-color);
+  padding: 15px 25px;
+  border-radius: 100px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2000;
+  animation: slideInRight 0.3s forwards;
+  transition: opacity 0.3s ease;
+  font-weight: 600;
+}
+
+.success-toast {
+  border-left: 4px solid var(--success-color);
+}
+
+.success-toast i {
+  color: var(--success-color);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.icon-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-selector-button {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--border-radius);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.icon-selector-button:hover {
+  background-color: rgba(124, 58, 237, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.icon-selector-button i {
+  transition: transform 0.2s ease;
+}
+
+.icon-selector-button:hover i {
+  transform: scale(1.1);
+}
+
+.clear-icon-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: white;
+  color: var(--accent-color);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.icon-selector-button:hover .clear-icon-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.clear-icon-btn:hover {
+  background-color: var(--accent-color);
+  color: white;
+  transform: scale(1.1) !important;
+}
+
+.button-icon-only {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.delete-btn {
+  color: var(--accent-color);
+  border-color: rgba(244, 63, 94, 0.2);
+}
+
+.delete-btn:hover {
+  background-color: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* 移动端适配 */
+@media (max-width: 992px) {
+  /* 保留表头在移动端 */
+  .link-header {
+    display: grid; /* 不再隐藏表头 */
+    grid-template-columns: 40px 1fr 1fr 80px 1fr 60px; /* 与PC端保持一致 */
+  }
+  
+  .link-item {
+    grid-template-columns: 40px 1fr 40px; /* 调整整体布局，与PC端保持一致 */
+    padding: 8px; /* 恢复PC端的内边距 */
+  }
+  
+  /* 移除之前的垂直堆叠样式 */
+  .link-fields {
+    display: grid; /* 恢复网格布局 */
+    grid-template-columns: 1fr 1fr 80px 1fr; /* 恢复PC端的列布局 */
+    gap: 8px;
+    width: 100%;
+  }
+  
+  /* 移除字段垂直堆叠样式 */
+  .link-field {
+    display: flex;
+    flex-direction: column;
+    width: auto; /* 不再强制100%宽度 */
+  }
+  
+  /* 保留标签文字，但仅在滚动视图外显示 */
+  .link-field:not(.icon-field)::before {
+    display: none; /* 隐藏移动端的标签，因为我们现在有了表头 */
+  }
+  
+  /* 调整图标字段，保持居中 */
+  .icon-field {
+    align-self: center;
+    margin: 0; /* 移除额外的边距 */
+  }
+  
+  /* 增强滚动容器样式 */
+  .scroll-container {
+    border: 1px solid rgba(99, 102, 241, 0.1); /* 恢复边框 */
+    background: rgba(255, 255, 255, 0.5); /* 恢复背景 */
+    margin-bottom: 1rem;
+    max-height: 350px;
+  }
+  
+  /* 增加滚动提示效果 */
+  .scroll-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 40px; 
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    opacity: 0.8;
+  }
+  
+  /* 增强滚动方向指示 */
+  .scroll-container::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-right: 2px solid rgba(99, 102, 241, 0.4);
+    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
+    transform: translateY(-50%) rotate(-45deg);
+    animation: pulseArrow 2s infinite;
+    z-index: 2;
+  }
+  
+  @keyframes pulseArrow {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.8; }
+  }
+}
+
+/* 添加更小屏幕的特殊处理 */
+/* @media (max-width: 576px) { */
+@media (max-width: 1200px) {
+  .links-container {
+    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
+  }
+  
+  .remove-link-btn {
+    margin-top: 0; /* 移除按钮上方的额外边距 */
+  }
+  
+  /* 优化移动端链接项内容显示 */
+  .link-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr 80px 1fr;
+    gap: 4px; /* 减小间距 */
+  }
+  
+  .link-field input {
+    width: 100%; /* 确保输入框宽度为100% */
+    min-width: 0; /* 防止输入框最小宽度导致溢出 */
+    font-size: 0.85rem; /* 减小字体大小 */
+    padding: 0.5rem 0.75rem; /* 减小内边距 */
+    text-overflow: ellipsis; /* 文本溢出时显示省略号 */
+    white-space: nowrap; /* 防止文本换行 */
+    overflow: hidden; /* 隐藏溢出内容 */
+  }
+  
+  /* 修复图标按钮样式，确保居中显示不溢出 */
+  .icon-selector-button {
+    width: 36px; /* 减小图标选择按钮尺寸 */
+    height: 36px;
+    min-width: 36px; /* 确保最小宽度 */
+    padding: 0;
+  }
+  
+  .icon-field {
+    display: flex;
+    justify-content: center;
+    min-width: 36px; /* 确保最小宽度 */
+    max-width: 80px; /* 限制最大宽度 */
+  }
+}
+
+/* 添加无图标样式 */
+.no-icon {
+  font-size: 0.9rem;
+  color: #888;
+  font-weight: normal;
+}
+
+/* 修改删除按钮样式 */
+.delete-btn {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+}
+
+.delete-btn:hover {
+  background-color: #e11d48;
+  color: white;
+  border-color: #e11d48;
+  transform: scale(1.05);
+}
+
+/* 1. 调整图标字段与标题行对齐 */
+.icon-field {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 调整无图标文本样式 */
+.no-icon {
+  font-size: 0.9rem;
+  color: #888;
+  font-weight: normal;
+}
+
+.remove-link-btn {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--accent-color);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  margin-top: 1.2rem;
+}
+
+.remove-link-btn:hover {
+  background: var(--accent-color);
+  color: white;
+  transform: rotate(90deg);
+}
+
+/* 3. 页脚设置保存成功消息样式 */
+.settings-success-message {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
+}
+
+.form-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 删除旧的 toast 通知相关样式 */
+.toast-notification {
+  display: none;
+}
+
+/* 移动端适配时确保成功消息可见 */
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+  
+  .settings-success-message {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    justify-content: center;
+  }
+}
+
+/* 图标标题居中对齐 */
+.link-field-header:nth-child(4) {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 新增link-delete-btn的替代样式 */
+.link-delete-btn {
+  display: none;
+}
+
+/* 添加可滚动容器样式，类似于审批记录部分 */
+.scroll-container {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: auto; /* 添加水平滚动支持 */
+  max-height: 400px;
+  border-radius: var(--border-radius);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+/* 调整链接容器与滚动容器的关系 */
+.links-wrapper {
+  padding: 0.5rem;
+}
+
+.links-container {
+  width: 100%;
+  min-width: 650px; /* 确保有足够的宽度展示所有列 */
+}
+
+/* 移动端适配 - 调整为保持PC端布局效果 */
+@media (max-width: 992px) {
+  /* 保留表头在移动端 */
+  .link-header {
+    display: grid; /* 不再隐藏表头 */
+    grid-template-columns: 40px 1fr 1fr 80px 1fr 60px; /* 与PC端保持一致 */
+  }
+  
+  .link-item {
+    grid-template-columns: 40px 1fr 40px; /* 调整整体布局，与PC端保持一致 */
+    padding: 8px; /* 恢复PC端的内边距 */
+  }
+  
+  /* 移除之前的垂直堆叠样式 */
+  .link-fields {
+    display: grid; /* 恢复网格布局 */
+    grid-template-columns: 1fr 1fr 80px 1fr; /* 恢复PC端的列布局 */
+    gap: 8px;
+    width: 100%;
+  }
+  
+  /* 移除字段垂直堆叠样式 */
+  .link-field {
+    display: flex;
+    flex-direction: column;
+    width: auto; /* 不再强制100%宽度 */
+  }
+  
+  /* 保留标签文字，但仅在滚动视图外显示 */
+  .link-field:not(.icon-field)::before {
+    display: none; /* 隐藏移动端的标签，因为我们现在有了表头 */
+  }
+  
+  /* 调整图标字段，保持居中 */
+  .icon-field {
+    align-self: center;
+    margin: 0; /* 移除额外的边距 */
+  }
+  
+  /* 增强滚动容器样式 */
+  .scroll-container {
+    border: 1px solid rgba(99, 102, 241, 0.1); /* 恢复边框 */
+    background: rgba(255, 255, 255, 0.5); /* 恢复背景 */
+    margin-bottom: 1rem;
+    max-height: 350px;
+  }
+  
+  /* 增加滚动提示效果 */
+  .scroll-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 40px; 
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    opacity: 0.8;
+  }
+  
+  /* 增强滚动方向指示 */
+  .scroll-container::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-right: 2px solid rgba(99, 102, 241, 0.4);
+    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
+    transform: translateY(-50%) rotate(-45deg);
+    animation: pulseArrow 2s infinite;
+    z-index: 2;
+  }
+  
+  @keyframes pulseArrow {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.8; }
+  }
+}
+
+/* 添加更小屏幕的特殊处理 */
+@media (max-width: 576px) {
+  .links-container {
+    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
+  }
+  
+  .remove-link-btn {
+    margin-top: 0; /* 移除按钮上方的额外边距 */
+  }
+}
+
+/* 添加链接按钮的样式 - 保持PC端风格 */
+.add-link-btn {
+  margin: 0.75rem auto 1rem;
+  min-width: 150px;
+  width: auto !important; /* 强制使用自动宽度，不随屏幕变化 */
+  max-width: 200px;
+  display: inline-flex !important; /* 强制使用PC端的内联弹性布局 */
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius);
+  padding: 0.5rem 1rem;
+  white-space: nowrap;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  height: auto !important; /* 确保高度适应内容 */
+}
+
+/* 确保按钮文本在任何设备上都显示 */
+.add-link-btn .btn-text {
+  display: inline !important; /* 强制显示文本 */
+  margin-left: 0.35rem; /* 增加图标和文字间距 */
+}
+
+/* 小屏幕样式 */
+@media (max-width: 576px) {
+  /* 改进滚动容器边缘渐变效果 */
+  .scroll-container::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 30px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.8));
+    pointer-events: none;
+    z-index: 2;
+  }
+  
+  .links-container {
+    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
+  }
+  
+  .remove-link-btn {
+    margin-top: 0; /* 移除按钮上方的额外边距 */
+  }
+}
+
+/* 恢复滚动容器样式 */
+.links-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+.links-container {
+  min-width: 650px; /* 确保在移动端有足够宽度显示全部内容 */
+}
+
+/* 在所有设备上覆盖移动端样式 */
+@media (max-width: 768px) {
+  /* 移除其他按钮文本的隐藏样式 */
+  .btn-text {
+    display: none;
+  }
+  
+  /* 但保持添加链接按钮文本显示 */
+  .add-link-btn {
+    height: auto !important;
+    width: auto !important;
+    display: inline-flex !important;
+    padding: 0.5rem 1rem !important;
+    min-width: 150px;
+    border-radius: var(--border-radius) !important;
+  }
+  
+  .add-link-btn .btn-text {
+    display: inline !important;
+  }
+}
+
+/* 添加按钮居中包装器 */
+.add-link-wrapper {
+  width: 100%;
+  text-align: center;
+  margin: 0.75rem 0 1rem;
+}
+
+/* 添加链接按钮的样式 - 保持PC端风格并居中 */
+.add-link-btn {
+  margin: 0 auto;
+  min-width: 150px;
+  width: auto !important; /* 强制使用自动宽度，不随屏幕变化 */
+  max-width: 200px;
+  display: inline-flex !important; /* 强制使用PC端的内联弹性布局 */
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius);
+  padding: 0.5rem 1.5rem;
+  white-space: nowrap;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  height: auto !important; /* 确保高度适应内容 */
+}
+
+/* 确保按钮文本在任何设备上都显示 */
+.add-link-btn .btn-text {
+  display: inline !important; /* 强制显示文本 */
+  margin-left: 0.35rem; /* 增加图标和文字间距 */
+}
+
+/* 在所有设备上覆盖移动端样式 */
+@media (max-width: 768px) {
+  /* 但保持添加链接按钮文本显示并居中 */
+  .add-link-btn {
+    height: auto !important;
+    width: auto !important;
+    display: inline-flex !important;
+    padding: 0.5rem 1.5rem !important;
+    min-width: 150px;
+    border-radius: var(--border-radius) !important;
+  }
+}
+
+/* 表单帮助文本样式 */
+.form-text {
+  font-size: 0.85rem;
+  color: var(--gray-color);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+/* 自定义文本区域样式 */
+textarea.custom-input {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+}
+
+/* 增强section-title样式 */
+.section-title {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* 分隔设置区域 */
+.settings-section {
+  margin-bottom: 3rem;
+  padding-bottom: 1rem;
+}
+
+.settings-section:not(:last-child) {
+  border-bottom: 1px dashed rgba(124, 58, 237, 0.1);
+}
+
+/* 设置区域描述 */
+.section-description {
+  font-size: 0.9rem;
+  color: var(--gray-color);
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+/* 自定义下拉选择框样式 */
+select.custom-input {
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+/* 占位符文本样式 */
+.custom-input::placeholder {
+  color: rgba(107, 114, 128, 0.6);
+  font-style: italic;
+}
+
+/* 表单帮助文本样式 */
+.form-text {
+  font-size: 0.85rem;
+  color: var(--gray-color);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+/* 自定义文本区域样式 */
+textarea.custom-input {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+  padding: 0.75rem 1rem;
+}
+
+/* 增强section-title样式 */
+.section-title {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* 分隔设置区域 */
+.settings-section {
+  margin-bottom: 3rem;
+  padding-bottom: 1rem;
+}
+
+.settings-section:not(:last-child) {
+  border-bottom: 1px dashed rgba(124, 58, 237, 0.1);
+}
+
+/* 网站图标上传样式 */
+.favicon-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.favicon-preview {
+  width: 64px;
+  height: 64px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.favicon-upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-upload {
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-upload:hover {
+  transform: scale(1.05);
+}
+
+.btn-clear-favicon {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--accent-color);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-clear-favicon:hover {
+  transform: scale(1.05);
+}
+
+.favicon-uploader {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.favicon-upload-area {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border: 2px dashed rgba(99, 102, 241, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+
+.favicon-upload-area:hover {
+  border-color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.favicon-upload-area.has-preview {
+  border-style: solid;
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.favicon-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 10px;
+}
+
+.favicon-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--gray-color);
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+.favicon-empty-state i {
+  font-size: 2rem;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.favicon-empty-state span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* 中央显示上传按钮 */
+.favicon-actions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.favicon-upload-area:hover .favicon-actions {
+  opacity: 1;
+}
+
+/* 通用按钮样式 */
+.favicon-action-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.favicon-action-btn i {
+  font-size: 1.2rem;
+}
+
+.favicon-action-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 上传按钮样式 */
+.upload-btn:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
+/* 删除按钮样式 - 右上角定位 */
+.remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 20;
+  background: rgba(244, 63, 94, 0.7);
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.remove-btn:hover {
+  background: rgba(244, 63, 94, 1);
+  transform: scale(1.15);
+}
+
+.hidden-upload {
+  display: none;
 }
 </style> 

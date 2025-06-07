@@ -50,10 +50,24 @@ export const setupAxiosInterceptors = () => {
     // 标准化URL，移除可能的尾部斜杠
     const normalizedUrl = url.endsWith('/') ? url.slice(0, -1) : url;
     
-    return (
-      normalizedUrl.includes('/api/auth') || 
-      normalizedUrl.includes('/api/resources')
-    );
+    // 打印调试信息
+    console.log(`检查URL是否需要保护: ${normalizedUrl}`);
+    
+    // 确保settings路径被正确识别
+    const isSettingsUrl = normalizedUrl.includes('/api/settings') || 
+                          normalizedUrl.includes('/settings/');
+                          
+    const isAuthUrl = normalizedUrl.includes('/api/auth') ||
+                       normalizedUrl.includes('/auth/');
+                       
+    const isResourcesUrl = normalizedUrl.includes('/api/resources') ||
+                           normalizedUrl.includes('/resources/');
+    
+    const isProtected = isSettingsUrl || isAuthUrl || isResourcesUrl;
+    
+    console.log(`URL ${normalizedUrl} 需要保护: ${isProtected}`);
+    
+    return isProtected;
   }
 
   axios.interceptors.request.use(
@@ -68,7 +82,7 @@ export const setupAxiosInterceptors = () => {
         
         if (token) {
           config.headers['Authorization'] = `${tokenType} ${token}`
-          console.log(`Added auth headers to: ${config.url}`)
+          console.log(`Added auth headers to: ${config.url}`, config.headers)
         } else {
           console.log(`No token available for: ${config.url}`)
         }

@@ -282,4 +282,18 @@ type SupplementCreate struct {
 type TokenResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
+}
+
+// SiteSettings 网站设置模型
+type SiteSettings struct {
+	ID           int       `db:"id" json:"id"`
+	SettingKey   string    `db:"setting_key" json:"setting_key"`
+	SettingValue JsonMap   `db:"setting_value" json:"setting_value"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// SiteSettingsUpdate 网站设置更新请求
+type SiteSettingsUpdate struct {
+	SettingValue JsonMap `json:"setting_value" binding:"required"`
 } 

@@ -11,6 +11,7 @@ import (
 
 	"dongman/internal/handlers"
 	"dongman/internal/models"
+	"dongman/internal/config"
 )
 
 func main() {
@@ -29,6 +30,11 @@ func main() {
 		log.Printf("创建初始管理员账号失败: %v", err)
 	}
 
+	// 初始化网站设置
+	if err := models.InitSiteSettings(); err != nil {
+		log.Printf("初始化网站设置失败: %v", err)
+	}
+
 	// 创建Gin应用
 	router := gin.Default()
 
@@ -41,15 +47,9 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// 获取当前工作目录
-	workDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("获取工作目录失败: %v", err)
-	}
-
 	// 配置静态文件服务
-	assetsDir := filepath.Join(workDir, "..", "assets")
-	router.Static("/assets", assetsDir)
+	router.Static("/assets", config.AssetPath)
+	router.Static("/public", filepath.Join(config.AssetPath, "public"))
 
 	// 设置路由
 	handlers.SetupRoutes(router)

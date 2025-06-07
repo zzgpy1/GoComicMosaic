@@ -1,0 +1,227 @@
+import { getSiteSettings, updateSiteSettings } from './api';
+
+// 缓存过期时间（毫秒）- 默认5分钟
+const CACHE_EXPIRATION = 5 * 60 * 1000;
+
+// 存储在LocalStorage中的键名
+const STORAGE_KEY = 'site_info_cache';
+const VERSION_KEY = 'site_info_version';
+
+class InfoManager {
+  constructor() {
+    // 单例模式
+    if (InfoManager.instance) {
+      return InfoManager.instance;
+    }
+    InfoManager.instance = this;
+    
+    // 初始化
+    this.cache = null;
+    this.lastFetchTime = 0;
+    this.version = this.getStoredVersion() || 1;
+    this.isLoading = false;
+    
+    // 从本地存储加载缓存
+    this.loadFromStorage();
+  }
+  
+  /**
+   * 从localStorage中加载缓存的网站信息
+   */
+  loadFromStorage() {
+    try {
+      const cachedData = localStorage.getItem(STORAGE_KEY);
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        this.cache = parsed.data;
+        this.lastFetchTime = parsed.timestamp;
+        console.log('已从本地存储加载网站信息缓存');
+      }
+    } catch (error) {
+      console.error('加载缓存的网站信息失败:', error);
+      // 清除可能损坏的缓存
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }
+  
+  /**
+   * 保存数据到localStorage
+   */
+  saveToStorage(data) {
+    try {
+      const cacheObject = {
+        timestamp: Date.now(),
+        data: data
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cacheObject));
+      console.log('网站信息缓存已保存到本地存储');
+    } catch (error) {
+      console.error('保存网站信息缓存失败:', error);
+    }
+  }
+  
+  /**
+   * 获取存储的版本号
+   */
+  getStoredVersion() {
+    const version = localStorage.getItem(VERSION_KEY);
+    return version ? parseInt(version, 10) : null;
+  }
+  
+  /**
+   * 保存版本号
+   */
+  saveVersion(version) {
+    localStorage.setItem(VERSION_KEY, version.toString());
+    this.version = version;
+  }
+  
+  /**
+   * 检查缓存是否过期
+   */
+  isCacheExpired() {
+    // 如果没有缓存，视为过期
+    if (!this.cache) return true;
+    
+    // 检查缓存是否超过指定的过期时间
+    return Date.now() - this.lastFetchTime > CACHE_EXPIRATION;
+  }
+  
+  /**
+   * 获取网站信息，优先使用缓存
+   */
+  async getInfo() {
+    // 如果有缓存且未过期，直接返回缓存
+    if (this.cache && !this.isCacheExpired()) {
+      console.log('使用缓存的网站信息');
+      return this.cache;
+    }
+    
+    // 防止并发请求
+    if (this.isLoading) {
+      console.log('正在获取网站信息，等待...');
+      // 等待当前请求完成
+      return new Promise(resolve => {
+        const checkCache = () => {
+          if (!this.isLoading) {
+            resolve(this.cache);
+          } else {
+            setTimeout(checkCache, 100);
+          }
+        };
+        checkCache();
+      });
+    }
+    
+    // 从服务器获取最新数据
+    this.isLoading = true;
+    try {
+      console.log('从服务器获取最新网站信息');
+      const response = await getSiteSettings('info');
+      this.cache = response.setting_value;
+      this.lastFetchTime = Date.now();
+      
+      // 保存到本地存储
+      this.saveToStorage(this.cache);
+      
+      // 检查并更新favicon
+      if (typeof window.checkFavicon === 'function') {
+        window.checkFavicon();
+      }
+      
+      return this.cache;
+    } catch (error) {
+      console.error('获取网站信息失败:', error);
+      // 如果有缓存，返回过期的缓存作为降级
+      if (this.cache) {
+        console.log('使用过期的缓存作为降级');
+        return this.cache;
+      }
+      
+      // 如果没有缓存，抛出错误
+      throw error;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+  
+  /**
+   * 获取页脚信息（这是为了兼容性而保留的方法）
+   */
+  async getFooterInfo() {
+    const info = await this.getInfo();
+    return info;
+  }
+  
+  /**
+   * 获取网站基本信息（标题、meta信息等）
+   */
+  async getSiteBasicInfo() {
+    const info = await this.getInfo();
+    // 确保基本信息字段存在
+    return {
+      title: info.title || '美漫资源共建',
+      logoText: info.logoText || '美漫资源共建',
+      description: info.description || '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。',
+      keywords: info.keywords || '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建',
+      ...info
+    };
+  }
+  
+  /**
+   * 更新网站信息
+   */
+  async updateInfo(infoData) {
+    try {
+      // 调用API更新信息
+      const response = await updateSiteSettings('info', infoData);
+      
+      // 更新缓存
+      this.cache = infoData;
+      this.lastFetchTime = Date.now();
+      
+      // 更新版本号
+      this.saveVersion(this.version + 1);
+      
+      // 保存到本地存储
+      this.saveToStorage(this.cache);
+      
+      // 检查并更新favicon
+      if (typeof window.checkFavicon === 'function') {
+        window.checkFavicon();
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('更新网站信息失败:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * 强制刷新缓存
+   */
+  async refreshCache() {
+    // 清除现有缓存
+    this.cache = null;
+    this.lastFetchTime = 0;
+    localStorage.removeItem(STORAGE_KEY);
+    
+    // 重新获取数据
+    return await this.getInfo();
+  }
+  
+  /**
+   * 清除缓存
+   */
+  clearCache() {
+    this.cache = null;
+    this.lastFetchTime = 0;
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('网站信息缓存已清除');
+  }
+}
+
+// 创建并导出单例实例
+const infoManager = new InfoManager();
+export default infoManager; 

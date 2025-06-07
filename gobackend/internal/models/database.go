@@ -71,6 +71,16 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
+CREATE TABLE IF NOT EXISTS site_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_key TEXT NOT NULL UNIQUE,
+    setting_value JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_site_settings_key ON site_settings(setting_key);
 `
 
 // InitDB 初始化数据库连接
@@ -308,5 +318,44 @@ func ConvertJsonFieldsToText() error {
 	}
 
 	log.Printf("JSON字段修复完成: 总共%d条记录, 成功修复%d条", len(resources), fixed)
+	return nil
+}
+
+// InitSiteSettings 初始化网站设置
+func InitSiteSettings() error {
+	// 默认的页脚设置
+	footerSettings := JsonMap{
+		"links": []map[string]interface{}{
+			{"text": "关于我们", "url": "/about", "type": "internal"},
+			{"text": "Telegram", "url": "https://t.me/xueximeng", "icon": "bi-telegram", "type": "external"},
+			{"text": "GitHub", "url": "https://github.com/fish2018/GoComicMosaic", "icon": "bi-github", "type": "external"},
+			{"text": "在线点播", "url": "/streams", "type": "internal"},
+			{"text": "漫迪小站", "url": "https://mdsub.top/", "type": "external"},
+			{"text": "三次元成瘾者康复中心", "url": "https://www.kangfuzhongx.in/", "type": "external"},
+		},
+		"copyright": "© 2025 美漫资源共建. 保留所有权利",
+		"show_visitor_count": true,
+	}
+	
+	// 将设置转为JSON
+	footerJSON, err := json.Marshal(footerSettings)
+	if err != nil {
+		return fmt.Errorf("序列化页脚设置失败: %w", err)
+	}
+	
+	// 插入或更新页脚设置
+	_, err = DB.Exec(`
+		INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) 
+		VALUES ('footer', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT(setting_key) DO UPDATE SET 
+		setting_value = ?, 
+		updated_at = CURRENT_TIMESTAMP
+	`, string(footerJSON), string(footerJSON))
+	
+	if err != nil {
+		return fmt.Errorf("保存页脚设置失败: %w", err)
+	}
+	
+	log.Printf("网站设置初始化完成")
 	return nil
 } 

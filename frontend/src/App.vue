@@ -5,7 +5,7 @@
         <div class="brand">
           <router-link to="/" class="brand-link">
             <i class="bi bi-collection-play brand-icon"></i>
-            <span class="brand-text">美漫资源共建</span>
+            <span class="brand-text">{{ siteInfo.logoText }}</span>
           </router-link>
         </div>
         
@@ -62,25 +62,44 @@
       <div class="container footer-inner">
         <!-- 页脚布局 -->
         <div class="footer-row">
-          <router-link to="/about" class="footer-link">关于我们</router-link>
-          <a href="https://t.me/xueximeng" target="_blank" class="footer-link" title="加入Telegram群组">
-            <i class="bi bi-telegram"></i>
-          </a>
-          <a href="https://github.com/fish2018/GoComicMosaic" target="_blank" class="footer-link" title="查看GitHub源码">
-            <i class="bi bi-github"></i>
-          </a>
-          <a href="/streams" target="_blank" class="footer-link">在线点播</a>
-          <a href="https://mdsub.top/" target="_blank" class="footer-link">漫迪小站</a>
-          <a href="https://www.kangfuzhongx.in/" target="_blank" class="footer-link">三次元成瘾者康复中心</a>
-          <span class="footer-link">总访问量 <span id="busuanzi_value_site_pv">0</span></span>
+          <template v-if="footerSettings">
+            <!-- 动态生成链接 -->
+            <template v-for="(link, index) in footerSettings.links" :key="index">
+              <!-- 内部链接 -->
+              <router-link v-if="link.type === 'internal'" :to="link.url" class="footer-link" :title="link.title">
+                <i v-if="link.icon" :class="link.icon"></i>
+                <span>{{ link.text }}</span>
+              </router-link>
+              
+              <!-- 外部链接 -->
+              <a v-else :href="link.url" target="_blank" class="footer-link" :title="link.title">
+                <i v-if="link.icon" :class="link.icon"></i>
+                <span v-if="!link.icon">{{ link.text }}</span>
+              </a>
+            </template>
+            
+            <!-- 访问统计 -->
+            <span class="footer-link" v-if="footerSettings.show_visitor_count">总访问量 <span id="busuanzi_value_site_pv">0</span></span>
+          </template>
+          
+          <!-- 在设置加载前的默认链接，或加载失败时的回退链接 -->
+          <template v-else>
+            <router-link to="/about" class="footer-link">关于我们</router-link>
+            <a href="https://t.me/xueximeng" target="_blank" class="footer-link" title="加入Telegram群组">
+              <i class="bi bi-telegram"></i>
+            </a>
+            <a href="https://github.com/fish2018/GoComicMosaic" target="_blank" class="footer-link" title="查看GitHub源码">
+              <i class="bi bi-github"></i>
+            </a>
+          </template>
         </div>
         
         <!-- 分隔线 -->
         <div class="footer-divider"></div>
         
-        
+        <!-- 版权信息 -->
         <div class="copyright">
-          <p>&copy; 2025 美漫资源共建. 保留所有权利</p>
+          <p>{{ footerSettings?.copyright || '&copy; 2025 美漫资源共建. 保留所有权利' }}</p>
         </div>
       </div>
     </footer>
@@ -106,12 +125,20 @@ import { isAuthenticated, getCurrentUser, logout, setupAxiosInterceptors } from 
 import { useRoute, useRouter } from 'vue-router'
 import LocalSearch from './components/LocalSearch.vue'
 import axios from 'axios'
+import { getSiteSettings } from './utils/api'
 
 const route = useRoute()
 const router = useRouter()
 const isLoggedIn = ref(false)
 const currentUser = ref({})
 const footerPreloaded = ref(false)
+const footerSettings = ref(null)
+const siteInfo = ref({
+  title: '美漫资源共建',
+  logoText: '美漫资源共建',
+  description: '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。',
+  keywords: '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建'
+})
 
 // 计算当前是否在管理员页面
 const isAdminPage = computed(() => {
@@ -128,6 +155,47 @@ const checkAuthState = () => {
 const handleLogout = () => {
   logout()
   checkAuthState()
+}
+
+// 获取页脚设置
+const loadFooterSettings = async () => {
+  try {
+    // 使用InfoManager获取缓存的信息
+    const infoManager = (await import('./utils/InfoManager')).default;
+    footerSettings.value = await infoManager.getFooterInfo();
+    console.log('页脚设置加载成功:', footerSettings.value);
+  } catch (error) {
+    console.error('获取页脚设置失败:', error);
+    // 使用默认设置
+    footerSettings.value = {
+      links: [
+        { text: "关于我们", url: "/about", type: "internal" },
+        { text: "Telegram", url: "https://t.me/xueximeng", icon: "bi bi-telegram", type: "external", title: "加入Telegram群组" },
+        { text: "GitHub", url: "https://github.com/fish2018/GoComicMosaic", icon: "bi bi-github", type: "external", title: "查看GitHub源码" },
+        { text: "在线点播", url: "/streams", type: "internal" },
+        { text: "漫迪小站", url: "https://mdsub.top/", type: "external" },
+        { text: "三次元成瘾者康复中心", url: "https://www.kangfuzhongx.in/", type: "external" },
+      ],
+      copyright: "© 2025 美漫资源共建. 保留所有权利",
+      show_visitor_count: true
+    };
+  }
+}
+
+// 加载网站基本信息
+const loadSiteInfo = async () => {
+  try {
+    const infoManager = (await import('./utils/InfoManager')).default;
+    const info = await infoManager.getSiteBasicInfo();
+    siteInfo.value = info;
+    console.log('网站基本信息加载成功:', siteInfo.value);
+    
+    // 更新页面标题和meta信息
+    updateMetaInfo(route);
+  } catch (error) {
+    console.error('获取网站基本信息失败:', error);
+    // 默认值已在siteInfo的ref初始化中设置
+  }
 }
 
 // 滚动到页面顶部
@@ -210,39 +278,44 @@ const handleScroll = () => {
 // 更新页面标题和meta信息的函数
 const updateMetaInfo = (to) => {
   // 设置默认值
-  const defaultTitle = '美漫资源共建 - 动漫爱好者共同贡献的美漫资源库'
-  const defaultDescription = '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。'
-  const defaultKeywords = '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建'
+  const defaultTitle = siteInfo.value.title;
+  const defaultDescription = siteInfo.value.description;
+  const defaultKeywords = siteInfo.value.keywords;
   
   // 获取路由的meta信息
-  const title = to.meta.title || defaultTitle
-  const description = to.meta.description || defaultDescription
-  const keywords = to.meta.keywords || defaultKeywords
+  const title = to.meta.title || defaultTitle;
+  const description = to.meta.description || defaultDescription;
+  const keywords = to.meta.keywords || defaultKeywords;
   
   // 更新页面标题
-  document.title = title
+  document.title = title;
   
   // 更新meta描述
-  let metaDescription = document.querySelector('meta[name="description"]')
+  let metaDescription = document.querySelector('meta[name="description"]');
   if (metaDescription) {
-    metaDescription.setAttribute('content', description)
+    metaDescription.setAttribute('content', description);
   }
   
   // 更新meta关键词
-  let metaKeywords = document.querySelector('meta[name="keywords"]')
+  let metaKeywords = document.querySelector('meta[name="keywords"]');
   if (metaKeywords) {
-    metaKeywords.setAttribute('content', keywords)
+    metaKeywords.setAttribute('content', keywords);
   }
   
   // 更新Open Graph标签
-  let ogTitle = document.querySelector('meta[property="og:title"]')
+  let ogTitle = document.querySelector('meta[property="og:title"]');
   if (ogTitle) {
-    ogTitle.setAttribute('content', title)
+    ogTitle.setAttribute('content', title);
   }
   
-  let ogDescription = document.querySelector('meta[property="og:description"]')
+  let ogDescription = document.querySelector('meta[property="og:description"]');
   if (ogDescription) {
-    ogDescription.setAttribute('content', description)
+    ogDescription.setAttribute('content', description);
+  }
+
+  // 检查并更新favicon
+  if (typeof window.checkFavicon === 'function') {
+    window.checkFavicon();
   }
 }
 
@@ -251,36 +324,40 @@ onMounted(() => {
   // 设置路由afterEach钩子
   router.afterEach((to) => {
     // 更新meta信息
-    updateMetaInfo(to)
+    updateMetaInfo(to);
     
     // 回到页面顶部（可选）
     // window.scrollTo(0, 0)
-  })
+  });
   
-  checkAuthState()
+  checkAuthState();
   
   // 初始加载时设置meta信息
-  updateMetaInfo(route)
+  updateMetaInfo(route);
   
   // 设置axios拦截器
   setupAxiosInterceptors(() => {
-    logout()
-    isLoggedIn.value = false
-  })
+    logout();
+    isLoggedIn.value = false;
+  });
+  
+  // 加载页脚设置和网站基本信息
+  loadFooterSettings();
+  loadSiteInfo();
   
   // 监听滚动事件
-  window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('scroll', handleScroll, { passive: true });
   
   // 优化滚动性能
-  optimizeScrollPerformance()
+  optimizeScrollPerformance();
   
   // 确保初始渲染后预加载底部元素
   nextTick(() => {
     setTimeout(preloadFooterContent, 1000);
-  })
+  });
   
   // 添加beforeunload事件监听器
-  window.addEventListener('beforeunload', clearPaginationStorage)
+  window.addEventListener('beforeunload', clearPaginationStorage);
 
   // 添加不蒜子访问统计脚本
   const bszScript = document.createElement('script');
@@ -291,9 +368,9 @@ onMounted(() => {
 
 // 页面卸载时移除事件监听器
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-  window.removeEventListener('beforeunload', clearPaginationStorage)
-})
+  window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('beforeunload', clearPaginationStorage);
+});
 </script>
 
 <style>
@@ -914,7 +991,7 @@ body {
   }
 }
 
-@media (min-width: 993px) and (max-width: 1200px) {
+@media(max-width: 1200px) {
   .btn-custom {
     padding: 0.6rem 1.2rem;
   }
@@ -929,7 +1006,7 @@ body {
   }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1200px) {
   .header-inner {
     display: flex;
     flex-wrap: wrap;

@@ -54,6 +54,9 @@
         >
           <div class="history-thumbnail" :style="{ backgroundImage: `url(${item.poster || 'https://via.placeholder.com/120x80.png?text=视频'})` }">
             <div class="history-play-icon">▶</div>
+            <div v-if="item.episodeIndex !== undefined" class="episode-badge">
+              第{{ item.episodeIndex + 1 }}集
+            </div>
           </div>
           <div class="history-info">
             <h3>{{ item.title }}</h3>
@@ -495,9 +498,13 @@ export default {
     
     // 添加到播放历史
     const addToPlayHistory = (item) => {
-      // 首先检查是否已存在相同内容
+      // 获取当前标题，用于识别同一部影视
+      const currentTitle = item.title || '自定义流媒体';
+      
+      // 首先检查是否已存在相同影视剧（基于标题匹配）
       const existingItemIndex = playHistory.value.findIndex(
-        h => (h.id && h.id === item.id) || 
+        h => (h.title && h.title === currentTitle) || 
+        (h.id && h.id === item.id) || 
         (h.src && item.src && h.src === item.src)
       );
       
@@ -509,14 +516,15 @@ export default {
       // 获取当前数据源ID
       const currentDataSourceId = selectedDataSource.value || '';
       
-      // 添加到开头
+      // 添加到开头 - 增加集数信息记录
       playHistory.value.unshift({
         id: item.id,
-        title: item.title || '自定义流媒体',
+        title: currentTitle,
         src: item.src,
         poster: item.poster || '',
         timestamp: new Date().getTime(),
-        dataSourceId: currentDataSourceId // 保存数据源ID
+        dataSourceId: currentDataSourceId, // 保存数据源ID
+        episodeIndex: item.episodeIndex !== undefined ? item.episodeIndex : (streamInfo.value?.currentEpisode || 0) // 记录当前播放的集数
       });
       
       // 限制历史记录数量
@@ -549,8 +557,8 @@ export default {
       }
 
       if (item.id) {
-        // 这是预设的视频
-        loadStreamById(item.id);
+        // 这是预设的视频 - 传递集数信息
+        loadStreamById(item.id, item.episodeIndex);
       } else if (item.src) {
         // 这是自定义URL
         customStreamUrl.value = item.src;
@@ -564,7 +572,7 @@ export default {
     };
     
     // 从API加载流媒体详情
-    const loadStreamFromApi = async (streamId) => {
+    const loadStreamFromApi = async (streamId, targetEpisodeIndex = 0) => {
       isLoading.value = true; // API请求加载，显示全屏遮罩
       playerError.value = null;
       
@@ -582,14 +590,20 @@ export default {
             throw new Error('没有可用的播放链接');
           }
           
-          // 默认播放第一集
-          const firstEpisode = episodesList[0];
+          // 确保目标集数在有效范围内
+          const episodeIndex = targetEpisodeIndex >= 0 && targetEpisodeIndex < episodesList.length 
+            ? targetEpisodeIndex 
+            : 0;
+          
+          // 获取要播放的集数
+          const targetEpisode = episodesList[episodeIndex];
+          
           // 准备流媒体信息
           const mediaInfo = {
             title: movieDetail.vod_name,
             description: movieDetail.vod_blurb || movieDetail.vod_content || '',
             episodes: episodesList,
-            currentEpisode: 0,
+            currentEpisode: episodeIndex, // 使用目标集数
             apiData: movieDetail,
             // 增加更多详情信息
             actor: movieDetail.vod_actor || '',
@@ -611,7 +625,7 @@ export default {
           // 设置媒体信息和播放源
           streamInfo.value = mediaInfo;
           currentStreamSources.value = [{
-            src: firstEpisode.url,
+            src: targetEpisode.url, // 使用目标集数的URL
             type: 'application/x-mpegURL' // 默认为HLS格式
           }];
           currentPoster.value = posterUrl;
@@ -620,11 +634,12 @@ export default {
           isPlaying.value = true;
           showingSearchResults.value = false;
           
-          // 添加到播放历史
+          // 添加到播放历史，包括集数信息
           addToPlayHistory({
             id: streamId,
             title: movieDetail.vod_name,
-            poster: posterUrl
+            poster: posterUrl,
+            episodeIndex: episodeIndex // 保存当前播放的集数
           });
           
           // 延迟结束加载状态
@@ -675,7 +690,18 @@ export default {
         // 5. 确保播放器始终显示
         isPlaying.value = true;
         
-        // 6. 充分延迟后结束加载状态
+        // 6. 更新播放历史中的集数信息
+        // 确保有有效的当前播放信息
+        if (streamInfo.value && streamInfo.value.apiData) {
+          addToPlayHistory({
+            id: streamInfo.value.apiData.vod_id,
+            title: streamInfo.value.title,
+            poster: currentPoster.value,
+            episodeIndex: index
+          });
+        }
+        
+        // 7. 充分延迟后结束加载状态
         setTimeout(() => {
           console.log('剧集切换完成');
           isVideoLoading.value = false; // 使用视频加载状态而非全局加载状态
@@ -689,7 +715,7 @@ export default {
     };
     
     // 修改从URL参数中加载流媒体的方法
-    const loadStreamById = async (streamId) => {
+    const loadStreamById = async (streamId, targetEpisodeIndex = 0) => {
       isLoading.value = true;
       
       try {
@@ -702,7 +728,7 @@ export default {
           isLoading.value = false; // 本地数据加载完成后关闭加载状态
         } else {
           // 使用API加载
-          await loadStreamFromApi(streamId);
+          await loadStreamFromApi(streamId, targetEpisodeIndex);
         }
       } catch (error) {
         console.error('加载流媒体信息失败:', error);
@@ -1071,4 +1097,180 @@ export default {
     };
   }
 }
-</script> 
+</script>
+
+<style scoped>
+/* 历史记录项样式 */
+.history-section {
+  margin: 1.5rem 0;
+  background: linear-gradient(to right, rgba(124, 58, 237, 0.03), rgba(241, 239, 254, 0.08));
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.history-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, #7c3aed, #8b5cf6);
+  border-radius: 4px 0 0 4px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.history-header h2::before {
+  content: "⏱";
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
+.history-items {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: thin; /* Firefox */
+}
+
+.history-items::-webkit-scrollbar {
+  height: 6px;
+}
+
+.history-items::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 3px;
+}
+
+.history-items::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.history-items::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  max-width: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.history-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.history-thumbnail {
+  height: 110px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  width: 100%;
+}
+
+.history-play-icon {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  background-color: rgba(124, 58, 237, 0.9);
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: scale(0.9);
+}
+
+.history-item:hover .history-play-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.history-info {
+  padding: 12px;
+}
+
+.history-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+}
+
+.history-info p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* 集数徽章样式 */
+.episode-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .history-items {
+    padding-bottom: 12px;
+  }
+  
+  .history-item {
+    min-width: 150px;
+    max-width: 170px;
+  }
+  
+  .history-thumbnail {
+    height: 100px;
+  }
+}
+</style> 

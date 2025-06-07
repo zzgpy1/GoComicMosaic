@@ -23,6 +23,24 @@ func SetupRoutes(router *gin.Engine) {
 		auth.POST("/change-password", JWTAuthMiddleware(), UpdatePassword)
 	}
 	
+	// 网站设置路由
+	settings := api.Group("/settings")
+	{
+		// 获取设置 - 公开API
+		settings.GET("/:key", GetSiteSettings)
+		settings.GET("/", GetAllSiteSettings)
+		
+		// 更新设置 - 需要管理员权限
+		settings.PUT("/:key", JWTAuthMiddleware(), AdminAuthMiddleware(), UpdateSiteSettings)
+	}
+	
+	// 管理员路由
+	admin := api.Group("/admin", JWTAuthMiddleware(), AdminAuthMiddleware())
+	{
+		// 网站图标上传
+		admin.POST("/upload/favicon", UploadFavicon)
+	}
+	
 	// 资源路由 - 需要认证
 	resources := api.Group("/resources")
 	{

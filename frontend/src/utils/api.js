@@ -1,4 +1,5 @@
 import { getDataSourceManager } from './dataSourceManager';
+import axios from 'axios';
 
 // 是否启用离线模式（当API不可用时）
 const OFFLINE_MODE = false; // 设置为false使用在线API
@@ -149,4 +150,68 @@ export const parseEpisodes = (playUrl) => {
   }
   
   return episodesArray;
+};
+
+// 获取指定key的网站设置 (key可以是'info'等)
+export const getSiteSettings = async (key) => {
+  try {
+    const response = await axios.get(`/api/settings/${key}`);
+    return response.data;
+  } catch (error) {
+    console.error(`获取网站设置 [${key}] 失败:`, error);
+    throw error;
+  }
+};
+
+// 获取所有网站设置
+export const getAllSiteSettings = async () => {
+  try {
+    const response = await axios.get('/api/settings/');
+    return response.data;
+  } catch (error) {
+    console.error('获取所有网站设置失败:', error);
+    throw error;
+  }
+};
+
+// 更新网站设置 (需要管理员权限，key可以是'info'等)
+export const updateSiteSettings = async (key, settingValue) => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      throw new Error('未登录或认证令牌已过期');
+    }
+    
+    // 详细打印调试信息
+    console.log(`准备更新设置 [${key}], 提交的数据:`, JSON.stringify(settingValue, null, 2));
+    console.log(`认证令牌前10位: ${token.substring(0, 10)}...`);
+    
+    // 构造请求数据
+    const requestData = { setting_value: settingValue };
+    console.log(`完整请求数据对象:`, requestData);
+    
+    // 使用单/api前缀
+    const response = await axios.put(`/api/settings/${key}`, requestData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log(`设置更新成功: 状态码=${response.status}, 响应数据:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`更新网站设置 [${key}] 失败:`, error);
+    
+    // 打印详细错误信息
+    if (error.response) {
+      console.error(`错误状态码: ${error.response.status}`);
+      console.error(`错误响应数据:`, error.response.data);
+      console.error(`请求URL: ${error.config.url}`);
+      console.error(`请求头:`, error.config.headers);
+      console.error(`请求数据:`, error.config.data);
+    }
+    
+    throw error;
+  }
 }; 
