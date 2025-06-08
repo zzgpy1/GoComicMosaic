@@ -2437,4 +2437,4 @@ const removeDataSource = (index) => {
 
 </script>
 
-<style scoped src="@/styles/admin.css"></style>
+<style scoped src="@/styles/Admin.css"></style>

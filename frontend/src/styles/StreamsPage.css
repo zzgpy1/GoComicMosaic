@@ -1,0 +1,173 @@
+/* 历史记录项样式 */
+.history-section {
+  margin: 1.5rem 0;
+  background: linear-gradient(to right, rgba(124, 58, 237, 0.03), rgba(241, 239, 254, 0.08));
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.history-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, #7c3aed, #8b5cf6);
+  border-radius: 4px 0 0 4px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.history-header h2::before {
+  content: "⏱";
+  margin-right: 8px;
+  font-size: 1.1rem;
+}
+
+.history-items {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: thin; /* Firefox */
+}
+
+.history-items::-webkit-scrollbar {
+  height: 6px;
+}
+
+.history-items::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 3px;
+}
+
+.history-items::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.history-items::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  max-width: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.history-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.history-thumbnail {
+  height: 110px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  width: 100%;
+}
+
+.history-play-icon {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  background-color: rgba(124, 58, 237, 0.9);
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: scale(0.9);
+}
+
+.history-item:hover .history-play-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.history-info {
+  padding: 12px;
+}
+
+.history-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+}
+
+.history-info p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* 集数徽章样式 */
+.episode-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .history-items {
+    padding-bottom: 12px;
+  }
+  
+  .history-item {
+    min-width: 150px;
+    max-width: 170px;
+  }
+  
+  .history-thumbnail {
+    height: 100px;
+  }
+}
