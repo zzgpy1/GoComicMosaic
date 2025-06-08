@@ -1,6 +1,6 @@
 # 动漫资源共享平台 - Golang后端
 
-这是使用Golang实现的动漫资源共享平台后端，原后端使用Python FastAPI实现。
+这是使用Golang实现的动漫资源共享平台后端
 
 ## 项目结构
 
@@ -14,8 +14,9 @@ gobackend/
 │   ├── diagnostic/             # 诊断工具
 │   │   └── main.go             # 数据库诊断程序
 │   └── test/                   # 测试工具
-├── config/                     # 配置文件
 ├── internal/                   # 内部包
+│   ├── config/                 # 配置文件处理
+│   │   └── config.go           # 配置加载与管理
 │   ├── models/                 # 数据模型
 │   │   ├── models.go           # 定义数据模型结构
 │   │   └── database.go         # 数据库连接和初始化
@@ -25,7 +26,11 @@ gobackend/
 │   │   ├── resource_handlers.go# 资源基本操作处理器
 │   │   ├── resource_approval.go# 资源审批和补充处理器
 │   │   ├── upload_handlers.go  # 图片上传处理器
+│   │   ├── proxy_handler.go    # CORS代理处理器
+│   │   ├── info_handlers.go    # 网站信息处理器
 │   │   └── routes.go           # 路由定义
+│   ├── routes/                 # 路由管理
+│   │   └── router.go           # 路由配置
 │   ├── auth/                   # 认证工具
 │   │   └── auth.go             # JWT认证相关功能
 │   └── utils/                  # 工具函数
@@ -37,13 +42,16 @@ gobackend/
 
 ## 功能特性
 
-- JWT认证系统，区分普通用户和管理员权限
-- 完整的资源CRUD操作
-- 资源审批流程（初始审批和补充内容审批）
-- 图片上传和处理
-- 资源点赞功能
-- SQLite数据库支持
-- WebP图像转换（支持静态图像和动画GIF）
+- **用户认证**：JWT认证系统，区分普通用户和管理员权限
+- **资源管理**：完整的资源CRUD操作
+- **审批系统**：资源审批流程（初始审批和补充内容审批）
+- **图片处理**：图片上传、处理和WebP转换
+- **网站配置**：支持动态管理网站信息（标题、描述、链接等）
+- **数据源管理**：管理平台支持的外部数据源
+- **CORS代理**：提供安全的跨域资源访问
+- **资源交互**：支持资源点赞功能
+- **数据存储**：SQLite数据库支持，方便部署和迁移
+- **高效转换**：WebP图像优化（支持静态图像和动画GIF）
 
 ## 技术栈
 
@@ -71,6 +79,14 @@ go run main.go
 
 服务默认在8000端口运行，可以通过环境变量`PORT`修改端口。
 
+3. 环境变量配置：
+
+```
+ASSETS_PATH="/path/to/assets" # 设置资源文件存储路径
+DB_PATH="/path/to/database.db" # 设置数据库文件路径
+PORT="8080" # 设置HTTP服务端口
+```
+
 ## API 接口
 
 ### 认证相关
@@ -91,22 +107,35 @@ go run main.go
 
 - `GET /api/resources/pending` - 获取待审批资源（管理员）
 - `PUT /api/resources/:id/approve` - 审批资源（管理员）
+- `GET /api/resources/approval-records` - 获取所有审批记录（管理员）
 - `DELETE /api/resources/:id/record` - 删除审批记录（管理员）
+- `DELETE /api/resources/batch-delete-records` - 批量删除审批记录（管理员）
 
 ### 资源补充
 
 - `POST /api/resources/:id/supplement` - 为资源添加补充内容
 - `GET /api/resources/pending-supplements` - 获取待审批补充内容的资源列表（管理员）
 - `GET /api/resources/:id/supplement` - 获取资源的补充内容（管理员）
+- `GET /api/resources/:id/approval-records` - 获取资源的审批历史（管理员）
 
 ### 文件上传
 
 - `POST /api/resources/upload-images` - 上传图片
+- `POST /api/admin/upload/favicon` - 上传网站图标
 
 ### 点赞功能
 
 - `POST /api/resources/:id/like` - 点赞资源
 - `POST /api/resources/:id/unlike` - 取消点赞
+
+### 网站配置管理
+
+- `GET /api/info` - 获取网站配置信息
+- `POST /api/admin/info` - 更新网站配置信息（管理员）
+
+### CORS代理
+
+- `GET /proxy` - 跨域代理请求服务
 
 ## 初次运行
 
@@ -132,6 +161,7 @@ go run main.go
 - **灵活的输出选项**：可选保留原扩展名或使用.webp扩展名
 - **支持动画GIF转WebP**：保留动画效果，同时减小文件体积
 - **降级处理**：当外部工具不可用时，自动降级使用内置方法处理
+- **批量处理**：支持目录递归处理和并行转换
 
 ### 使用方法
 
@@ -215,8 +245,19 @@ go build -o webp-converter cmd/webp/main.go
 
 如果外部工具`gif2webp`不可用，工具会自动降级为转换静态图像。
 
-### 性能优化建议
+## 最近更新内容
+
+- 添加了批量删除审批记录功能
+- 实现了网站信息管理功能，支持动态配置网站各项参数
+- 增强了图片处理和转换功能，提升处理效率
+- 优化了数据库查询性能
+- 完善了CORS代理功能，支持更安全的跨域资源访问
+- 添加了详细的API错误返回，便于前端处理
+
+## 性能优化建议
 
 1. **调整并发数量**：根据机器性能调整`-concurrency`参数
 2. **批量处理大量文件**：对大型目录建议分批处理或增加并发数
-3. **内存使用优化**：处理超大图片时建议单独处理，避免内存溢出 
+3. **内存使用优化**：处理超大图片时建议单独处理，避免内存溢出
+4. **数据库索引**：根据访问模式优化SQLite索引
+5. **静态资源缓存**：为图片等静态资源配置适当的缓存策略 

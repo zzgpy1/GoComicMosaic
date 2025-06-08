@@ -5,6 +5,9 @@
  * 1. 复制此文件并重命名为 yourDataSourceName.js
  * 2. 修改下面的配置和实现
  * 3. 系统将自动加载你的数据源
+ * 
+ * 注意：
+ * 现在推荐直接在 dataSourcesConfig.js 中添加简化配置，而不是创建独立文件
  */
 
 import axios from 'axios';
@@ -12,20 +15,35 @@ import { addCorsProxy } from '../corsProxy';
 
 // 数据源配置 - 可以根据需要修改这里的配置
 const CONFIG = {
-  // 基础URL - 直接设置为完整的API地址
+  // 【必填】基础URL - 直接设置为完整的API地址
   // JSON格式示例: 'https://api.example.com/api.php/provide/vod/'
   // XML格式示例: 'https://api.example.com/api.php/provide/vod/at/xml/'
+  // 如果有播放源指定，建议使用格式: 'https://api.example.com/api.php/provide/vod/from/source/at/xml/'
   baseUrl: 'https://api.example.com/api.php/provide/vod/',
   
-  // 是否使用XML格式 (true: XML格式, false: JSON格式)
-  useXml: false
+  // 【可选】是否使用XML格式 (true: XML格式, false: JSON格式)
+  // 默认为false
+  useXml: false,
+  
+  // 【可选】数据源ID，默认根据name自动生成
+  // id: 'customid',
+  
+  // 【可选】请求超时时间，默认12000ms
+  // timeout: 10000
 };
+
+// 系统会自动提取播放源信息
+// 1. 如果URL包含 /from/xxx/，会自动使用xxx作为播放源标识
+// 2. 否则，使用数据源ID作为默认播放源标识
 
 const templateDataSource = {
   // 【必填】数据源显示名称
   name: '数据源名称',
   
-  // 【必填】数据源简要描述
+  // 【自动生成】数据源ID
+  // id: 会根据name自动生成
+  
+  // 【自动生成】数据源简要描述
   description: '这是一个数据源模板，支持JSON和XML格式，复制并修改它来创建你自己的数据源',
   
   // 【必填】API基础URL - 使用配置中的URL

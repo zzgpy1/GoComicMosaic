@@ -129,8 +129,54 @@
             {{ settingsError }}
           </div>
           
-          <!-- 基本信息设置部分 -->
-          <div class="settings-section">
+          <!-- 标签页导航 -->
+          <div class="settings-tabs">
+            <div 
+              class="settings-tab" 
+              :class="{ 'active': activeSettingsTab === 'basic' }"
+              @click="activeSettingsTab = 'basic'"
+            >
+              <i class="bi bi-info-circle"></i>
+              <span>基本信息</span>
+            </div>
+            <div 
+              class="settings-tab" 
+              :class="{ 'active': activeSettingsTab === 'meta' }"
+              @click="activeSettingsTab = 'meta'"
+            >
+              <i class="bi bi-card-text"></i>
+              <span>页面元信息</span>
+            </div>
+            <div 
+              class="settings-tab" 
+              :class="{ 'active': activeSettingsTab === 'footer' }"
+              @click="activeSettingsTab = 'footer'"
+            >
+              <i class="bi bi-layout-text-window"></i>
+              <span>页脚设置</span>
+            </div>
+            <div 
+              class="settings-tab" 
+              :class="{ 'active': activeSettingsTab === 'datasources' }"
+              @click="activeSettingsTab = 'datasources'"
+            >
+              <i class="bi bi-database-gear"></i>
+              <span>采集解析源</span>
+            </div>
+            <div 
+              class="settings-tab" 
+              :class="{ 'active': activeSettingsTab === 'about' }"
+              @click="activeSettingsTab = 'about'"
+            >
+              <i class="bi bi-file-person"></i>
+              <span>关于页面</span>
+            </div>
+          </div>
+          
+          <!-- 标签页内容区域 -->
+          <div class="settings-tab-content">
+            <!-- 基本信息设置标签页 -->
+            <div class="settings-section" v-show="activeSettingsTab === 'basic'">
             <h5 class="section-title">基本信息设置</h5>
             
             <!-- 网站图标 (favicon) -->
@@ -255,8 +301,8 @@
             </div>
           </div>
           
-          <!-- 路由Meta信息设置 -->
-          <div class="settings-section">
+          <!-- 页面元信息设置标签页 -->
+          <div class="settings-section" v-show="activeSettingsTab === 'meta'">
             <h5 class="section-title">页面元信息设置</h5>
             <div class="section-description">
               设置各个页面的标题、描述和关键词。这些信息将显示在浏览器标签页和搜索引擎结果中。
@@ -341,11 +387,11 @@
             </div>
           </div>
           
-          <!-- 页脚设置部分 -->
-          <div class="settings-section">
+          <!-- 页脚设置标签页 -->
+          <div class="settings-section" v-show="activeSettingsTab === 'footer'">
             <h5 class="section-title">页脚设置</h5>
             
-            <!-- 显示访问统计 - 移到最上方 -->
+            <!-- 显示访问统计 -->
             <div class="form-group">
               <label class="form-label">显示访问统计</label>
               <div class="checkbox-wrapper horizontal-display">
@@ -382,7 +428,6 @@
                     <div class="link-field-header">显示文本</div>
                     <div class="link-field-header">URL</div>
                     <div class="link-field-header">图标</div>
-                    <div class="link-field-header">提示文本</div>
                     <div class="link-field-header actions-header"></div>
                   </div>
                   
@@ -427,7 +472,7 @@
                           </div>
                         </div>
                         
-                        <!-- 删除按钮 - 更新类名和图标 -->
+                        <!-- 删除按钮 -->
                         <button 
                           type="button" 
                           class="remove-link-btn" 
@@ -443,7 +488,7 @@
               </div>
             </div>
             
-            <!-- 添加新链接按钮 - 添加包装器确保居中 -->
+            <!-- 添加新链接按钮 -->
             <div class="add-link-wrapper">
               <button 
                 type="button" 
@@ -456,8 +501,8 @@
             </div>
           </div>
           
-          <!-- About页面设置部分 -->
-          <div class="settings-section">
+          <!-- 关于页面设置标签页 -->
+          <div class="settings-section" v-show="activeSettingsTab === 'about'">
             <h5 class="section-title">关于页面设置</h5>
             
             <!-- 本站介绍设置 -->
@@ -607,7 +652,7 @@
             
             <!-- 联系我们设置 -->
             <div class="form-group">
-              <h6 class="subsection-title"><i class="bi bi-chat-dots"></i> 联系我们</h6>
+              <h6 class="subsection-title"><i class="bi bi-chat-text"></i> 联系我们</h6>
               
               <!-- 标题 -->
               <div class="form-group">
@@ -636,14 +681,14 @@
                     class="custom-input" 
                     v-model="aboutPageConfig.contactSection.description" 
                     rows="3"
-                    placeholder="输入联系方式描述..."
+                    placeholder="输入联系我们描述..."
                   ></textarea>
                 </div>
               </div>
               
               <!-- 图标 -->
               <div class="form-group">
-                <label class="form-label">装饰图标</label>
+                <label class="form-label">图标</label>
                 <div class="icon-selector-button" 
                   @click="openContactSectionIconSelector" 
                   :title="aboutPageConfig.contactSection.icon ? '更改图标' : '选择图标'"
@@ -662,19 +707,12 @@
               </div>
               
               <!-- 联系方式列表 -->
-              <h6 class="subsection-title mt-4"><i class="bi bi-list-ul"></i> 联系方式列表</h6>
+              <div class="form-group contact-items-wrapper">
+                <label class="form-label">联系方式列表</label>
               
-              <div class="scroll-container links-wrapper">
+                <div class="scroll-container links-wrapper contact-items-container">
                 <div class="links-container">
-                  <!-- 标签头部 -->
-                  <div class="link-header">
-                    <div class="drag-handle-placeholder"></div>
-                    <div class="link-field-header">文本</div>
-                    <div class="link-field-header">图标</div>
-                    <div class="link-field-header actions-header"></div>
-                  </div>
-                  
-                  <!-- 联系方式列表，支持拖拽排序 -->
+                    <!-- 联系方式列表 -->
                   <draggable
                     v-model="aboutPageConfig.contactItems"
                     item-key="id"
@@ -683,14 +721,14 @@
                     @end="onDragEnd"
                   >
                     <template #item="{ element, index }">
-                      <div :key="element.id" class="link-item">
+                        <div :key="element.id" class="link-item contact-item">
                         <div class="drag-handle">
                           <i class="bi bi-grip-vertical"></i>
                         </div>
                         <div class="link-fields">
-                          <!-- 文本 -->
-                          <div class="link-field" data-label="文本">
-                            <input type="text" v-model="element.text" class="custom-input" placeholder="联系方式文本">
+                            <!-- 联系方式文本 -->
+                            <div class="link-field" data-label="联系方式">
+                              <input type="text" v-model="element.text" class="custom-input" placeholder="联系方式内容">
                           </div>
                           
                           <!-- 图标 -->
@@ -738,12 +776,107 @@
                   <i class="bi bi-plus-circle"></i>
                   <span class="btn-text">添加联系方式</span>
                 </button>
+                </div>
+              </div>
               </div>
             </div>
           </div>
           
-          <!-- 保存按钮 - 移到这里作为整个设置区域的统一保存按钮 -->
+          <!-- 采集解析源设置标签页 -->
+          <div class="settings-section" v-show="activeSettingsTab === 'datasources'">
+            <h5 class="section-title">采集解析源设置</h5>
+            <div class="section-description">
+              配置资源采集和解析的数据源，系统将根据这些配置自动获取和更新资源信息。每个数据源需要设置三个基本属性：
+              <ul class="description-list">
+                <li><strong>名称</strong>：数据源的识别名称，便于管理</li>
+                <li><strong>基础URL</strong>：API接口地址或网页链接，系统将从此地址获取数据</li>
+                <li><strong>使用XML</strong>：是否以XML格式解析返回数据，不勾选则使用JSON格式</li>
+              </ul>
+              <div class="description-note">注意：配置更改后需点击底部"保存设置"按钮使其生效。数据源优先级按列表顺序，可拖动排序调整。</div>
+            </div>
+            
+            <!-- 数据源链接列表 -->
+            <div class="form-group">
+              <label class="form-label">数据源列表</label>
+              <div class="scroll-container links-wrapper">
+                <div class="links-container">
+                  <!-- 标签头部，只显示一次 -->
+                  <div class="link-header datasource-header">
+                    <div class="drag-handle-placeholder"></div>
+                    <div class="datasource-header-fields">
+                      <div class="link-field-header name-field">名称</div>
+                      <div class="link-field-header url-field">基础URL</div>
+                      <div class="link-field-header xml-field">使用XML</div>
+                    </div>
+                    <div class="link-field-header actions-header">操作</div>
+                  </div>
+                  
+                  <!-- 数据源列表，支持拖拽排序 -->
+                  <draggable
+                    v-model="dataSources"
+                    item-key="id"
+                    handle=".drag-handle"
+                    ghost-class="ghost-item"
+                    @end="onDragEnd"
+                  >
+                    <template #item="{ element, index }">
+                      <div :key="index" class="link-item datasource-item">
+                        <div class="drag-handle">
+                          <i class="bi bi-grip-vertical"></i>
+                        </div>
+                        <div class="link-fields datasource-fields">
+                          <!-- 数据源名称 -->
+                          <div class="link-field name-field" data-label="名称">
+                            <input type="text" v-model="element.name" class="custom-input" placeholder="数据源名称">
+                          </div>
+                          
+                          <!-- 基础URL -->
+                          <div class="link-field url-field" data-label="基础URL">
+                            <input type="text" v-model="element.baseUrl" class="custom-input" placeholder="https://example.com/api">
+                          </div>
+                          
+                          <!-- 使用XML -->
+                          <div class="link-field xml-field checkbox-field" data-label="XML">
+                            <div class="checkbox-wrapper checkbox-center">
+                              <input :id="`use-xml-${index}`" class="custom-checkbox" type="checkbox" v-model="element.useXml">
+                              <label :for="`use-xml-${index}`"></label>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <!-- 删除按钮 -->
+                        <button 
+                          type="button" 
+                          class="remove-link-btn actions-field" 
+                          @click="removeDataSource(index)"
+                          title="删除此数据源"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </template>
+                  </draggable>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 添加新数据源按钮 -->
+            <div class="add-link-wrapper">
+              <button 
+                type="button" 
+                class="btn-custom btn-outline btn-sm add-link-btn" 
+                @click="addNewDataSource"
+              >
+                <i class="bi bi-plus-circle"></i>
+                <span class="btn-text">添加数据源</span>
+              </button>
+              
+            </div>
+          </div>
+          
+        <!-- 保存按钮 -->
           <div class="form-actions">
+          <!-- 成功提示在按钮上方 -->
             <div v-if="settingsSuccess" class="settings-success-message">
               <i class="bi bi-check-circle-fill"></i> 设置保存成功！
             </div>
@@ -756,7 +889,7 @@
             >
               <div v-if="settingsLoading" class="spinner"></div>
               <i class="bi bi-save"></i>
-              <span class="btn-text">保存所有设置</span>
+            <span class="btn-text">保存设置</span>
             </button>
           </div>
         </div>
@@ -1222,11 +1355,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted,  watch } from 'vue'
 import axios from 'axios'
-import { isAdmin, debugAuth } from '../utils/auth'
+import { debugAuth } from '../utils/auth'
 import { useRouter } from 'vue-router'
-import { updateSiteSettings, getSiteSettings } from '../utils/api'
+import iconList from '../utils/icons.js';
 import draggable from 'vuedraggable'
 import infoManager from '../utils/InfoManager'
 
@@ -1262,6 +1395,7 @@ const showSiteSettings = ref(false)
 const settingsLoading = ref(false)
 const settingsSuccess = ref(false)
 const settingsError = ref(null)
+const activeSettingsTab = ref('basic') // 添加标签页状态变量
 const footerSettings = ref({
   links: [],
   copyright: '',
@@ -1279,21 +1413,6 @@ const currentIcon = ref('')
 const iconSelectorTarget = ref('') // 用于区分当前为哪个元素选择图标（链接、介绍、特性等）
 const iconSelectorIndex = ref(-1) // 当前编辑的项目索引
 const iconDisplay = ref({}) // 用于显示图标的简化名称
-// const iconList = ['tencent-qq',
-//   'github', 'twitter', 'facebook', 'instagram', 'telegram', 'discord', 'tiktok',
-//   'youtube', 'chat', 'chat-fill', 'messenger', 'whatsapp', 'skype', 'reddit',
-//   'pinterest', 'google', 'linkedin', 'globe', 'globe2', 'house', 'info-circle',
-//   'question-circle', 'exclamation-circle', 'shield', 'hand-thumbs-up',
-//   'envelope', 'envelope-fill', 'telephone', 'telephone-fill', 'people',
-//   'person', 'journal-text', 'book', 'bookmark', 'bookmark-fill',
-//   'heart', 'heart-fill', 'star', 'star-fill', 'bell', 'bell-fill',
-//   'gear', 'gear-fill', 'tools', 'box', 'gift', 'cart', 'cart-fill',
-//   'bag', 'bag-fill', 'basket', 'basket-fill', 'camera', 'camera-fill',
-//   'music-note', 'music-note-list', 'film', 'play-circle', 'calendar',
-//   'calendar-date', 'calendar-week', 'clock', 'clock-fill', 'award',
-//   'briefcase', 'emoji-smile', 'emoji-laugh', 'emoji-sunglasses'
-// ]
-const iconList = ['0-circle', '0-circle-fill', '0-square', '0-square-fill', '1-circle', '1-circle-fill', '1-square', '1-square-fill', '123', '2-circle', '2-circle-fill', '2-square', '2-square-fill', '3-circle', '3-circle-fill', '3-square', '3-square-fill', '4-circle', '4-circle-fill', '4-square', '4-square-fill', '5-circle', '5-circle-fill', '5-square', '5-square-fill', '6-circle', '6-circle-fill', '6-square', '6-square-fill', '7-circle', '7-circle-fill', '7-square', '7-square-fill', '8-circle', '8-circle-fill', '8-square', '8-square-fill', '9-circle', '9-circle-fill', '9-square', '9-square-fill', 'activity', 'airplane', 'airplane-engines', 'airplane-engines-fill', 'airplane-fill', 'alarm', 'alarm-fill', 'alexa', 'align-bottom', 'align-center', 'align-end', 'align-middle', 'align-start', 'align-top', 'alipay', 'alphabet', 'alphabet-uppercase', 'alt', 'amazon', 'amd', 'android', 'android2', 'anthropic', 'app', 'app-indicator', 'apple', 'apple-music', 'archive', 'archive-fill', 'arrow-90deg-down', 'arrow-90deg-left', 'arrow-90deg-right', 'arrow-90deg-up', 'arrow-bar-down', 'arrow-bar-left', 'arrow-bar-right', 'arrow-bar-up', 'arrow-clockwise', 'arrow-counterclockwise', 'arrow-down', 'arrow-down-circle', 'arrow-down-circle-fill', 'arrow-down-left-circle', 'arrow-down-left-circle-fill', 'arrow-down-left-square', 'arrow-down-left-square-fill', 'arrow-down-right-circle', 'arrow-down-right-circle-fill', 'arrow-down-right-square', 'arrow-down-right-square-fill', 'arrow-down-square', 'arrow-down-square-fill', 'arrow-down-left', 'arrow-down-right', 'arrow-down-short', 'arrow-down-up', 'arrow-left', 'arrow-left-circle', 'arrow-left-circle-fill', 'arrow-left-square', 'arrow-left-square-fill', 'arrow-left-right', 'arrow-left-short', 'arrow-repeat', 'arrow-return-left', 'arrow-return-right', 'arrow-right', 'arrow-right-circle', 'arrow-right-circle-fill', 'arrow-right-square', 'arrow-right-square-fill', 'arrow-right-short', 'arrow-through-heart', 'arrow-through-heart-fill', 'arrow-up', 'arrow-up-circle', 'arrow-up-circle-fill', 'arrow-up-left-circle', 'arrow-up-left-circle-fill', 'arrow-up-left-square', 'arrow-up-left-square-fill', 'arrow-up-right-circle', 'arrow-up-right-circle-fill', 'arrow-up-right-square', 'arrow-up-right-square-fill', 'arrow-up-square', 'arrow-up-square-fill', 'arrow-up-left', 'arrow-up-right', 'arrow-up-short', 'arrows', 'arrows-angle-contract', 'arrows-angle-expand', 'arrows-collapse', 'arrows-collapse-vertical', 'arrows-expand', 'arrows-expand-vertical', 'arrows-fullscreen', 'arrows-move', 'arrows-vertical', 'aspect-ratio', 'aspect-ratio-fill', 'asterisk', 'at', 'award', 'award-fill', 'back', 'backpack', 'backpack-fill', 'backpack2', 'backpack2-fill', 'backpack3', 'backpack3-fill', 'backpack4', 'backpack4-fill', 'backspace', 'backspace-fill', 'backspace-reverse', 'backspace-reverse-fill', 'badge-3d', 'badge-3d-fill', 'badge-4k', 'badge-4k-fill', 'badge-8k', 'badge-8k-fill', 'badge-ad', 'badge-ad-fill', 'badge-ar', 'badge-ar-fill', 'badge-cc', 'badge-cc-fill', 'badge-hd', 'badge-hd-fill', 'badge-sd', 'badge-sd-fill', 'badge-tm', 'badge-tm-fill', 'badge-vo', 'badge-vo-fill', 'badge-vr', 'badge-vr-fill', 'badge-wc', 'badge-wc-fill', 'bag', 'bag-check', 'bag-check-fill', 'bag-dash', 'bag-dash-fill', 'bag-fill', 'bag-heart', 'bag-heart-fill', 'bag-plus', 'bag-plus-fill', 'bag-x', 'bag-x-fill', 'balloon', 'balloon-fill', 'balloon-heart', 'balloon-heart-fill', 'ban', 'ban-fill', 'bandaid', 'bandaid-fill', 'bank', 'bank2', 'bar-chart', 'bar-chart-fill', 'bar-chart-line', 'bar-chart-line-fill', 'bar-chart-steps', 'basket', 'basket-fill', 'basket2', 'basket2-fill', 'basket3', 'basket3-fill', 'battery', 'battery-charging', 'battery-full', 'battery-half', 'battery-low', 'beaker', 'beaker-fill', 'behance', 'bell', 'bell-fill', 'bell-slash', 'bell-slash-fill', 'bezier', 'bezier2', 'bicycle', 'bing', 'binoculars', 'binoculars-fill', 'blockquote-left', 'blockquote-right', 'bluesky', 'bluetooth', 'body-text', 'book', 'book-fill', 'book-half', 'bookmark', 'bookmark-check', 'bookmark-check-fill', 'bookmark-dash', 'bookmark-dash-fill', 'bookmark-fill', 'bookmark-heart', 'bookmark-heart-fill', 'bookmark-plus', 'bookmark-plus-fill', 'bookmark-star', 'bookmark-star-fill', 'bookmark-x', 'bookmark-x-fill', 'bookmarks', 'bookmarks-fill', 'bookshelf', 'boombox', 'boombox-fill', 'bootstrap', 'bootstrap-fill', 'bootstrap-reboot', 'border', 'border-all', 'border-bottom', 'border-center', 'border-inner', 'border-left', 'border-middle', 'border-outer', 'border-right', 'border-style', 'border-top', 'border-width', 'bounding-box', 'bounding-box-circles', 'box', 'box-arrow-down-left', 'box-arrow-down-right', 'box-arrow-down', 'box-arrow-in-down', 'box-arrow-in-down-left', 'box-arrow-in-down-right', 'box-arrow-in-left', 'box-arrow-in-right', 'box-arrow-in-up', 'box-arrow-in-up-left', 'box-arrow-in-up-right', 'box-arrow-left', 'box-arrow-right', 'box-arrow-up', 'box-arrow-up-left', 'box-arrow-up-right', 'box-fill', 'box-seam', 'box-seam-fill', 'box2', 'box2-fill', 'box2-heart', 'box2-heart-fill', 'boxes', 'braces', 'braces-asterisk', 'bricks', 'briefcase', 'briefcase-fill', 'brightness-alt-high', 'brightness-alt-high-fill', 'brightness-alt-low', 'brightness-alt-low-fill', 'brightness-high', 'brightness-high-fill', 'brightness-low', 'brightness-low-fill', 'brilliance', 'broadcast', 'broadcast-pin', 'browser-chrome', 'browser-edge', 'browser-firefox', 'browser-safari', 'brush', 'brush-fill', 'bucket', 'bucket-fill', 'bug', 'bug-fill', 'building', 'building-add', 'building-check', 'building-dash', 'building-down', 'building-exclamation', 'building-fill', 'building-fill-add', 'building-fill-check', 'building-fill-dash', 'building-fill-down', 'building-fill-exclamation', 'building-fill-gear', 'building-fill-lock', 'building-fill-slash', 'building-fill-up', 'building-fill-x', 'building-gear', 'building-lock', 'building-slash', 'building-up', 'building-x', 'buildings', 'buildings-fill', 'bullseye', 'bus-front', 'bus-front-fill', 'c-circle', 'c-circle-fill', 'c-square', 'c-square-fill', 'cake', 'cake-fill', 'cake2', 'cake2-fill', 'calculator', 'calculator-fill', 'calendar', 'calendar-check', 'calendar-check-fill', 'calendar-date', 'calendar-date-fill', 'calendar-day', 'calendar-day-fill', 'calendar-event', 'calendar-event-fill', 'calendar-fill', 'calendar-heart', 'calendar-heart-fill', 'calendar-minus', 'calendar-minus-fill', 'calendar-month', 'calendar-month-fill', 'calendar-plus', 'calendar-plus-fill', 'calendar-range', 'calendar-range-fill', 'calendar-week', 'calendar-week-fill', 'calendar-x', 'calendar-x-fill', 'calendar2', 'calendar2-check', 'calendar2-check-fill', 'calendar2-date', 'calendar2-date-fill', 'calendar2-day', 'calendar2-day-fill', 'calendar2-event', 'calendar2-event-fill', 'calendar2-fill', 'calendar2-heart', 'calendar2-heart-fill', 'calendar2-minus', 'calendar2-minus-fill', 'calendar2-month', 'calendar2-month-fill', 'calendar2-plus', 'calendar2-plus-fill', 'calendar2-range', 'calendar2-range-fill', 'calendar2-week', 'calendar2-week-fill', 'calendar2-x', 'calendar2-x-fill', 'calendar3', 'calendar3-event', 'calendar3-event-fill', 'calendar3-fill', 'calendar3-range', 'calendar3-range-fill', 'calendar3-week', 'calendar3-week-fill', 'calendar4', 'calendar4-event', 'calendar4-range', 'calendar4-week', 'camera', 'camera2', 'camera-fill', 'camera-reels', 'camera-reels-fill', 'camera-video', 'camera-video-fill', 'camera-video-off', 'camera-video-off-fill', 'capslock', 'capslock-fill', 'capsule', 'capsule-pill', 'car-front', 'car-front-fill', 'card-checklist', 'card-heading', 'card-image', 'card-list', 'card-text', 'caret-down', 'caret-down-fill', 'caret-down-square', 'caret-down-square-fill', 'caret-left', 'caret-left-fill', 'caret-left-square', 'caret-left-square-fill', 'caret-right', 'caret-right-fill', 'caret-right-square', 'caret-right-square-fill', 'caret-up', 'caret-up-fill', ' caret-up-square', 'caret-up-square-fill', 'cart', 'cart-check', 'cart-check-fill', 'cart-dash', 'cart-dash-fill', 'cart-fill', 'cart-plus', 'cart-plus-fill', 'cart-x', 'cart-x-fill', 'cart2', 'cart3', 'cart4', 'cash', 'cash-coin', 'cash-stack', 'cassette', 'cassette-fill', 'cast', 'cc-circle', 'cc-circle-fill', 'cc-square', 'cc-square-fill', 'chat', 'chat-dots', 'chat-dots-fill', 'chat-fill', 'chat-heart', 'chat-heart-fill', 'chat-left', 'chat-left-dots', 'chat-left-dots-fill', 'chat-left-fill', 'chat-left-heart', 'chat-left-heart-fill', 'chat-left-quote', 'chat-left-quote-fill', 'chat-left-text', 'chat-left-text-fill', 'chat-quote', 'chat-quote-fill', 'chat-right', 'chat-right-dots', 'chat-right-dots-fill', 'chat-right-fill', 'chat-right-heart', 'chat-right-heart-fill', 'chat-right-quote', 'chat-right-quote-fill', 'chat-right-text', 'chat-right-text-fill', 'chat-square', 'chat-square-dots', 'chat-square-dots-fill', 'chat-square-fill', 'chat-square-heart', 'chat-square-heart-fill', 'chat-square-quote', 'chat-square-quote-fill', 'chat-square-text', 'chat-square-text-fill', 'chat-text', 'chat-text-fill', 'check', 'check-all', 'check-circle', 'check-circle-fill', 'check-lg', 'check-square', 'check-square-fill', 'check2', 'check2-all', 'check2-circle', 'check2-square', 'chevron-bar-contract', 'chevron-bar-down', 'chevron-bar-expand', 'chevron-bar-left', 'chevron-bar-right', 'chevron-bar-up', 'chevron-compact-down', 'chevron-compact-left', 'chevron-compact-right', 'chevron-compact-up', 'chevron-contract', 'chevron-double-down', 'chevron-double-left', 'chevron-double-right', 'chevron-double-up', 'chevron-down', 'chevron-expand', 'chevron-left', 'chevron-right', 'chevron-up', 'circle', 'circle-fill', 'circle-half', 'slash-circle', 'circle-square', 'claude', 'clipboard', 'clipboard-check', 'clipboard-check-fill', 'clipboard-data', 'clipboard-data-fill', 'clipboard-fill', 'clipboard-heart', 'clipboard-heart-fill', 'clipboard-minus', 'clipboard-minus-fill', 'clipboard-plus', 'clipboard-plus-fill', 'clipboard-pulse', 'clipboard-x', 'clipboard-x-fill', 'clipboard2', 'clipboard2-check', 'clipboard2-check-fill', 'clipboard2-data', 'clipboard2-data-fill', 'clipboard2-fill', 'clipboard2-heart', 'clipboard2-heart-fill', 'clipboard2-minus', 'clipboard2-minus-fill', 'clipboard2-plus', 'clipboard2-plus-fill', 'clipboard2-pulse', 'clipboard2-pulse-fill', 'clipboard2-x', 'clipboard2-x-fill', 'clock', 'clock-fill', 'clock-history', 'cloud', 'cloud-arrow-down', 'cloud-arrow-down-fill', 'cloud-arrow-up', 'cloud-arrow-up-fill', 'cloud-check', 'cloud-check-fill', 'cloud-download', 'cloud-download-fill', 'cloud-drizzle', 'cloud-drizzle-fill', 'cloud-fill', 'cloud-fog', 'cloud-fog-fill', 'cloud-fog2', 'cloud-fog2-fill', 'cloud-hail', 'cloud-hail-fill', 'cloud-haze', 'cloud-haze-fill', 'cloud-haze2', 'cloud-haze2-fill', 'cloud-lightning', 'cloud-lightning-fill', 'cloud-lightning-rain', 'cloud-lightning-rain-fill', 'cloud-minus', 'cloud-minus-fill', 'cloud-moon', 'cloud-moon-fill', 'cloud-plus', 'cloud-plus-fill', 'cloud-rain', 'cloud-rain-fill', 'cloud-rain-heavy', 'cloud-rain-heavy-fill', 'cloud-slash', 'cloud-slash-fill', 'cloud-sleet', 'cloud-sleet-fill', 'cloud-snow', 'cloud-snow-fill', 'cloud-sun', 'cloud-sun-fill', 'cloud-upload', 'cloud-upload-fill', 'clouds', 'clouds-fill', 'cloudy', 'cloudy-fill', 'code', 'code-slash', 'code-square', 'coin', 'collection', 'collection-fill', 'collection-play', 'collection-play-fill', 'columns', 'columns-gap', 'command', 'compass', 'compass-fill', 'cone', 'cone-striped', 'controller', 'cookie', 'copy', 'cpu', 'cpu-fill', 'credit-card', 'credit-card-2-back', 'credit-card-2-back-fill', 'credit-card-2-front', 'credit-card-2-front-fill', 'credit-card-fill', 'crop', 'crosshair', 'crosshair2', 'css', 'cup', 'cup-fill', 'cup-hot', 'cup-hot-fill', 'cup-straw', 'currency-bitcoin', 'currency-dollar', 'currency-euro', 'currency-exchange', 'currency-pound', 'currency-rupee', 'currency-yen', 'cursor', 'cursor-fill', 'cursor-text', 'dash', 'dash-circle', 'dash-circle-dotted', 'dash-circle-fill', 'dash-lg', 'dash-square', 'dash-square-dotted', 'dash-square-fill', 'database', 'database-add', 'database-check', 'database-dash', 'database-down', 'database-exclamation', 'database-fill', 'database-fill-add', 'database-fill-check', 'database-fill-dash', 'database-fill-down', 'database-fill-exclamation', 'database-fill-gear', 'database-fill-lock', 'database-fill-slash', 'database-fill-up', 'database-fill-x', 'database-gear', 'database-lock', 'database-slash', 'database-up', 'database-x', 'device-hdd', 'device-hdd-fill', 'device-ssd', 'device-ssd-fill', 'diagram-2', 'diagram-2-fill', 'diagram-3', 'diagram-3-fill', 'diamond', 'diamond-fill', 'diamond-half', 'dice-1', 'dice-1-fill', 'dice-2', 'dice-2-fill', 'dice-3', 'dice-3-fill', 'dice-4', 'dice-4-fill', 'dice-5', 'dice-5-fill', 'dice-6', 'dice-6-fill', 'disc', 'disc-fill', 'discord', 'display', 'display-fill', 'displayport', 'displayport-fill', 'distribute-horizontal', 'distribute-vertical', 'door-closed', 'door-closed-fill', 'door-open', 'door-open-fill', 'dot', 'download', 'dpad', 'dpad-fill', 'dribbble', 'dropbox', 'droplet', 'droplet-fill', 'droplet-half', 'duffle', 'duffle-fill', 'ear', 'ear-fill', 'earbuds', 'easel', 'easel-fill', 'easel2', 'easel2-fill', 'easel3', 'easel3-fill', 'egg', 'egg-fill', 'egg-fried', 'eject', 'eject-fill', 'emoji-angry', 'emoji-angry-fill', 'emoji-astonished', 'emoji-astonished-fill', 'emoji-dizzy', 'emoji-dizzy-fill', 'emoji-expressionless', 'emoji-expressionless-fill', 'emoji-frown', 'emoji-frown-fill', 'emoji-grimace', 'emoji-grimace-fill', 'emoji-grin', 'emoji-grin-fill', 'emoji-heart-eyes', 'emoji-heart-eyes-fill', 'emoji-kiss', 'emoji-kiss-fill', 'emoji-laughing', 'emoji-laughing-fill', 'emoji-neutral', 'emoji-neutral-fill', 'emoji-smile', 'emoji-smile-fill', 'emoji-smile-upside-down', 'emoji-smile-upside-down-fill', 'emoji-sunglasses', 'emoji-sunglasses-fill', 'emoji-surprise', 'emoji-surprise-fill', 'emoji-tear', 'emoji-tear-fill', 'emoji-wink', 'emoji-wink-fill', 'envelope', 'envelope-arrow-down', 'envelope-arrow-down-fill', 'envelope-arrow-up', 'envelope-arrow-up-fill', 'envelope-at', 'envelope-at-fill', 'envelope-check', 'envelope-check-fill', 'envelope-dash', 'envelope-dash-fill', 'envelope-exclamation', 'envelope-exclamation-fill', 'envelope-fill', 'envelope-heart', 'envelope-heart-fill', 'envelope-open', 'envelope-open-fill', 'envelope-open-heart', 'envelope-open-heart-fill', 'envelope-paper', 'envelope-paper-fill', 'envelope-paper-heart', 'envelope-paper-heart-fill', 'envelope-plus', 'envelope-plus-fill', 'envelope-slash', 'envelope-slash-fill', 'envelope-x', 'envelope-x-fill', 'eraser', 'eraser-fill', 'escape', 'ethernet', 'ev-front', 'ev-front-fill', 'ev-station', 'ev-station-fill', 'exclamation', 'exclamation-circle', 'exclamation-circle-fill', 'exclamation-diamond', 'exclamation-diamond-fill', 'exclamation-lg', 'exclamation-octagon', 'exclamation-octagon-fill', 'exclamation-square', 'exclamation-square-fill', 'exclamation-triangle', 'exclamation-triangle-fill', 'exclude', 'explicit', 'explicit-fill', 'exposure', 'eye', 'eye-fill', 'eye-slash', 'eye-slash-fill', 'eyedropper', 'eyeglasses', 'facebook', 'fan', 'fast-forward', 'fast-forward-btn', 'fast-forward-btn-fill', 'fast-forward-circle', 'fast-forward-circle-fill', 'fast-forward-fill', 'feather', 'feather2', 'file', 'file-arrow-down', 'file-arrow-down-fill', 'file-arrow-up', 'file-arrow-up-fill', 'file-bar-graph', 'file-bar-graph-fill', 'file-binary', 'file-binary-fill', 'file-break', 'file-break-fill', 'file-check', 'file-check-fill', 'file-code', 'file-code-fill', 'file-diff', 'file-diff-fill', 'file-earmark', 'file-earmark-arrow-down', 'file-earmark-arrow-down-fill', 'file-earmark-arrow-up', 'file-earmark-arrow-up-fill', 'file-earmark-bar-graph', 'file-earmark-bar-graph-fill', 'file-earmark-binary', 'file-earmark-binary-fill', 'file-earmark-break', 'file-earmark-break-fill', 'file-earmark-check', 'file-earmark-check-fill', 'file-earmark-code', 'file-earmark-code-fill', 'file-earmark-diff', 'file-earmark-diff-fill', 'file-earmark-easel', 'file-earmark-easel-fill', 'file-earmark-excel', 'file-earmark-excel-fill', 'file-earmark-fill', 'file-earmark-font', 'file-earmark-font-fill', 'file-earmark-image', 'file-earmark-image-fill', 'file-earmark-lock', 'file-earmark-lock-fill', 'file-earmark-lock2', 'file-earmark-lock2-fill', 'file-earmark-medical', 'file-earmark-medical-fill', 'file-earmark-minus', 'file-earmark-minus-fill', 'file-earmark-music', 'file-earmark-music-fill', 'file-earmark-pdf', 'file-earmark-pdf-fill', 'file-earmark-person', 'file-earmark-person-fill', 'file-earmark-play', 'file-earmark-play-fill', 'file-earmark-plus', 'file-earmark-plus-fill', 'file-earmark-post', 'file-earmark-post-fill', 'file-earmark-ppt', 'file-earmark-ppt-fill', 'file-earmark-richtext', 'file-earmark-richtext-fill', 'file-earmark-ruled', 'file-earmark-ruled-fill', 'file-earmark-slides', 'file-earmark-slides-fill', 'file-earmark-spreadsheet', 'file-earmark-spreadsheet-fill', 'file-earmark-text', 'file-earmark-text-fill', 'file-earmark-word', 'file-earmark-word-fill', 'file-earmark-x', 'file-earmark-x-fill', 'file-earmark-zip', 'file-earmark-zip-fill', 'file-easel', 'file-easel-fill', 'file-excel', 'file-excel-fill', 'file-fill', 'file-font', 'file-font-fill', 'file-image', 'file-image-fill', 'file-lock', 'file-lock-fill', 'file-lock2', 'file-lock2-fill', 'file-medical', 'file-medical-fill', 'file-minus', 'file-minus-fill', 'file-music', 'file-music-fill', 'file-pdf', 'file-pdf-fill', 'file-person', 'file-person-fill', 'file-play', 'file-play-fill', 'file-plus', 'file-plus-fill', 'file-post', 'file-post-fill', 'file-ppt', 'file-ppt-fill', 'file-richtext', 'file-richtext-fill', 'file-ruled', 'file-ruled-fill', 'file-slides', 'file-slides-fill', 'file-spreadsheet', 'file-spreadsheet-fill', 'file-text', 'file-text-fill', 'file-word', 'file-word-fill', 'file-x', 'file-x-fill', 'file-zip', 'file-zip-fill', 'files', 'files-alt', 'filetype-aac', 'filetype-ai', 'filetype-bmp', 'filetype-cs', 'filetype-css', 'filetype-csv', 'filetype-doc', 'filetype-docx', 'filetype-exe', 'filetype-gif', 'filetype-heic', 'filetype-html', 'filetype-java', 'filetype-jpg', 'filetype-js', 'filetype-json', 'filetype-jsx', 'filetype-key', 'filetype-m4p', 'filetype-md', 'filetype-mdx', 'filetype-mov', 'filetype-mp3', 'filetype-mp4', 'filetype-otf', 'filetype-pdf', 'filetype-php', 'filetype-png', 'filetype-ppt', 'filetype-pptx', 'filetype-psd', 'filetype-py', 'filetype-raw', 'filetype-rb', 'filetype-sass', 'filetype-scss', 'filetype-sh', 'filetype-sql', 'filetype-svg', 'filetype-tiff', 'filetype-tsx', 'filetype-ttf', 'filetype-txt', 'filetype-wav', 'filetype-woff', 'filetype-xls', 'filetype-xlsx', 'filetype-xml', 'filetype-yml', 'film', 'filter', 'filter-circle', 'filter-circle-fill', 'filter-left', 'filter-right', 'filter-square', 'filter-square-fill', 'fingerprint', 'fire', 'flag', 'flag-fill', 'flask', 'flask-fill', 'flask-florence', 'flask-florence-fill', 'floppy', 'floppy-fill', 'floppy2', 'floppy2-fill', 'flower1', 'flower2', 'flower3', 'folder', 'folder-check', 'folder-fill', 'folder-minus', 'folder-plus', 'folder-symlink', 'folder-symlink-fill', 'folder-x', 'folder2', 'folder2-open', 'fonts', 'fork-knife', 'forward', 'forward-fill', 'front', 'fuel-pump', 'fuel-pump-diesel', 'fuel-pump-diesel-fill', 'fuel-pump-fill', 'fullscreen', 'fullscreen-exit', 'funnel', 'funnel-fill', 'gear', 'gear-fill', 'gear-wide', 'gear-wide-connected', 'gem', 'gender-ambiguous', 'gender-female', 'gender-male', 'gender-neuter', 'gender-trans', 'geo', 'geo-alt', 'geo-alt-fill', 'geo-fill', 'gift', 'gift-fill', 'git', 'github', 'gitlab', 'globe', 'globe-americas', 'globe-americas-fill', 'globe-asia-australia', 'globe-asia-australia-fill', 'globe-central-south-asia', 'globe-central-south-asia-fill', 'globe-europe-africa', 'globe-europe-africa-fill', 'globe2', 'google', 'google-play', 'gpu-card', 'graph-down', 'graph-down-arrow', 'graph-up', 'graph-up-arrow', 'grid', 'grid-1x2', 'grid-1x2-fill', 'grid-3x2', 'grid-3x2-gap', 'grid-3x2-gap-fill', 'grid-3x3', 'grid-3x3-gap', 'grid-3x3-gap-fill', 'grid-fill', 'grip-horizontal', 'grip-vertical', 'h-circle', 'h-circle-fill', 'h-square', 'h-square-fill', 'hammer', 'hand-index', 'hand-index-fill', 'hand-index-thumb', 'hand-index-thumb-fill', 'hand-thumbs-down', 'hand-thumbs-down-fill', 'hand-thumbs-up', 'hand-thumbs-up-fill', 'handbag', 'handbag-fill', 'hash', 'hdd', 'hdd-fill', 'hdd-network', 'hdd-network-fill', 'hdd-rack', 'hdd-rack-fill', 'hdd-stack', 'hdd-stack-fill', 'hdmi', 'hdmi-fill', 'headphones', 'headset', 'headset-vr', 'heart', 'heart-arrow', 'heart-fill', 'heart-half', 'heart-pulse', 'heart-pulse-fill', 'heartbreak', 'heartbreak-fill', 'hearts', 'heptagon', 'heptagon-fill', 'heptagon-half', 'hexagon', 'hexagon-fill', 'hexagon-half', 'highlighter', 'highlights', 'hospital', 'hospital-fill', 'hourglass', 'hourglass-bottom', 'hourglass-split', 'hourglass-top', 'house', 'house-add', 'house-add-fill', 'house-check', 'house-check-fill', 'house-dash', 'house-dash-fill', 'house-door', 'house-door-fill', 'house-down', 'house-down-fill', 'house-exclamation', 'house-exclamation-fill', 'house-fill', 'house-gear', 'house-gear-fill', 'house-heart', 'house-heart-fill', 'house-lock', 'house-lock-fill', 'house-slash', 'house-slash-fill', 'house-up', 'house-up-fill', 'house-x', 'house-x-fill', 'houses', 'houses-fill', 'hr', 'hurricane', 'hypnotize', 'image', 'image-alt', 'image-fill', 'images', 'inbox', 'inbox-fill', 'inboxes-fill', 'inboxes', 'incognito', 'indent', 'infinity', 'info', 'info-circle', 'info-circle-fill', 'info-lg', 'info-square', 'info-square-fill', 'input-cursor', 'input-cursor-text', 'instagram', 'intersect', 'javascript', 'journal', 'journal-album', 'journal-arrow-down', 'journal-arrow-up', 'journal-bookmark', 'journal-bookmark-fill', 'journal-check', 'journal-code', 'journal-medical', 'journal-minus', 'journal-plus', 'journal-richtext', 'journal-text', 'journal-x', 'journals', 'joystick', 'justify', 'justify-left', 'justify-right', 'kanban', 'kanban-fill', 'key', 'key-fill', 'keyboard', 'keyboard-fill', 'ladder', 'lamp', 'lamp-fill', 'laptop', 'laptop-fill', 'layer-backward', 'layer-forward', 'layers', 'layers-fill', 'layers-half', 'layout-sidebar', 'layout-sidebar-inset-reverse', 'layout-sidebar-inset', 'layout-sidebar-reverse', 'layout-split', 'layout-text-sidebar', 'layout-text-sidebar-reverse', 'layout-text-window', 'layout-text-window-reverse', 'layout-three-columns', 'layout-wtf', 'leaf', 'leaf-fill', 'life-preserver', 'lightbulb', 'lightbulb-fill', 'lightbulb-off', 'lightbulb-off-fill', 'lightning', 'lightning-charge', 'lightning-charge-fill', 'lightning-fill', 'line', 'link', 'link-45deg', 'linkedin', 'list', 'list-check', 'list-columns', 'list-columns-reverse', 'list-nested', 'list-ol', 'list-stars', 'list-task', 'list-ul', 'lock', 'lock-fill', 'luggage', 'luggage-fill', 'lungs', 'lungs-fill', 'magic', 'magnet', 'magnet-fill', 'mailbox', 'mailbox-flag', 'mailbox2', 'mailbox2-flag', 'map', 'map-fill', 'markdown', 'markdown-fill', 'marker-tip', 'mask', 'mastodon', 'measuring-cup', 'measuring-cup-fill', 'medium', 'megaphone', 'megaphone-fill', 'memory', 'menu-app', 'menu-app-fill', 'menu-button', 'menu-button-fill', 'menu-button-wide', 'menu-button-wide-fill', 'menu-down', 'menu-up', 'messenger', 'meta', 'mic', 'mic-fill', 'mic-mute', 'mic-mute-fill', 'microsoft', 'microsoft-teams', 'minecart', 'minecart-loaded', 'modem', 'modem-fill', 'moisture', 'moon', 'moon-fill', 'moon-stars', 'moon-stars-fill', 'mortarboard', 'mortarboard-fill', 'motherboard', 'motherboard-fill', 'mouse', 'mouse-fill', 'mouse2', 'mouse2-fill', 'mouse3', 'mouse3-fill', 'music-note', 'music-note-beamed', 'music-note-list', 'music-player', 'music-player-fill', 'newspaper', 'nintendo-switch', 'node-minus', 'node-minus-fill', 'node-plus', 'node-plus-fill', 'noise-reduction', 'nut', 'nut-fill', 'nvidia', 'nvme', 'nvme-fill', 'octagon', 'octagon-fill', 'octagon-half', 'openai', 'opencollective', 'optical-audio', 'optical-audio-fill', 'option', 'outlet', 'p-circle', 'p-circle-fill', 'p-square', 'p-square-fill', 'paint-bucket', 'palette', 'palette-fill', 'palette2', 'paperclip', 'paragraph', 'pass', 'pass-fill', 'passport', 'passport-fill', 'patch-check', 'patch-check-fill', 'patch-exclamation', 'patch-exclamation-fill', 'patch-minus', 'patch-minus-fill', 'patch-plus', 'patch-plus-fill', 'patch-question', 'patch-question-fill', 'pause', 'pause-btn', 'pause-btn-fill', 'pause-circle', 'pause-circle-fill', 'pause-fill', 'paypal', 'pc', 'pc-display', 'pc-display-horizontal', 'pc-horizontal', 'pci-card', 'pci-card-network', 'pci-card-sound', 'peace', 'peace-fill', 'pen', 'pen-fill', 'pencil', 'pencil-fill', 'pencil-square', 'pentagon', 'pentagon-fill', 'pentagon-half', 'people', 'person-circle', 'people-fill', 'percent', 'perplexity', 'person', 'person-add', 'person-arms-up', 'person-badge', 'person-badge-fill', 'person-bounding-box', 'person-check', 'person-check-fill', 'person-dash', 'person-dash-fill', 'person-down', 'person-exclamation', 'person-fill', 'person-fill-add', 'person-fill-check', 'person-fill-dash', 'person-fill-down', 'person-fill-exclamation', 'person-fill-gear', 'person-fill-lock', 'person-fill-slash', 'person-fill-up', 'person-fill-x', 'person-gear', 'person-heart', 'person-hearts', 'person-lines-fill', 'person-lock', 'person-plus', 'person-plus-fill', 'person-raised-hand', 'person-rolodex', 'person-slash', 'person-square', 'person-standing', 'person-standing-dress', 'person-up', 'person-vcard', 'person-vcard-fill', 'person-video', 'person-video2', 'person-video3', 'person-walking', 'person-wheelchair', 'person-workspace', 'person-x', 'person-x-fill', 'phone', 'phone-fill', 'phone-flip', 'phone-landscape', 'phone-landscape-fill', 'phone-vibrate', 'phone-vibrate-fill', 'pie-chart', 'pie-chart-fill', 'piggy-bank', 'piggy-bank-fill', 'pin', 'pin-angle', 'pin-angle-fill', 'pin-fill', 'pin-map', 'pin-map-fill', 'pinterest', 'pip', 'pip-fill', 'play', 'play-btn', 'play-btn-fill', 'play-circle', 'play-circle-fill', 'play-fill', 'playstation', 'plug', 'plug-fill', 'plugin', 'plus', 'plus-circle', 'plus-circle-dotted', 'plus-circle-fill', 'plus-lg', 'plus-slash-minus', 'plus-square', 'plus-square-dotted', 'plus-square-fill', 'postage', 'postage-fill', 'postage-heart', 'postage-heart-fill', 'postcard', 'postcard-fill', 'postcard-heart', 'postcard-heart-fill', 'power', 'prescription', 'prescription2', 'printer', 'printer-fill', 'projector', 'projector-fill', 'puzzle', 'puzzle-fill', 'qr-code', 'qr-code-scan', 'question', 'question-circle', 'question-diamond', 'question-diamond-fill', 'question-circle-fill', 'question-lg', 'question-octagon', 'question-octagon-fill', 'question-square', 'question-square-fill', 'quora', 'quote', 'r-circle', 'r-circle-fill', 'r-square', 'r-square-fill', 'radar', 'radioactive', 'rainbow', 'receipt', 'receipt-cutoff', 'reception-0', 'reception-1', 'reception-2', 'reception-3', 'reception-4', 'record', 'record-btn', 'record-btn-fill', 'record-circle', 'record-circle-fill', 'record-fill', 'record2', 'record2-fill', 'recycle', 'reddit', 'regex', 'repeat', 'repeat-1', 'reply', 'reply-all', 'reply-all-fill', 'reply-fill', 'rewind', 'rewind-btn', 'rewind-btn-fill', 'rewind-circle', 'rewind-circle-fill', 'rewind-fill', 'robot', 'rocket', 'rocket-fill', 'rocket-takeoff', 'rocket-takeoff-fill', 'router', 'router-fill', 'rss', 'rss-fill', 'rulers', 'safe', 'safe-fill', 'safe2', 'safe2-fill', 'save', 'save-fill', 'save2', 'save2-fill', 'scissors', 'scooter', 'screwdriver', 'sd-card', 'sd-card-fill', 'search', 'search-heart', 'search-heart-fill', 'segmented-nav', 'send', 'send-arrow-down', 'send-arrow-down-fill', 'send-arrow-up', 'send-arrow-up-fill', 'send-check', 'send-check-fill', 'send-dash', 'send-dash-fill', 'send-exclamation', 'send-exclamation-fill', 'send-fill', 'send-plus', 'send-plus-fill', 'send-slash', 'send-slash-fill', 'send-x', 'send-x-fill', 'server', 'shadows', 'share', 'share-fill', 'shield', 'shield-check', 'shield-exclamation', 'shield-fill', 'shield-fill-check', 'shield-fill-exclamation', 'shield-fill-minus', 'shield-fill-plus', 'shield-fill-x', 'shield-lock', 'shield-lock-fill', 'shield-minus', 'shield-plus', 'shield-shaded', 'shield-slash', 'shield-slash-fill', 'shield-x', 'shift', 'shift-fill', 'shop', 'shop-window', 'shuffle', 'sign-dead-end', 'sign-dead-end-fill', 'sign-do-not-enter', 'sign-do-not-enter-fill', 'sign-intersection', 'sign-intersection-fill', 'sign-intersection-side', 'sign-intersection-side-fill', 'sign-intersection-t', 'sign-intersection-t-fill', 'sign-intersection-y', 'sign-intersection-y-fill', 'sign-merge-left', 'sign-merge-left-fill', 'sign-merge-right', 'sign-merge-right-fill', 'sign-no-left-turn', 'sign-no-left-turn-fill', 'sign-no-parking', 'sign-no-parking-fill', 'sign-no-right-turn', 'sign-no-right-turn-fill', 'sign-railroad', 'sign-railroad-fill', 'sign-stop', 'sign-stop-fill', 'sign-stop-lights', 'sign-stop-lights-fill', 'sign-turn-left', 'sign-turn-left-fill', 'sign-turn-right', 'sign-turn-right-fill', 'sign-turn-slight-left', 'sign-turn-slight-left-fill', 'sign-turn-slight-right', 'sign-turn-slight-right-fill', 'sign-yield', 'sign-yield-fill', 'signal', 'signpost', 'signpost-2', 'signpost-2-fill', 'signpost-fill', 'signpost-split', 'signpost-split-fill', 'sim', 'sim-fill', 'sim-slash', 'sim-slash-fill', 'sina-weibo', 'skip-backward', 'skip-backward-btn', 'skip-backward-btn-fill', 'skip-backward-circle', 'skip-backward-circle-fill', 'skip-backward-fill', 'skip-end', 'skip-end-btn', 'skip-end-btn-fill', 'skip-end-circle', 'skip-end-circle-fill', 'skip-end-fill', 'skip-forward', 'skip-forward-btn', 'skip-forward-btn-fill', 'skip-forward-circle', 'skip-forward-circle-fill', 'skip-forward-fill', 'skip-start', 'skip-start-btn', 'skip-start-btn-fill', 'skip-start-circle', 'skip-start-circle-fill', 'skip-start-fill', 'skype', 'slack', 'slash', 'slash-circle-fill', 'slash-lg', 'slash-square', 'slash-square-fill', 'sliders', 'sliders2', 'sliders2-vertical', 'smartwatch', 'snapchat', 'snow', 'snow2', 'snow3', 'sort-alpha-down', 'sort-alpha-down-alt', 'sort-alpha-up', 'sort-alpha-up-alt', 'sort-down', 'sort-down-alt', 'sort-numeric-down', 'sort-numeric-down-alt', 'sort-numeric-up', 'sort-numeric-up-alt', 'sort-up', 'sort-up-alt', 'soundwave', 'sourceforge', 'speaker', 'speaker-fill', 'speedometer', 'speedometer2', 'spellcheck', 'spotify', 'square', 'square-fill', 'square-half', 'stack', 'stack-overflow', 'star', 'star-fill', 'star-half', 'stars', 'steam', 'stickies', 'stickies-fill', 'sticky', 'sticky-fill', 'stop', 'stop-btn', 'stop-btn-fill', 'stop-circle', 'stop-circle-fill', 'stop-fill', 'stoplights', 'stoplights-fill', 'stopwatch', 'stopwatch-fill', 'strava', 'stripe', 'subscript', 'substack', 'subtract', 'suit-club', 'suit-club-fill', 'suit-diamond', 'suit-diamond-fill', 'suit-heart', 'suit-heart-fill', 'suit-spade', 'suit-spade-fill', 'suitcase', 'suitcase-fill', 'suitcase-lg', 'suitcase-lg-fill', 'suitcase2', 'suitcase2-fill', 'sun', 'sun-fill', 'sunglasses', 'sunrise', 'sunrise-fill', 'sunset', 'sunset-fill', 'superscript', 'symmetry-horizontal', 'symmetry-vertical', 'table', 'tablet', 'tablet-fill', 'tablet-landscape', 'tablet-landscape-fill', 'tag', 'tag-fill', 'tags', 'tags-fill', 'taxi-front', 'taxi-front-fill', 'telegram', 'telephone', 'telephone-fill', 'telephone-forward', 'telephone-forward-fill', 'telephone-inbound', 'telephone-inbound-fill', 'telephone-minus', 'telephone-minus-fill', 'telephone-outbound', 'telephone-outbound-fill', 'telephone-plus', 'telephone-plus-fill', 'telephone-x', 'telephone-x-fill', 'tencent-qq', 'terminal', 'terminal-dash', 'terminal-fill', 'terminal-plus', 'terminal-split', 'terminal-x', 'text-center', 'text-indent-left', 'text-indent-right', 'text-left', 'text-paragraph', 'text-right', 'text-wrap', 'textarea', 'textarea-resize', 'textarea-t', 'thermometer', 'thermometer-half', 'thermometer-high', 'thermometer-low', 'thermometer-snow', 'thermometer-sun', 'threads', 'threads-fill', 'three-dots', 'three-dots-vertical', 'thunderbolt', 'thunderbolt-fill', 'ticket', 'ticket-detailed', 'ticket-detailed-fill', 'ticket-fill', 'ticket-perforated', 'ticket-perforated-fill', 'tiktok', 'toggle-off', 'toggle-on', 'toggle2-off', 'toggle2-on', 'toggles', 'toggles2', 'tools', 'tornado', 'train-freight-front', 'train-freight-front-fill', 'train-front', 'train-front-fill', 'train-lightrail-front', 'train-lightrail-front-fill', 'translate', 'transparency', 'trash', 'trash-fill', 'trash2', 'trash2-fill', 'trash3', 'trash3-fill', 'tree', 'tree-fill', 'trello', 'triangle', 'triangle-fill', 'triangle-half', 'trophy', 'trophy-fill', 'tropical-storm', 'truck', 'truck-flatbed', 'truck-front', 'truck-front-fill', 'tsunami', 'tux', 'tv', 'tv-fill', 'twitch', 'twitter', 'twitter-x', 'type', 'type-bold', 'type-h1', 'type-h2', 'type-h3', 'type-h4', 'type-h5', 'type-h6', 'type-italic', 'type-strikethrough', 'type-underline', 'typescript', 'ubuntu', 'ui-checks', 'ui-checks-grid', 'ui-radios', 'ui-radios-grid', 'umbrella', 'umbrella-fill', 'unindent', 'union', 'unity', 'universal-access', 'universal-access-circle', 'unlock', 'unlock-fill', 'unlock2', 'unlock2-fill', 'upc', 'upc-scan', 'upload', 'usb', 'usb-c', 'usb-c-fill', 'usb-drive', 'usb-drive-fill', 'usb-fill', 'usb-micro', 'usb-micro-fill', 'usb-mini', 'usb-mini-fill', 'usb-plug', 'usb-plug-fill', 'usb-symbol', 'valentine', 'valentine2', 'vector-pen', 'view-list', 'view-stacked', 'vignette', 'vimeo', 'vinyl', 'vinyl-fill', 'virus', 'virus2', 'voicemail', 'volume-down', 'volume-down-fill', 'volume-mute', 'volume-mute-fill', 'volume-off', 'volume-off-fill', 'volume-up', 'volume-up-fill', 'vr', 'wallet', 'wallet-fill', 'wallet2', 'watch', 'water', 'webcam', 'webcam-fill', 'wechat', 'whatsapp', 'wifi', 'wifi-1', 'wifi-2', 'wifi-off', 'wikipedia', 'wind', 'window', 'window-dash', 'window-desktop', 'window-dock', 'window-fullscreen', 'window-plus', 'window-sidebar', 'window-split', 'window-stack', 'window-x', 'windows', 'wordpress', 'wrench', 'wrench-adjustable', 'wrench-adjustable-circle', 'wrench-adjustable-circle-fill', 'x', 'x-circle', 'x-circle-fill', 'x-diamond', 'x-diamond-fill', 'x-lg', 'x-octagon', 'x-octagon-fill', 'x-square', 'x-square-fill', 'xbox', 'yelp', 'yin-yang', 'youtube', 'zoom-in', 'zoom-out'];
 const filteredIcons = ref([...iconList])
 
 // 审批详情相关
@@ -1375,71 +1494,6 @@ const fetchPendingResources = async () => {
     }
   } finally {
     loadingPending.value = false
-  }
-}
-
-// 审批资源
-const approveResource = async (resourceId) => {
-  approvalLoading.value = resourceId
-  
-  try {
-    const token = localStorage.getItem('accessToken')
-    
-    if (!token) {
-      router.push('/login')
-      return
-    }
-    
-    // 获取要审批的资源
-    const resourceToApprove = pendingResources.value.find(r => r.id === resourceId);
-    
-    // 发送批准请求，同时将所有图片标记为已批准，并设置第一张图片为海报
-    await axios.put(`/api/resources/${resourceId}/approve`, {
-      status: 'approved',
-      approved_images: resourceToApprove?.images || [], // 批准所有图片
-      poster_image: resourceToApprove?.images?.length > 0 ? resourceToApprove.images[0] : null // 第一张图片作为海报
-    })
-    
-    // 从待审批列表中移除
-    pendingResources.value = pendingResources.value.filter(r => r.id !== resourceId)
-    
-    // 刷新已审批的资源列表
-    await fetchResources()
-  } catch (err) {
-    console.error('审批资源失败:', err)
-    error.value = '审批资源失败，请稍后重试'
-  } finally {
-    approvalLoading.value = null
-  }
-}
-
-// 拒绝资源
-const rejectResource = async (resourceId) => {
-  approvalLoading.value = resourceId
-  
-  try {
-    const token = localStorage.getItem('accessToken')
-    
-    if (!token) {
-      router.push('/login')
-      return
-    }
-    
-    // 发送拒绝请求
-    await axios.put(`/api/resources/${resourceId}/approve`, {
-      status: 'rejected'
-    })
-    
-    // 从待审批列表中移除
-    pendingResources.value = pendingResources.value.filter(r => r.id !== resourceId)
-    
-    // 刷新已审批的资源列表
-    await fetchResources()
-  } catch (err) {
-    console.error('拒绝资源失败:', err)
-    error.value = '拒绝资源失败，请稍后重试'
-  } finally {
-    approvalLoading.value = null
   }
 }
 
@@ -1557,32 +1611,6 @@ const removeResourceFromList = async () => {
   }
 }
 
-// 原删除资源函数保留但不再使用
-const deleteResource = async () => {
-  if (!resourceToDelete.value) return
-  
-  deleteLoading.value = true
-  
-  try {
-    const token = localStorage.getItem('accessToken')
-    
-    if (!token) {
-      router.push('/login')
-      return
-    }
-    
-    await axios.delete(`/api/resources/${resourceToDelete.value.id}`)
-    resources.value = resources.value.filter(r => r.id !== resourceToDelete.value.id)
-    showDeleteModal.value = false
-    resourceToDelete.value = null
-  } catch (err) {
-    console.error('删除资源失败:', err)
-    error.value = '删除资源失败，请稍后重试'
-  } finally {
-    deleteLoading.value = false
-  }
-}
-
 // 显示审批详情
 const showApprovalDetails = async (resource) => {
   try {
@@ -1611,14 +1639,6 @@ const closeApprovalDetails = () => {
   selectedResource.value = null
 }
 
-// 从描述中提取审批备注
-const getApprovalNotes = (description) => {
-  if (!description) return null
-  
-  // 尝试从描述中提取审批备注
-  const notesMatch = description.match(/管理员审批意见: (.+)$/s)
-  return notesMatch ? notesMatch[1] : null
-}
 
 // 获取图片文件名
 const getImageFileName = (imagePath) => {
@@ -1732,6 +1752,47 @@ const loadFooterSettings = async () => {
     if (!footerSettings.value.keywords) footerSettings.value.keywords = '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建';
     if (!footerSettings.value.routeMeta) footerSettings.value.routeMeta = {};
     
+    // 加载数据源配置
+    if (footerSettings.value.dataSources && Array.isArray(footerSettings.value.dataSources)) {
+      dataSources.value = footerSettings.value.dataSources;
+    } else {
+      // 初始化为空数组
+      dataSources.value = [];
+    }
+    
+    // 不管后台是否已有配置，都尝试加载默认数据源并添加到列表中
+    try {
+      const dataSourcesConfigModule = await import('../utils/dataSourcesConfig.js');
+      const dataSourcesConfig = dataSourcesConfigModule.default;
+      if (dataSourcesConfig && Array.isArray(dataSourcesConfig)) {
+        // 转换为数据源格式，并检查是否已存在（避免重复）
+        const defaultDataSources = dataSourcesConfig.map((source, index) => ({
+          id: Date.now() + index + 1000,  // 使用一个较大的基数，避免ID冲突
+          name: source.name || '',
+          baseUrl: source.baseUrl || '',
+          useXml: source.useXml || false
+        }));
+        
+        // 合并现有数据源和默认数据源，避免重复
+        for (const defaultSource of defaultDataSources) {
+          // 检查是否已存在相同baseUrl的数据源
+          const exists = dataSources.value.some(source => 
+            source.baseUrl === defaultSource.baseUrl || 
+            source.name === defaultSource.name
+          );
+          
+          // 如果不存在，则添加到列表
+          if (!exists) {
+            dataSources.value.push(defaultSource);
+          }
+        }
+        
+        console.log('已成功加载默认数据源配置');
+      }
+    } catch (err) {
+      console.log('未找到dataSourcesConfig.js或加载过程中出错:', err);
+    }
+    
     // 如果存在favicon，显示预览
     if (footerSettings.value.favicon) {
       console.log('Found existing favicon:', footerSettings.value.favicon);
@@ -1835,6 +1896,9 @@ const saveAllSettings = async () => {
     
     // 更新About页面配置
     siteInfo.aboutPageConfig = JSON.parse(JSON.stringify(aboutPageConfig));
+    
+    // 更新采集解析源配置
+    siteInfo.dataSources = JSON.parse(JSON.stringify(dataSources.value));
     
     // 更新所有页脚设置和其他设置
     // 使用解构赋值而不是Object.assign以避免覆盖其他重要属性
@@ -2216,22 +2280,6 @@ const handleFaviconUpload = (event) => {
   reader.readAsDataURL(file);
 };
 
-// 清除已上传的图标
-const clearFaviconUpload = (event) => {
-  // 阻止事件冒泡和默认行为
-  if (event) {
-    event.stopPropagation();
-    event.preventDefault();
-  }
-  
-  console.log('清除favicon触发');
-  siteFaviconPreview.value = '';
-  siteFaviconFile.value = null;
-  if (faviconUploadRef.value) {
-    faviconUploadRef.value.value = '';
-  }
-};
-
 // 触发文件输入控件
 const triggerFileInput = () => {
   if (faviconUploadRef.value) {
@@ -2361,36 +2409,6 @@ const clearContactItemIcon = (index) => {
   aboutPageConfig.contactItems[index].icon = '';
 };
 
-// 保存About页面设置
-// const saveAboutPageSettings = async () => {
-//   aboutSettingsLoading.value = true;
-//   aboutSettingsSuccess.value = false;
-  
-//   try {
-//     // 获取当前的网站信息
-//     const siteInfo = await infoManager.getInfo();
-    
-//     // 更新About页面配置
-//     siteInfo.aboutPageConfig = JSON.parse(JSON.stringify(aboutPageConfig));
-    
-//     // 保存更新后的网站信息
-//     await infoManager.updateInfo(siteInfo);
-    
-//     // 显示成功消息
-//     aboutSettingsSuccess.value = true;
-    
-//     // 3秒后隐藏成功消息
-//     setTimeout(() => {
-//       aboutSettingsSuccess.value = false;
-//     }, 3000);
-//   } catch (error) {
-//     console.error('保存About页面设置失败:', error);
-//     alert('保存失败，请稍后重试');
-//   } finally {
-//     aboutSettingsLoading.value = false;
-//   }
-// };
-
 // 打开页脚链接图标选择器
 const openFooterIconSelector = (index) => {
   iconSelectorTarget.value = 'footer';
@@ -2398,2462 +2416,25 @@ const openFooterIconSelector = (index) => {
   currentIcon.value = getIconName(footerSettings.value.links[index]?.icon || '');
   openIconSelector(index);
 }
+
+// 数据源设置
+const dataSources = ref([]);
+
+// 添加新数据源
+const addNewDataSource = () => {
+  dataSources.value.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    name: '',
+    baseUrl: '',
+    useXml: false
+  });
+};
+
+// 移除数据源
+const removeDataSource = (index) => {
+  dataSources.value.splice(index, 1);
+};
+
 </script>
 
-<style scoped>
-/* 整体布局 */
-.admin-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-/* 英雄区域 */
-.admin-hero {
-  text-align: center;
-  padding: 3rem 0;
-  margin-bottom: 2rem;
-  animation: fadeIn 0.8s ease-out;
-}
-
-.hero-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: var(--primary-color);
-  margin-bottom: 0.5rem;
-  letter-spacing: -1px;
-  text-shadow: 
-    3px 3px 0 rgba(99, 102, 241, 0.2),
-    6px 6px 10px rgba(0, 0, 0, 0.1);
-}
-
-.hero-subtitle {
-  font-size: 1.2rem;
-  color: var(--gray-color);
-  font-weight: 500;
-}
-
-/* 管理卡片 */
-.admin-card {
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: var(--card-radius);
-  box-shadow: 
-    0 10px 20px rgba(0, 0, 0, 0.08),
-    inset 0 -2px 6px rgba(255, 255, 255, 0.7),
-    inset 2px 2px 6px rgba(255, 255, 255, 1);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  margin-bottom: 2rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.admin-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 
-    0 15px 30px rgba(0, 0, 0, 0.1),
-    inset 0 -2px 6px rgba(255, 255, 255, 0.7),
-    inset 2px 2px 6px rgba(255, 255, 255, 1);
-}
-
-/* 卡片头部 */
-.card-header {
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-  background: linear-gradient(to right, rgba(99, 102, 241, 0.03), rgba(124, 58, 237, 0.08));
-}
-
-.card-header h4 {
-  margin: 0;
-  color: var(--dark-color);
-  font-weight: 700;
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.card-header h4 i {
-  font-size: 1.2rem;
-  color: var(--primary-color);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.badge-count {
-  background: var(--accent-gradient);
-  color: white;
-  font-size: 0.85rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 100px;
-  font-weight: 600;
-  min-width: 24px;
-  text-align: center;
-}
-
-.badge-inline {
-  margin-left: 8px;
-  display: inline-flex;
-}
-
-.refresh-btn, .toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-/* 卡片内容 */
-.card-body {
-  padding: 1.5rem;
-}
-
-/* 表单样式 */
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: var(--dark-color);
-}
-
-.input-group {
-  display: flex;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.7);
-  transition: all 0.3s ease;
-}
-
-.input-group:focus-within {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.input-prefix {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  background-color: rgba(99, 102, 241, 0.05);
-  color: var(--primary-color);
-  border-right: 1px solid rgba(99, 102, 241, 0.1);
-}
-
-.input-prefix i {
-  font-size: 1.2rem;
-}
-
-.custom-input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--dark-color);
-}
-
-/* 消息样式 */
-.error-message, .success-message {
-  padding: 1rem;
-  border-radius: var(--border-radius);
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 500;
-}
-
-.error-message {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-color);
-}
-
-.success-message {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-}
-
-.error-message i, .success-message i {
-  font-size: 1.2rem;
-}
-
-/* 加载器 */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 5rem 0;
-}
-
-.loader {
-  width: 60px;
-  height: 60px;
-  border: 3px solid rgba(99, 102, 241, 0.1);
-  border-top: 3px solid var(--primary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 5px 15px rgba(99, 102, 241, 0.15);
-}
-
-.small-spinner {
-  width: 20px;
-  height: 20px;
-  border-width: 2px;
-  margin-right: 0;
-}
-
-.loading-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  color: var(--gray-color);
-}
-
-/* 空状态 */
-.empty-state {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--gray-color);
-}
-
-.empty-state i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.6;
-}
-
-.empty-state p {
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-/* 表格样式 */
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;  /* 添加垂直滚动功能 */
-  max-height: 600px; /* 设置最大高度以触发滚动条 */
-  border-radius: var(--border-radius);
-  background: rgba(255, 255, 255, 0.5);
-  padding: 0;
-  position: relative;
-}
-
-/* 固定表头样式 */
-.custom-table {
-  display: table;
-  min-width: 800px;
-  width: 100%;
-  white-space: nowrap;
-  table-layout: fixed;
-  border-collapse: separate; /* 设置为separate以支持固定表头 */
-  border-spacing: 0; /* 移除边框间距 */
-}
-
-.custom-table thead {
-  position: sticky; /* 设置表头为粘性定位 */
-  top: 0;          /* 固定在容器顶部 */
-  z-index: 1;       /* 确保表头在内容上层 */
-  background: rgba(255, 255, 255, 0.95); /* 确保表头背景不透明 */
-}
-
-.custom-table th {
-  background: rgba(99, 102, 241, 0.05);
-  font-weight: 600;
-  color: var(--dark-color);
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-  position: sticky; /* 确保每个th元素也保持粘性定位 */
-  top: 0;          /* 固定在容器顶部 */
-  z-index: 2;      /* 确保高于tbody内容 */
-}
-
-.custom-table td {
-  padding: 1rem;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.05);
-  color: var(--gray-color);
-}
-
-.custom-table tr:last-child td {
-  border-bottom: none;
-}
-
-.custom-table tr:hover td {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.id-badge {
-  background: rgba(99, 102, 241, 0.1);
-  color: var(--primary-color);
-  padding: 0.2rem 0.5rem;
-  border-radius: 100px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.type-badge {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-  padding: 0.2rem 0.75rem;
-  border-radius: 100px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-
-.badge-supplement {
-  background-color: #f59e0b;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.badge-initial {
-  background-color: #6366f1;
-  color: white;
-  padding: 0.35rem 0.75rem;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.status-badge {
-  padding: 0.2rem 0.75rem;
-  border-radius: 100px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.status-approved {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-}
-
-.status-rejected {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-color);
-}
-
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.view-images-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-/* 自定义复选框 */
-.checkbox-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.custom-checkbox {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.checkbox-wrapper label {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  border: 2px solid rgba(99, 102, 241, 0.3);
-  background-color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.custom-checkbox:checked + label {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.custom-checkbox:checked + label::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 2px;
-  width: 6px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.checkbox-wrapper:hover label {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-/* 表单操作 */
-.form-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 1rem;
-}
-
-/* 按钮样式 */
-.btn-custom {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--border-radius);
-  border: none;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  white-space: nowrap;
-}
-
-.btn-custom::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: 0.5s;
-}
-
-.btn-custom:hover::before {
-  left: 100%;
-}
-
-.btn-custom:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.btn-primary {
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
-}
-
-.btn-outline {
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--primary-color);
-  border: 1px solid rgba(124, 58, 237, 0.2);
-}
-
-.btn-accent {
-  background: var(--accent-gradient);
-  color: white;
-  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.2);
-}
-
-.btn-sm {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
-}
-
-.btn-custom:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-/* 模态框样式 */
-.custom-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-  overflow-y: auto;
-  animation: fadeIn 0.3s ease;
-  padding-top: 5vh;
-}
-
-.modal-dialog {
-  width: 100%;
-  max-width: 800px;
-  animation: slideUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  margin: 2rem 0;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.small-dialog {
-  max-width: 500px;
-}
-
-.large-dialog {
-  max-width: 1000px;
-}
-
-.modal-content {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: var(--card-radius);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-  background: linear-gradient(to right, rgba(99, 102, 241, 0.05), rgba(124, 58, 237, 0.1));
-}
-
-.modal-title {
-  margin: 0;
-  color: var(--dark-color);
-  font-weight: 700;
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.modal-title i {
-  color: var(--primary-color);
-}
-
-.close-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(99, 102, 241, 0.1);
-  color: var(--gray-color);
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.close-btn:hover {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-color);
-  transform: rotate(90deg);
-}
-
-.modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-footer {
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid rgba(99, 102, 241, 0.1);
-  background: rgba(99, 102, 241, 0.02);
-}
-
-/* 审批详情样式 */
-.detail-section {
-  margin-bottom: 1.5rem;
-  border-radius: var(--border-radius);
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(99, 102, 241, 0.05);
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.detail-section:hover {
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
-
-.detail-title {
-  padding: 1rem;
-  margin: 0;
-  font-weight: 600;
-  background: rgba(99, 102, 241, 0.05);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.05);
-}
-
-.detail-title i {
-  color: var(--primary-color);
-}
-
-/* 新增: 统一内容区域样式 */
-.detail-content {
-  padding: 1rem;
-}
-
-.detail-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.detail-column {
-  padding: 1rem;
-}
-
-.detail-item {
-  display: flex;
-  margin-bottom: 0.75rem;
-  align-items: flex-start;
-  line-height: 1.5;
-}
-
-.detail-label {
-  font-weight: 600;
-  color: var(--gray-color);
-  min-width: 100px;
-  padding-right: 1rem;
-}
-
-.detail-value {
-  color: var(--dark-color);
-  flex: 1;
-  word-break: break-word;
-}
-
-.detail-note {
-  padding: 1rem;
-  color: var(--dark-color);
-  white-space: pre-wrap;
-  line-height: 1.6;
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.resource-link {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.resource-link:hover {
-  text-decoration: underline;
-}
-
-.image-count {
-  font-size: 0.9rem;
-  color: var(--gray-color);
-  font-weight: 400;
-}
-
-.images-grid {
-  padding: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.image-preview-item {
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.image-preview-item:hover {
-  transform: translateY(-5px) scale(1.02);
-}
-
-.image-card {
-  position: relative;
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  aspect-ratio: 1 / 1;
-}
-
-.image-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
-}
-
-.image-card:hover img {
-  transform: scale(1.1);
-}
-
-.image-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0.5rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent);
-  display: flex;
-  justify-content: center;
-}
-
-.poster-badge {
-  background: rgba(244, 63, 94, 0.9);
-  color: white;
-  font-size: 0.8rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 100px;
-  font-weight: 600;
-}
-
-.empty-images {
-  padding: 2rem;
-  text-align: center;
-  color: var(--gray-color);
-  grid-column: 1 / -1;
-}
-
-.empty-images i {
-  font-size: 2.5rem;
-  opacity: 0.6;
-  margin-bottom: 0.75rem;
-}
-
-/* 链接区域样式 */
-.links-container {
-  padding: 1rem;
-}
-
-.link-category {
-  margin-bottom: 1.5rem;
-}
-
-.category-name {
-  font-weight: 600;
-  color: var(--primary-color);
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-}
-
-.links-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.link-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: var(--border-radius);
-  margin-bottom: 0.5rem;
-}
-
-.link-item i {
-  color: var(--primary-color);
-}
-
-.link-url {
-  flex: 1;
-  word-break: break-all;
-}
-
-.link-password {
-  background: rgba(99, 102, 241, 0.1);
-  color: var(--primary-color);
-  padding: 0.2rem 0.5rem;
-  border-radius: 100px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-/* 确认对话框特有样式 */
-.confirm-message {
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  color: var(--dark-color);
-}
-
-.info-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: rgba(6, 182, 212, 0.1);
-  color: var(--secondary-color);
-  border-radius: var(--border-radius);
-}
-
-.info-box i {
-  font-size: 1.1rem;
-  margin-top: 0.2rem;
-}
-
-/* 图片预览模态框特有样式 */
-.preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
-}
-
-.preview-item {
-  aspect-ratio: 1/1;
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  cursor: zoom-in;
-  transition: all 0.3s ease;
-}
-
-.preview-item:hover {
-  transform: scale(1.05);
-}
-
-.preview-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* 新的大图预览样式 - 与ResourceDetail.vue保持一致 */
-.modal-image-container {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-  animation: zoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.preview-large-image {
-  max-width: 100%;
-  max-height: 90vh;
-  border-radius: var(--card-radius);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
-  border: 3px solid rgba(255, 255, 255, 0.8);
-}
-
-.image-close-btn {
-  position: absolute;
-  top: -15px;
-  right: -15px;
-  background: white;
-  color: var(--dark-color);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-  z-index: 10;
-  opacity: 0.8;
-  transition: all 0.3s ease;
-  border: none;
-}
-
-.image-close-btn:hover {
-  opacity: 1;
-  transform: rotate(90deg);
-}
-
-/* 删除旧的大图预览样式 */
-.large-image-overlay,
-.large-image-container,
-.large-image,
-.close-large-img {
-  /* 这些旧样式将被移除，由新样式替代 */
-}
-
-/* 新增动画效果 */
-@keyframes zoomIn {
-  from { 
-    opacity: 0;
-    transform: scale(0.9); 
-  }
-  to { 
-    opacity: 1;
-    transform: scale(1); 
-  }
-}
-
-/* 动画 */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 响应式样式优化 */
-@media (max-width: 992px) {
-  .admin-container {
-    padding: 1rem;
-  }
-  
-  .admin-hero {
-    padding: 1.5rem;
-  }
-  
-  .hero-title {
-    font-size: 1.8rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 1rem;
-  }
-  
-  .admin-card {
-    margin-bottom: 1.5rem;
-  }
-  
-  .card-header {
-    flex-direction: row;
-    gap: 0.75rem;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-  }
-  
-  .header-actions {
-    width: auto;
-    display: flex;
-    justify-content: flex-end;
-  }
-  
-  .header-left {
-    width: auto;
-    justify-content: flex-start;
-  }
-  
-  .admin-content {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* @media (max-width: 768px) { */
-@media (max-width: 1200px) {
-  /* 移动端基础样式 */
-  .admin-container {
-    padding: 0 0.5rem;
-  }
-  
-  .admin-hero {
-    padding: 2rem 0;
-    margin-bottom: 1.5rem;
-  }
-  
-  .hero-title {
-    font-size: 1.8rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 1rem;
-  }
-  
-  .card-header {
-    padding: 1rem;
-    flex-wrap: nowrap; /* 强制不换行 */
-    gap: 10px;
-    justify-content: space-between;
-  }
-  
-  .card-header h4 {
-    font-size: 1.1rem;
-    max-width: 80%; /* 进一步增加宽度确保文字显示完整 */
-    overflow: visible; /* 确保文字不会被截断 */
-    white-space: nowrap; /* 不允许文字换行，保持在一行 */
-    text-overflow: ellipsis; /* 超出部分显示省略号 */
-  }
-  
-  .header-left h4 {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap; /* 不允许换行 */
-    gap: 0.25rem; /* 减小图标和文字间的间距 */
-  }
-  
-  .header-left h4 i {
-    margin-right: 0.25rem; /* 减少图标右侧边距 */
-  }
-  
-  .card-body {
-    padding: 1rem;
-  }
-  
-  /* 表格样式 - 增强横向显示 */
-  .custom-table {
-    min-width: 1000px !important;
-    width: 100% !important;
-    white-space: nowrap !important;
-    border-collapse: collapse !important;
-  }
-  
-  .table-container {
-    margin: 0 -1rem !important;
-    width: calc(100% + 2rem) !important;
-    overflow-x: auto !important;
-    padding: 0 0.5rem !important;
-  }
-  
-  .custom-table td, 
-  .custom-table th {
-    padding: 0.75rem 0.5rem;
-  }
-  
-  /* 按钮布局优化 */
-  .header-actions {
-    margin-left: auto;
-    white-space: nowrap;
-  }
-  
-  /* 优化按钮在移动端的布局 */
-  .btn-custom.btn-sm {
-    padding: 0.4rem;
-    font-size: 0.8rem;
-    min-width: 36px;
-    height: 36px;
-    justify-content: center;
-  }
-  
-  /* 改善下拉菜单在移动端的可用性 */
-  .dropdown-menu {
-    min-width: 200px;
-  }
-  
-  /* 改善模态框在移动端的显示 */
-  .custom-modal .modal-dialog {
-    width: 95%;
-    max-width: none;
-  }
-  
-  /* 修改表单在移动端的布局 */
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  /* 修改密码按钮样式优化 */
-  .form-actions {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-  }
-  
-  .form-actions button {
-    width: auto;
-    border-radius: 50%;
-    min-width: 38px;
-    height: 38px;
-    padding: 0.5rem;
-  }
-  
-  /* 移动端按钮仅显示图标，不显示文字 */
-  .btn-text {
-    display: none;
-  }
-  
-  .btn-custom {
-    padding: 0.5rem;
-    min-width: 38px;
-    height: 38px;
-    justify-content: center;
-  }
-  
-  .btn-custom i {
-    font-size: 1.1rem;
-    margin-right: 0;
-  }
-  
-  /* 确保带有徽章的按钮能正常显示 */
-  .btn-custom .badge-count {
-    display: inline-flex;
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    min-width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    font-size: 0.75rem;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* 特殊处理某些需要文本的按钮 */
-  .close-btn .btn-text,
-  .confirmation-btn .btn-text {
-    display: inline-block;
-  }
-  
-  /* 批量删除按钮需要更多空间 */
-  .btn-custom.btn-accent.btn-sm {
-    position: relative;
-    min-width: 38px;
-    padding: 0.4rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .admin-hero {
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .hero-title {
-    font-size: 1.4rem;
-  }
-  
-  .hero-subtitle {
-    font-size: 0.9rem;
-  }
-  
-  .admin-card {
-    margin-bottom: 1rem;
-  }
-  
-  .card-header {
-    padding: 0.75rem 1rem;
-    flex-wrap: nowrap; /* 确保即使在更小的屏幕上也不换行 */
-  }
-  
-  .card-header h4 {
-    font-size: 0.95rem; /* 更小的字体 */
-    max-width: 75%; /* 进一步增加宽度 */
-    overflow: visible; /* 确保文字不会被截断 */
-    white-space: nowrap; /* 不允许文字换行 */
-    text-overflow: ellipsis; /* 超出部分显示省略号 */
-  }
-  
-  .card-body {
-    padding: 0.75rem;
-  }
-  
-  /* 优化表格在小屏幕上的显示 */
-  .custom-table th:nth-child(3),
-  .custom-table th:nth-child(4),
-  .custom-table td:nth-child(3),
-  .custom-table td:nth-child(4) {
-    display: none;
-  }
-  
-  .custom-table th:first-child,
-  .custom-table td:first-child {
-    padding-left: 0.5rem;
-  }
-  
-  .custom-table th:last-child,
-  .custom-table td:last-child {
-    padding-right: 0.5rem;
-  }
-  
-  /* 图片预览模态框优化 */
-  .modal-image-container {
-    max-width: 95vw;
-  }
-  
-  .image-close-btn {
-    right: 0;
-    top: -40px;
-  }
-  
-  /* 调整按钮大小和间距 */
-  .btn-custom {
-    padding: 0.45rem;
-    min-width: 34px;
-    height: 34px;
-    border-radius: 50%;
-  }
-  
-  .btn-custom.btn-sm {
-    padding: 0.35rem;
-    min-width: 30px;
-    height: 30px;
-  }
-  
-  .btn-custom i {
-    font-size: 1rem;
-  }
-  
-  /* 垂直堆叠操作按钮 */
-  .actions-cell {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    justify-content: flex-end;
-  }
-  
-  /* 优化弹窗提示和确认 */
-  .alert {
-    padding: 0.75rem;
-    font-size: 0.85rem;
-  }
-  
-  /* 模态框按钮在移动端位置调整 */
-  .modal-footer {
-    justify-content: space-between;
-  }
-  
-  .modal-footer .btn-custom {
-    min-width: auto;
-    width: auto;
-    padding: 0.45rem 0.75rem;
-    border-radius: var(--border-radius);
-    height: auto;
-  }
-  
-  .modal-footer .btn-custom .btn-text {
-    display: inline-block;
-  }
-}
-
-/* 特殊处理某些需要文本的按钮 */
-.close-btn .btn-text,
-.confirmation-btn .btn-text {
-  display: inline-block;
-}
-
-/* 优化审批详情中查看公开页面按钮在移动端的样式 */
-@media (max-width: 768px) {
-  .modal-actions .btn-custom {
-    padding: 0.5rem;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .modal-actions .btn-custom i {
-    margin: 0;
-    font-size: 1.25rem;
-  }
-}
-
-/* 网站设置相关样式 */
-.settings-section {
-  margin-bottom: 2rem;
-}
-
-.section-title {
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--gray-color);
-  color: var(--primary-color);
-}
-
-.links-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.link-item {
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  border-radius: var(--border-radius);
-  background-color: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-.link-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  flex: 1;
-}
-
-.link-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.link-field label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--gray-color);
-}
-
-.checkbox-label {
-  margin-left: 0.5rem;
-  cursor: pointer;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .link-fields {
-    grid-template-columns: 1fr;
-  }
-  
-  .link-item {
-    flex-direction: column;
-  }
-}
-
-/* 链接项样式 */
-.link-header {
-  display: grid;
-  grid-template-columns: 40px 1fr 1fr 80px 1fr 60px;
-  gap: 8px;
-  padding: 0 10px;
-  margin-bottom: 10px;
-  font-weight: 600;
-  color: var(--primary-color);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-  padding-bottom: 8px;
-}
-
-.link-field-header {
-  font-size: 0.85rem;
-  padding: 0 5px;
-}
-
-.drag-handle-placeholder {
-  width: 40px;
-}
-
-.link-item {
-  display: grid;
-  grid-template-columns: 40px 1fr 60px;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: var(--border-radius);
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(99, 102, 241, 0.1);
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-}
-
-.link-item:hover {
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-}
-
-.drag-handle {
-  cursor: grab;
-  color: #aaa;
-  font-size: 1.2rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: color 0.2s;
-}
-
-.drag-handle:hover {
-  color: var(--primary-color);
-}
-
-.ghost-item {
-  opacity: 0.5;
-  background: rgba(124, 58, 237, 0.1);
-  border: 1px dashed var(--primary-color);
-}
-
-.link-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr 80px 1fr;
-  gap: 8px;
-  width: 100%;
-}
-
-.link-field {
-  padding: 0 5px;
-}
-
-.icon-input-container {
-  position: relative;
-  flex: 1;
-}
-
-.clear-icon-btn {
-  position: absolute;
-  right: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  padding: 5px;
-  border-radius: 50%;
-  cursor: pointer;
-  color: #aaa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.clear-icon-btn:hover {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-color);
-}
-
-/* 图标选择器样式 */
-.icon-selector .input-prefix {
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.icon-selector .input-prefix:hover {
-  background-color: rgba(124, 58, 237, 0.1);
-  color: var(--primary-color);
-}
-
-.icon-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 10px;
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 10px;
-}
-
-.icon-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-}
-
-.icon-item:hover {
-  background-color: rgba(124, 58, 237, 0.1);
-  border-color: rgba(124, 58, 237, 0.2);
-}
-
-.icon-item.selected {
-  background-color: rgba(124, 58, 237, 0.2);
-  border-color: var(--primary-color);
-}
-
-.icon-item i {
-  font-size: 1.5rem;
-  margin-bottom: 5px;
-  color: var(--dark-color);
-}
-
-.icon-name {
-  font-size: 0.7rem;
-  color: var(--dark-color);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-}
-
-/* 水平显示的复选框 */
-.horizontal-display {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.horizontal-display label {
-  margin-right: 10px;
-}
-
-.checkbox-text {
-  margin-left: 10px;
-  font-weight: 500;
-}
-
-/* 成功提示通知 */
-.toast-notification {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--dark-color);
-  padding: 15px 25px;
-  border-radius: 100px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 2000;
-  animation: slideInRight 0.3s forwards;
-  transition: opacity 0.3s ease;
-  font-weight: 600;
-}
-
-.success-toast {
-  border-left: 4px solid var(--success-color);
-}
-
-.success-toast i {
-  color: var(--success-color);
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.icon-field {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-selector-button {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--border-radius);
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 1.2rem;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.icon-selector-button:hover {
-  background-color: rgba(124, 58, 237, 0.1);
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
-
-.icon-selector-button i {
-  transition: transform 0.2s ease;
-}
-
-.icon-selector-button:hover i {
-  transform: scale(1.1);
-}
-
-.clear-icon-btn {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: white;
-  color: var(--accent-color);
-  border: 1px solid rgba(244, 63, 94, 0.3);
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  padding: 0;
-  font-size: 0.7rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.icon-selector-button:hover .clear-icon-btn {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.clear-icon-btn:hover {
-  background-color: var(--accent-color);
-  color: white;
-  transform: scale(1.1) !important;
-}
-
-.button-icon-only {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-}
-
-.delete-btn {
-  color: var(--accent-color);
-  border-color: rgba(244, 63, 94, 0.2);
-}
-
-.delete-btn:hover {
-  background-color: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-/* 移动端适配 */
-@media (max-width: 992px) {
-  /* 保留表头在移动端 */
-  .link-header {
-    display: grid; /* 不再隐藏表头 */
-    grid-template-columns: 40px 1fr 1fr 80px 1fr 60px; /* 与PC端保持一致 */
-  }
-  
-  .link-item {
-    grid-template-columns: 40px 1fr 40px; /* 调整整体布局，与PC端保持一致 */
-    padding: 8px; /* 恢复PC端的内边距 */
-  }
-  
-  /* 移除之前的垂直堆叠样式 */
-  .link-fields {
-    display: grid; /* 恢复网格布局 */
-    grid-template-columns: 1fr 1fr 80px 1fr; /* 恢复PC端的列布局 */
-    gap: 8px;
-    width: 100%;
-  }
-  
-  /* 移除字段垂直堆叠样式 */
-  .link-field {
-    display: flex;
-    flex-direction: column;
-    width: auto; /* 不再强制100%宽度 */
-  }
-  
-  /* 保留标签文字，但仅在滚动视图外显示 */
-  .link-field:not(.icon-field)::before {
-    display: none; /* 隐藏移动端的标签，因为我们现在有了表头 */
-  }
-  
-  /* 调整图标字段，保持居中 */
-  .icon-field {
-    align-self: center;
-    margin: 0; /* 移除额外的边距 */
-  }
-  
-  /* 增强滚动容器样式 */
-  .scroll-container {
-    border: 1px solid rgba(99, 102, 241, 0.1); /* 恢复边框 */
-    background: rgba(255, 255, 255, 0.5); /* 恢复背景 */
-    margin-bottom: 1rem;
-    max-height: 350px;
-  }
-  
-  /* 增加滚动提示效果 */
-  .scroll-container::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px; 
-    height: 100%;
-    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    opacity: 0.8;
-  }
-  
-  /* 增强滚动方向指示 */
-  .scroll-container::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: 10px;
-    width: 20px;
-    height: 20px;
-    border-right: 2px solid rgba(99, 102, 241, 0.4);
-    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
-    transform: translateY(-50%) rotate(-45deg);
-    animation: pulseArrow 2s infinite;
-    z-index: 2;
-  }
-  
-  @keyframes pulseArrow {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.8; }
-  }
-}
-
-/* 添加更小屏幕的特殊处理 */
-/* @media (max-width: 576px) { */
-@media (max-width: 1200px) {
-  .links-container {
-    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
-  }
-  
-  .remove-link-btn {
-    margin-top: 0; /* 移除按钮上方的额外边距 */
-  }
-  
-  /* 优化移动端链接项内容显示 */
-  .link-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr 80px 1fr;
-    gap: 4px; /* 减小间距 */
-  }
-  
-  .link-field input {
-    width: 100%; /* 确保输入框宽度为100% */
-    min-width: 0; /* 防止输入框最小宽度导致溢出 */
-    font-size: 0.85rem; /* 减小字体大小 */
-    padding: 0.5rem 0.75rem; /* 减小内边距 */
-    text-overflow: ellipsis; /* 文本溢出时显示省略号 */
-    white-space: nowrap; /* 防止文本换行 */
-    overflow: hidden; /* 隐藏溢出内容 */
-  }
-  
-  /* 修复图标按钮样式，确保居中显示不溢出 */
-  .icon-selector-button {
-    width: 36px; /* 减小图标选择按钮尺寸 */
-    height: 36px;
-    min-width: 36px; /* 确保最小宽度 */
-    padding: 0;
-  }
-  
-  .icon-field {
-    display: flex;
-    justify-content: center;
-    min-width: 36px; /* 确保最小宽度 */
-    max-width: 80px; /* 限制最大宽度 */
-  }
-}
-
-/* 添加无图标样式 */
-.no-icon {
-  font-size: 0.9rem;
-  color: #888;
-  font-weight: normal;
-}
-
-/* 修改删除按钮样式 */
-.delete-btn {
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-}
-
-.delete-btn:hover {
-  background-color: #e11d48;
-  color: white;
-  border-color: #e11d48;
-  transform: scale(1.05);
-}
-
-/* 1. 调整图标字段与标题行对齐 */
-.icon-field {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 调整无图标文本样式 */
-.no-icon {
-  font-size: 0.9rem;
-  color: #888;
-  font-weight: normal;
-}
-
-.remove-link-btn {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-color);
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  margin-top: 1.2rem;
-}
-
-.remove-link-btn:hover {
-  background: var(--accent-color);
-  color: white;
-  transform: rotate(90deg);
-}
-
-/* 3. 页脚设置保存成功消息样式 */
-.settings-success-message {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success-color);
-  padding: 0.5rem 1rem;
-  border-radius: var(--border-radius);
-  margin-right: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  animation: fadeIn 0.3s ease;
-}
-
-.form-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 1rem;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* 删除旧的 toast 通知相关样式 */
-.toast-notification {
-  display: none;
-}
-
-/* 移动端适配时确保成功消息可见 */
-@media (max-width: 768px) {
-  .form-actions {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.75rem;
-  }
-  
-  .settings-success-message {
-    width: 100%;
-    margin-bottom: 0.5rem;
-    justify-content: center;
-  }
-}
-
-/* 图标标题居中对齐 */
-.link-field-header:nth-child(4) {
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 新增link-delete-btn的替代样式 */
-.link-delete-btn {
-  display: none;
-}
-
-/* 添加可滚动容器样式，类似于审批记录部分 */
-.scroll-container {
-  width: 100%;
-  overflow-y: auto;
-  overflow-x: auto; /* 添加水平滚动支持 */
-  max-height: 400px;
-  border-radius: var(--border-radius);
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(99, 102, 241, 0.1);
-  margin-bottom: 1rem;
-  position: relative;
-}
-
-/* 调整链接容器与滚动容器的关系 */
-.links-wrapper {
-  padding: 0.5rem;
-}
-
-.links-container {
-  width: 100%;
-  min-width: 650px; /* 确保有足够的宽度展示所有列 */
-}
-
-/* 移动端适配 - 调整为保持PC端布局效果 */
-@media (max-width: 992px) {
-  /* 保留表头在移动端 */
-  .link-header {
-    display: grid; /* 不再隐藏表头 */
-    grid-template-columns: 40px 1fr 1fr 80px 1fr 60px; /* 与PC端保持一致 */
-  }
-  
-  .link-item {
-    grid-template-columns: 40px 1fr 40px; /* 调整整体布局，与PC端保持一致 */
-    padding: 8px; /* 恢复PC端的内边距 */
-  }
-  
-  /* 移除之前的垂直堆叠样式 */
-  .link-fields {
-    display: grid; /* 恢复网格布局 */
-    grid-template-columns: 1fr 1fr 80px 1fr; /* 恢复PC端的列布局 */
-    gap: 8px;
-    width: 100%;
-  }
-  
-  /* 移除字段垂直堆叠样式 */
-  .link-field {
-    display: flex;
-    flex-direction: column;
-    width: auto; /* 不再强制100%宽度 */
-  }
-  
-  /* 保留标签文字，但仅在滚动视图外显示 */
-  .link-field:not(.icon-field)::before {
-    display: none; /* 隐藏移动端的标签，因为我们现在有了表头 */
-  }
-  
-  /* 调整图标字段，保持居中 */
-  .icon-field {
-    align-self: center;
-    margin: 0; /* 移除额外的边距 */
-  }
-  
-  /* 增强滚动容器样式 */
-  .scroll-container {
-    border: 1px solid rgba(99, 102, 241, 0.1); /* 恢复边框 */
-    background: rgba(255, 255, 255, 0.5); /* 恢复背景 */
-    margin-bottom: 1rem;
-    max-height: 350px;
-  }
-  
-  /* 增加滚动提示效果 */
-  .scroll-container::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px; 
-    height: 100%;
-    background: linear-gradient(to right, transparent, rgba(255,255,255,0.8));
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    opacity: 0.8;
-  }
-  
-  /* 增强滚动方向指示 */
-  .scroll-container::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    right: 10px;
-    width: 20px;
-    height: 20px;
-    border-right: 2px solid rgba(99, 102, 241, 0.4);
-    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
-    transform: translateY(-50%) rotate(-45deg);
-    animation: pulseArrow 2s infinite;
-    z-index: 2;
-  }
-  
-  @keyframes pulseArrow {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.8; }
-  }
-}
-
-/* 添加更小屏幕的特殊处理 */
-@media (max-width: 576px) {
-  .links-container {
-    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
-  }
-  
-  .remove-link-btn {
-    margin-top: 0; /* 移除按钮上方的额外边距 */
-  }
-}
-
-/* 添加链接按钮的样式 - 保持PC端风格 */
-.add-link-btn {
-  margin: 0.75rem auto 1rem;
-  min-width: 150px;
-  width: auto !important; /* 强制使用自动宽度，不随屏幕变化 */
-  max-width: 200px;
-  display: inline-flex !important; /* 强制使用PC端的内联弹性布局 */
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--border-radius);
-  padding: 0.5rem 1rem;
-  white-space: nowrap;
-  z-index: 1;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  height: auto !important; /* 确保高度适应内容 */
-}
-
-/* 确保按钮文本在任何设备上都显示 */
-.add-link-btn .btn-text {
-  display: inline !important; /* 强制显示文本 */
-  margin-left: 0.35rem; /* 增加图标和文字间距 */
-}
-
-/* 小屏幕样式 */
-@media (max-width: 576px) {
-  /* 改进滚动容器边缘渐变效果 */
-  .scroll-container::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
-    width: 30px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.8));
-    pointer-events: none;
-    z-index: 2;
-  }
-  
-  .links-container {
-    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
-  }
-  
-  .remove-link-btn {
-    margin-top: 0; /* 移除按钮上方的额外边距 */
-  }
-}
-
-/* 恢复滚动容器样式 */
-.links-wrapper {
-  margin-bottom: 0.5rem;
-}
-
-.links-container {
-  min-width: 650px; /* 确保在移动端有足够宽度显示全部内容 */
-}
-
-/* 在所有设备上覆盖移动端样式 */
-@media (max-width: 768px) {
-  /* 移除其他按钮文本的隐藏样式 */
-  .btn-text {
-    display: none;
-  }
-  
-  /* 但保持添加链接按钮文本显示 */
-  .add-link-btn {
-    height: auto !important;
-    width: auto !important;
-    display: inline-flex !important;
-    padding: 0.5rem 1rem !important;
-    min-width: 150px;
-    border-radius: var(--border-radius) !important;
-  }
-  
-  .add-link-btn .btn-text {
-    display: inline !important;
-  }
-}
-
-/* 添加按钮居中包装器 */
-.add-link-wrapper {
-  width: 100%;
-  text-align: center;
-  margin: 0.75rem 0 1rem;
-}
-
-/* 添加链接按钮的样式 - 保持PC端风格并居中 */
-.add-link-btn {
-  margin: 0 auto;
-  min-width: 150px;
-  width: auto !important; /* 强制使用自动宽度，不随屏幕变化 */
-  max-width: 200px;
-  display: inline-flex !important; /* 强制使用PC端的内联弹性布局 */
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--border-radius);
-  padding: 0.5rem 1.5rem;
-  white-space: nowrap;
-  z-index: 1;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  height: auto !important; /* 确保高度适应内容 */
-}
-
-/* 确保按钮文本在任何设备上都显示 */
-.add-link-btn .btn-text {
-  display: inline !important; /* 强制显示文本 */
-  margin-left: 0.35rem; /* 增加图标和文字间距 */
-}
-
-/* 在所有设备上覆盖移动端样式 */
-@media (max-width: 768px) {
-  /* 但保持添加链接按钮文本显示并居中 */
-  .add-link-btn {
-    height: auto !important;
-    width: auto !important;
-    display: inline-flex !important;
-    padding: 0.5rem 1.5rem !important;
-    min-width: 150px;
-    border-radius: var(--border-radius) !important;
-  }
-}
-
-/* 表单帮助文本样式 */
-.form-text {
-  font-size: 0.85rem;
-  color: var(--gray-color);
-  margin-top: 0.5rem;
-  line-height: 1.4;
-}
-
-/* 自定义文本区域样式 */
-textarea.custom-input {
-  min-height: 100px;
-  resize: vertical;
-  line-height: 1.5;
-  padding: 0.75rem 1rem;
-}
-
-/* 增强section-title样式 */
-.section-title {
-  font-size: 1.2rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
-  color: var(--primary-color);
-  font-weight: 600;
-}
-
-/* 分隔设置区域 */
-.settings-section {
-  margin-bottom: 3rem;
-  padding-bottom: 1rem;
-}
-
-.settings-section:not(:last-child) {
-  border-bottom: 1px dashed rgba(124, 58, 237, 0.1);
-}
-
-/* 设置区域描述 */
-.section-description {
-  font-size: 0.9rem;
-  color: var(--gray-color);
-  margin-top: -0.5rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
-}
-
-/* 自定义下拉选择框样式 */
-select.custom-input {
-  appearance: none;
-  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>');
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1rem;
-  padding-right: 2.5rem;
-}
-
-/* 占位符文本样式 */
-.custom-input::placeholder {
-  color: rgba(107, 114, 128, 0.6);
-  font-style: italic;
-}
-
-/* 表单帮助文本样式 */
-.form-text {
-  font-size: 0.85rem;
-  color: var(--gray-color);
-  margin-top: 0.5rem;
-  line-height: 1.4;
-}
-
-/* 自定义文本区域样式 */
-textarea.custom-input {
-  min-height: 100px;
-  resize: vertical;
-  line-height: 1.5;
-  padding: 0.75rem 1rem;
-}
-
-/* 增强section-title样式 */
-.section-title {
-  font-size: 1.2rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
-  color: var(--primary-color);
-  font-weight: 600;
-}
-
-/* 分隔设置区域 */
-.settings-section {
-  margin-bottom: 3rem;
-  padding-bottom: 1rem;
-}
-
-.settings-section:not(:last-child) {
-  border-bottom: 1px dashed rgba(124, 58, 237, 0.1);
-}
-
-/* 网站图标上传样式 */
-.favicon-upload-container {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.favicon-preview {
-  width: 64px;
-  height: 64px;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.favicon-upload-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.btn-upload {
-  background: var(--primary-gradient);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-upload:hover {
-  transform: scale(1.05);
-}
-
-.btn-clear-favicon {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-color);
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-clear-favicon:hover {
-  transform: scale(1.05);
-}
-
-.favicon-uploader {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-}
-
-.favicon-upload-area {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border: 2px dashed rgba(99, 102, 241, 0.3);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-}
-
-.favicon-upload-area:hover {
-  border-color: var(--primary-color);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.favicon-upload-area.has-preview {
-  border-style: solid;
-  border-color: rgba(99, 102, 241, 0.5);
-}
-
-.favicon-preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 10px;
-}
-
-.favicon-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--gray-color);
-  text-align: center;
-  padding: 0 0.5rem;
-}
-
-.favicon-empty-state i {
-  font-size: 2rem;
-  opacity: 0.7;
-  margin-bottom: 0.5rem;
-}
-
-.favicon-empty-state span {
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-/* 中央显示上传按钮 */
-.favicon-actions {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.6);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.favicon-upload-area:hover .favicon-actions {
-  opacity: 1;
-}
-
-/* 通用按钮样式 */
-.favicon-action-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.favicon-action-btn i {
-  font-size: 1.2rem;
-}
-
-.favicon-action-btn:hover {
-  transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* 上传按钮样式 */
-.upload-btn:hover {
-  background: rgba(99, 102, 241, 0.5);
-}
-
-/* 删除按钮样式 - 右上角定位 */
-.remove-btn {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 20;
-  background: rgba(244, 63, 94, 0.7);
-  opacity: 1;
-  transition: all 0.3s ease;
-}
-
-.remove-btn:hover {
-  background: rgba(244, 63, 94, 1);
-  transform: scale(1.15);
-}
-
-.hidden-upload {
-  display: none;
-}
-
-/* About页面设置相关样式 */
-.subsection-title {
-  font-size: 1.1rem;
-  margin: 1.5rem 0 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--dark-color);
-}
-
-.subsection-title i {
-  color: var(--primary-color);
-}
-
-.mt-4 {
-  margin-top: 1.5rem;
-}
-
-.description-field textarea {
-  min-height: 80px;
-}
-
-.description-field .form-text {
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  color: var(--gray-color);
-}
-
-.description-field code {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 0.1rem 0.3rem;
-  border-radius: 3px;
-  font-size: 0.85em;
-}
-</style> 
+<style scoped src="@/styles/admin.css"></style>

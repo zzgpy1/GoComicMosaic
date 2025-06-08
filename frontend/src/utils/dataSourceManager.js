@@ -1,7 +1,12 @@
 // 导入数据源索引文件
 import dataSources from './dataSources';
 
-// 数据源管理器类
+/**
+ * 数据源管理器类
+ * 
+ * 提供数据源的统一管理功能，包括注册、获取、切换等操作
+ * 现在支持简化的数据源配置，只需要配置name、baseUrl和useXml三个核心参数
+ */
 class DataSourceManager {
   constructor() {
     // 注册的数据源列表
