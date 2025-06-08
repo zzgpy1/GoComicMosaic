@@ -870,7 +870,63 @@
                 <i class="bi bi-plus-circle"></i>
                 <span class="btn-text">添加数据源</span>
               </button>
+            </div>
+            
+            <!-- 外部数据源管理 -->
+            <div class="external-datasource-section mt-4">
+              <h5 class="section-title">外部数据源</h5>
+              <div class="section-description">
+                添加自定义JavaScript文件作为数据源，适用于需要特殊处理的非标准API接口。
+                <div class="description-note">注意：外部数据源可能存在安全风险，请确保只添加来自可信来源的脚本。</div>
+              </div>
               
+              <!-- 添加外部数据源 -->
+              <div class="form-group">
+                <label class="form-label">添加外部数据源</label>
+                <div class="input-group">
+                  <input 
+                    type="text" 
+                    v-model="externalSourceUrl" 
+                    class="custom-input" 
+                    placeholder="https://example.com/datasource.js"
+                  >
+                  <button 
+                    @click="addExternalDataSource" 
+                    class="btn-custom btn-primary" 
+                    :disabled="!externalSourceUrl || externalSourceLoading"
+                  >
+                    <div v-if="externalSourceLoading" class="spinner small-spinner"></div>
+                    <i v-else class="bi bi-plus-circle"></i>
+                    <span class="btn-text">{{ externalSourceLoading ? '加载中...' : '添加' }}</span>
+                  </button>
+                </div>
+                <div v-if="externalSourceError" class="error-message mt-2">
+                  <i class="bi bi-exclamation-triangle-fill"></i>
+                  {{ externalSourceError }}
+                </div>
+              </div>
+              
+              <!-- 外部数据源列表 -->
+              <div v-if="externalDataSources.length > 0" class="form-group">
+                <label class="form-label">已加载的外部数据源</label>
+                <div class="scroll-container links-wrapper">
+                  <div class="links-container">
+                    <div v-for="source in externalDataSources" :key="source.id" class="external-source-item">
+                      <div class="source-info">
+                        <div class="source-name">{{ source.name }}</div>
+                        <div class="source-url">{{ source.url }}</div>
+                      </div>
+                      <button 
+                        @click="removeExternalDataSource(source.id)" 
+                        class="btn-custom btn-danger btn-sm"
+                      >
+                        <i class="bi bi-trash"></i>
+                        <span class="btn-text">删除</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -1357,11 +1413,12 @@
 <script setup>
 import { ref, reactive, onMounted,  watch } from 'vue'
 import axios from 'axios'
-import { debugAuth } from '../utils/auth'
 import { useRouter } from 'vue-router'
-import iconList from '../utils/icons.js';
+import { isAuthenticated, isAdmin, debugAuth } from '../utils/auth'
 import draggable from 'vuedraggable'
 import infoManager from '../utils/InfoManager'
+import { getDataSourceManager } from '../utils/dataSourceManager'
+import iconList from '../utils/icons.js';
 
 const router = useRouter()
 const resources = ref([])
@@ -1755,43 +1812,34 @@ const loadFooterSettings = async () => {
     // 加载数据源配置
     if (footerSettings.value.dataSources && Array.isArray(footerSettings.value.dataSources)) {
       dataSources.value = footerSettings.value.dataSources;
+      console.log(`从数据库加载 ${dataSources.value.length} 个数据源配置`);
     } else {
       // 初始化为空数组
       dataSources.value = [];
+      
+      // 只有在没有现有数据源配置时，才加载默认数据源
+      try {
+        const dataSourcesConfigModule = await import('../utils/dataSourcesConfig.js');
+        const dataSourcesConfig = dataSourcesConfigModule.default;
+        if (dataSourcesConfig && Array.isArray(dataSourcesConfig)) {
+          // 转换为数据源格式
+          const defaultDataSources = dataSourcesConfig.map((source, index) => ({
+            id: Date.now() + index + 1000,  // 使用一个较大的基数，避免ID冲突
+            name: source.name || '',
+            baseUrl: source.baseUrl || '',
+            useXml: source.useXml || false
+          }));
+          
+          // 设置为默认数据源
+          dataSources.value = defaultDataSources;
+          console.log(`从默认配置加载 ${dataSources.value.length} 个数据源`);
+        }
+      } catch (err) {
+        console.log('未找到dataSourcesConfig.js或加载过程中出错:', err);
+      }
     }
     
-    // 不管后台是否已有配置，都尝试加载默认数据源并添加到列表中
-    try {
-      const dataSourcesConfigModule = await import('../utils/dataSourcesConfig.js');
-      const dataSourcesConfig = dataSourcesConfigModule.default;
-      if (dataSourcesConfig && Array.isArray(dataSourcesConfig)) {
-        // 转换为数据源格式，并检查是否已存在（避免重复）
-        const defaultDataSources = dataSourcesConfig.map((source, index) => ({
-          id: Date.now() + index + 1000,  // 使用一个较大的基数，避免ID冲突
-          name: source.name || '',
-          baseUrl: source.baseUrl || '',
-          useXml: source.useXml || false
-        }));
-        
-        // 合并现有数据源和默认数据源，避免重复
-        for (const defaultSource of defaultDataSources) {
-          // 检查是否已存在相同baseUrl的数据源
-          const exists = dataSources.value.some(source => 
-            source.baseUrl === defaultSource.baseUrl || 
-            source.name === defaultSource.name
-          );
-          
-          // 如果不存在，则添加到列表
-          if (!exists) {
-            dataSources.value.push(defaultSource);
-          }
-        }
-        
-        console.log('已成功加载默认数据源配置');
-      }
-    } catch (err) {
-      console.log('未找到dataSourcesConfig.js或加载过程中出错:', err);
-    }
+    // 不再无条件加载默认数据源
     
     // 如果存在favicon，显示预览
     if (footerSettings.value.favicon) {
@@ -2044,6 +2092,11 @@ const clearIcon = (index) => {
 
 // 更新所有图标的显示名称
 const updateIconDisplay = () => {
+  if (!footerSettings.value || !footerSettings.value.links) {
+    console.log('链接尚未初始化，跳过图标显示更新');
+    return;
+  }
+  
   footerSettings.value.links.forEach((link, index) => {
     iconDisplay.value[index] = getIconName(link.icon);
   });
@@ -2099,6 +2152,14 @@ onMounted(async () => {
     const results = await Promise.allSettled([resourcesPromise, pendingResourcesPromise, footerSettingsPromise])
     
     console.log('Fetch results:', results.map(r => r.status))
+    
+    // 基础数据加载完成后，立即加载外部数据源
+    try {
+      await loadExternalDataSources();
+      console.log('外部数据源加载完成');
+    } catch (error) {
+      console.error('加载外部数据源失败:', error);
+    }
     
     // 检查是否有任何请求失败
     const anyFailed = results.some(result => result.status === 'rejected')
@@ -2433,7 +2494,141 @@ const addNewDataSource = () => {
 // 移除数据源
 const removeDataSource = (index) => {
   dataSources.value.splice(index, 1);
+  
+  // 提示用户需要保存设置
+  settingsSuccess.value = true;
+  setTimeout(() => {
+    settingsSuccess.value = false;
+  }, 500);
+  
+  setTimeout(() => {
+    settingsError.value = "请记得点击底部的'保存设置'按钮，否则删除操作不会永久生效！";
+    setTimeout(() => {
+      settingsError.value = null;
+    }, 3000);
+  }, 600);
 };
+
+// 外部数据源管理
+const externalSourceUrl = ref('');
+const externalSourceLoading = ref(false);
+const externalSourceError = ref(null);
+const externalDataSources = ref([]);
+
+// 加载外部数据源列表
+const loadExternalDataSources = async () => {
+  try {
+    const dataSourceManager = getDataSourceManager();
+    
+    // 确保dataSourceManager和dataSources存在
+    if (!dataSourceManager || !dataSourceManager.dataSources) {
+      console.log('数据源管理器尚未初始化或不包含数据源');
+      externalDataSources.value = [];
+      return;
+    }
+    
+    externalDataSources.value = Object.values(dataSourceManager.dataSources)
+      .filter(ds => ds && ds.isExternal)
+      .map(ds => ({
+        id: ds.id,
+        name: ds.name,
+        url: ds.sourceUrl
+      }));
+    
+    console.log(`已加载 ${externalDataSources.value.length} 个外部数据源`);
+  } catch (error) {
+    console.error('加载外部数据源列表失败:', error);
+    externalDataSources.value = [];
+  }
+};
+
+// 添加外部数据源
+const addExternalDataSource = async () => {
+  if (!externalSourceUrl.value) {
+    externalSourceError.value = '请输入外部数据源URL';
+    return;
+  }
+  
+  // 检查URL格式
+  try {
+    new URL(externalSourceUrl.value);
+  } catch (e) {
+    externalSourceError.value = 'URL格式不正确';
+    return;
+  }
+  
+  externalSourceLoading.value = true;
+  externalSourceError.value = null;
+  
+  try {
+    const dataSourceManager = getDataSourceManager();
+    
+    if (!dataSourceManager) {
+      throw new Error('数据源管理器未初始化');
+    }
+    
+    const dataSource = await dataSourceManager.loadExternalDataSource(externalSourceUrl.value);
+    
+    // 成功加载后清空输入框
+    externalSourceUrl.value = '';
+    
+    // 刷新列表
+    await loadExternalDataSources();
+    
+    // 显示成功消息
+    settingsSuccess.value = true;
+    setTimeout(() => {
+      settingsSuccess.value = false;
+    }, 3000);
+  } catch (error) {
+    console.error('加载外部数据源失败:', error);
+    externalSourceError.value = `加载失败: ${error.message || '未知错误'}`;
+  } finally {
+    externalSourceLoading.value = false;
+  }
+};
+
+// 移除外部数据源
+const removeExternalDataSource = async (id) => {
+  try {
+    const dataSourceManager = getDataSourceManager();
+    
+    if (!dataSourceManager) {
+      throw new Error('数据源管理器未初始化');
+    }
+    
+    dataSourceManager.removeExternalDataSource(id);
+    
+    // 刷新列表
+    await loadExternalDataSources();
+    
+    // 显示成功消息
+    settingsSuccess.value = true;
+    setTimeout(() => {
+      settingsSuccess.value = false;
+    }, 3000);
+  } catch (error) {
+    console.error('删除外部数据源失败:', error);
+    externalSourceError.value = `删除失败: ${error.message || '未知错误'}`;
+    settingsError.value = '删除外部数据源失败: ' + error.message;
+    setTimeout(() => {
+      settingsError.value = null;
+    }, 3000);
+  }
+};
+
+// 监听标签页切换，在切换到采集解析源标签页时刷新外部数据源列表
+watch(activeSettingsTab, async (newTab) => {
+  if (newTab === 'datasources') {
+    // 切换到采集解析源标签页时自动刷新外部数据源列表
+    try {
+      await loadExternalDataSources();
+      console.log('在切换到采集解析源标签页时刷新外部数据源列表');
+    } catch (error) {
+      console.error('刷新外部数据源列表失败:', error);
+    }
+  }
+});
 
 </script>
 

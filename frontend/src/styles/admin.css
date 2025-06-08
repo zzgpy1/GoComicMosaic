@@ -2826,3 +2826,138 @@ textarea.custom-input {
   min-width: 80px;
   text-align: center;
 }
+
+/* 外部数据源样式 */
+.external-datasource-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px dashed rgba(99, 102, 241, 0.2);
+}
+
+.external-datasource-form {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.external-datasource-form .input-group {
+  flex: 1;
+}
+
+.external-datasource-list {
+  margin-top: 1.5rem;
+}
+
+.external-datasource-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  transition: all 0.2s ease;
+}
+
+.external-datasource-item:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.external-datasource-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.external-datasource-name {
+  font-weight: 600;
+  color: var(--dark-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.external-datasource-name i {
+  color: var(--primary-color);
+}
+
+.external-datasource-url {
+  font-size: 0.85rem;
+  color: var(--gray-color);
+  word-break: break-all;
+}
+
+.external-datasource-actions {
+  display: flex;
+  align-items: center;
+}
+
+.empty-external-sources {
+  text-align: center;
+  padding: 2rem;
+  color: var(--gray-color);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius);
+  border: 1px dashed rgba(99, 102, 241, 0.2);
+}
+
+.empty-external-sources i {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .external-datasource-form {
+    flex-direction: column;
+  }
+  
+  .external-datasource-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .external-datasource-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* 外部数据源列表项 */
+.external-source-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius);
+  margin-bottom: 0.75rem;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  transition: all 0.2s ease;
+}
+
+.external-source-item:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.source-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.source-name {
+  font-weight: 600;
+  color: var(--dark-color);
+}
+
+.source-url {
+  font-size: 0.85rem;
+  color: var(--gray-color);
+  word-break: break-all;
+}

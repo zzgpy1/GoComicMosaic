@@ -216,7 +216,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import VideoPlayer from '../components/VideoPlayer.vue';
 import EpisodeSelector from '../components/EpisodeSelector.vue';
@@ -820,10 +820,75 @@ export default {
         
         // 设置当前选择的数据源
         selectedDataSource.value = dataSourceManager.getCurrentDataSourceId() || '';
+        
+        console.log('已加载数据源列表:', Object.keys(dataSources.value).length, '个数据源');
+        Object.entries(dataSources.value).forEach(([id, name]) => {
+          console.log(`- 数据源: ${name} (${id})`);
+        });
+        
+        // 订阅数据源更新事件
+        const unsubscribe = dataSourceManager.onDataSourcesUpdated((updatedSources) => {
+          console.log('数据源列表已更新，重新加载...');
+          dataSources.value = updatedSources;
+          console.log('更新后的数据源列表:', Object.keys(dataSources.value).length, '个数据源');
+        });
+        
+        // 在组件卸载时取消订阅
+        onUnmounted(() => {
+          if (unsubscribe) unsubscribe();
+        });
       } catch (error) {
         console.error('加载数据源列表失败:', error);
       }
     };
+    
+    // 刷新数据源列表 - 提供给其他组件调用
+    const refreshDataSources = () => {
+      console.log('刷新数据源列表...');
+      loadDataSources();
+    };
+    
+    // 在组件挂载后设置
+    onMounted(() => {
+      loadStreams();
+      loadPlayHistory();
+      loadDataSources(); // 初始加载数据源列表
+      
+      // 处理路由参数
+      if (props.id) {
+        loadStreamById(props.id);
+      } else if (props.direct_url) {
+        customStreamUrl.value = props.direct_url;
+        playCustomStream();
+      } else if (route.query.search) {
+        // 如果URL中包含search参数，自动执行搜索
+        searchQuery.value = route.query.search;
+        console.log("自动搜索:", searchQuery.value);
+        performApiSearch();
+        showingSearchResults.value = true;
+      } else {
+        // 默认显示搜索结果
+        showingSearchResults.value = true;
+      }
+    });
+    
+    // 监听路由变化，确保刷新页面或从其他页面返回时正确加载内容
+    watch(() => route.query, (newQuery) => {
+      if (newQuery.id && newQuery.id !== props.id) {
+        loadStreamById(newQuery.id);
+      } else if (newQuery.direct_url && newQuery.direct_url !== props.direct_url) {
+        customStreamUrl.value = newQuery.direct_url;
+        playCustomStream();
+      } else if (newQuery.search) {
+        // 处理搜索参数变化
+        if (searchQuery.value !== newQuery.search) {
+          searchQuery.value = newQuery.search;
+          console.log("路由变化，自动搜索:", searchQuery.value);
+          performApiSearch();
+          showingSearchResults.value = true;
+        }
+      }
+    }, { deep: true });
     
     // 切换数据源
     const changeDataSource = () => {
@@ -1009,47 +1074,6 @@ export default {
       playHistory.value = [];
       localStorage.removeItem('playHistory');
     };
-    
-    onMounted(() => {
-      loadStreams();
-      loadPlayHistory();
-      loadDataSources(); // 加载数据源列表
-      
-      // 处理路由参数
-      if (props.id) {
-        loadStreamById(props.id);
-      } else if (props.direct_url) {
-        customStreamUrl.value = props.direct_url;
-        playCustomStream();
-      } else if (route.query.search) {
-        // 如果URL中包含search参数，自动执行搜索
-        searchQuery.value = route.query.search;
-        console.log("自动搜索:", searchQuery.value);
-        performApiSearch();
-        showingSearchResults.value = true;
-      } else {
-        // 默认显示搜索结果
-        showingSearchResults.value = true;
-      }
-    });
-    
-    // 监听路由变化，确保刷新页面或从其他页面返回时正确加载内容
-    watch(() => route.query, (newQuery) => {
-      if (newQuery.id && newQuery.id !== props.id) {
-        loadStreamById(newQuery.id);
-      } else if (newQuery.direct_url && newQuery.direct_url !== props.direct_url) {
-        customStreamUrl.value = newQuery.direct_url;
-        playCustomStream();
-      } else if (newQuery.search) {
-        // 处理搜索参数变化
-        if (searchQuery.value !== newQuery.search) {
-          searchQuery.value = newQuery.search;
-          console.log("路由变化，自动搜索:", searchQuery.value);
-          performApiSearch();
-          showingSearchResults.value = true;
-        }
-      }
-    }, { deep: true });
     
     return {
       streams,
