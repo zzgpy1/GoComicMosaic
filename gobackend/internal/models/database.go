@@ -355,6 +355,19 @@ func InitSiteSettings() error {
 	if err != nil {
 		return fmt.Errorf("保存页脚设置失败: %w", err)
 	}
+
+	// 插入或更新info设置
+	_, err = DB.Exec(`
+		INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) 
+		VALUES ('info', '{"title": "动漫资源平台", "description": "分享优质动漫资源", "logoText": "动漫资源", "keywords": "动漫,资源,分享", "show_visitor_count": true}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT(setting_key) DO UPDATE SET 
+		setting_value = EXCLUDED.setting_value,
+		updated_at = CURRENT_TIMESTAMP
+	`)
+	
+	if err != nil {
+		return fmt.Errorf("保存info设置失败: %w", err)
+	}
 	
 	log.Printf("网站设置初始化完成")
 	return nil

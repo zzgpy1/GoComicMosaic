@@ -8,6 +8,30 @@
 
 ---
 
+## Docker一键部署
+
+```
+docker run -d --name dongman \
+  -p 80:80 -p 443:443 \
+  -v /your/local/path:/app/data \
+  -e DOMAIN=your-domain.com \
+  2011820123/gcm:latest
+```
+
+如需启用HTTPS，需要在挂载目录中放置SSL证书：
+
+1. 创建SSL证书目录：
+   ```bash
+   mkdir -p /your/local/path/ssl
+   ```
+
+2. 复制证书文件（必须使用这些文件名）：
+   ```bash
+   cp /path/to/your/fullchain.pem /your/local/path/ssl/
+   cp /path/to/your/privkey.pem /your/local/path/ssl/
+   ```
+
+
 ## 适配移动端样式
 移动端也可以更好的体验美漫共建小站了
 
