@@ -36,6 +36,16 @@ const baseRoutes = [
     }
   },
   {
+    path: '/tmdb-search',
+    name: 'TMDBSearch',
+    component: () => import('../views/TMDBSearch.vue'),
+    meta: {
+      title: 'tmdb_search_title',
+      description: 'tmdb_search_description',
+      keywords: 'tmdb_search_keywords'
+    }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('../views/Login.vue'),
@@ -109,6 +119,11 @@ const defaultMetaInfo = {
   submit_resource_title: '提交资源 - 美漫资源共建平台',
   submit_resource_description: '在这里提交您收集的美漫资源，包括标题、简介、链接等信息，与社区共同构建完整的资源库。',
   submit_resource_keywords: '提交资源, 分享美漫, 资源贡献, 美漫共建',
+  
+  // TMDB搜索页
+  tmdb_search_title: 'TMDB资源搜索导入 - 美漫资源共建平台',
+  tmdb_search_description: '搜索TMDB动画资源，预览并一键导入到资源库中。快速便捷地添加优质内容。',
+  tmdb_search_keywords: 'TMDB搜索, 资源导入, 动漫搜索, 美漫共建',
   
   // 登录页
   login_title: '用户登录 - 美漫资源共建平台',

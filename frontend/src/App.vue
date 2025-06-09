@@ -25,6 +25,9 @@
               <button @click="handleLogout" class="btn-custom btn-outline">
                 <i class="bi bi-box-arrow-right me-1"></i><span class="btn-text">登出</span>
               </button>
+              <router-link to="/tmdb-search" class="btn-custom btn-secondary">
+                <i class="bi bi-collection-play me-1"></i><span class="btn-text">TMDB搜索</span>
+              </router-link>
               <router-link to="/submit" class="btn-custom btn-primary">
                 <i class="bi bi-plus-circle me-1"></i><span class="btn-text">提交资源</span>
               </router-link>
@@ -34,6 +37,9 @@
             <div class="button-group">
               <router-link to="/login" class="btn-custom btn-outline" aria-label="管理员登录">
                 <i class="bi bi-shield-lock me-1"></i><span class="btn-text">管理员登录</span>
+              </router-link>
+              <router-link to="/tmdb-search" class="btn-custom btn-secondary">
+                <i class="bi bi-search me-1"></i><span class="btn-text">TMDB搜索</span>
               </router-link>
               <router-link to="/submit" class="btn-custom btn-primary" aria-label="提交资源">
                 <i class="bi bi-plus-circle me-1"></i><span class="btn-text">提交资源</span>

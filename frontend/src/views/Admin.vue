@@ -165,6 +165,14 @@
             </div>
             <div 
               class="settings-tab" 
+              :class="{ 'active': activeSettingsTab === 'tmdb' }"
+              @click="activeSettingsTab = 'tmdb'"
+            >
+              <i class="bi bi-film"></i>
+              <span>TMDB配置</span>
+            </div>
+            <div 
+              class="settings-tab" 
               :class="{ 'active': activeSettingsTab === 'about' }"
               @click="activeSettingsTab = 'about'"
             >
@@ -930,8 +938,55 @@
             </div>
           </div>
           
-        <!-- 保存按钮 -->
-          <div class="form-actions">
+          <!-- TMDB配置标签页 -->
+          <div class="settings-section" v-show="activeSettingsTab === 'tmdb'">
+            <h5 class="section-title">TMDB API 配置</h5>
+            
+            <div v-if="tmdbSuccess" class="success-message">
+              <i class="bi bi-check-circle-fill"></i>
+              TMDB配置更新成功
+            </div>
+            <div v-if="tmdbError" class="error-message">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              {{ tmdbError }}
+            </div>
+            
+            <!-- API密钥配置 -->
+            <div class="form-group">
+              <label class="form-label">TMDB API 密钥</label>
+              <div class="input-group">
+                <div class="input-prefix">
+                  <i class="bi bi-key-fill"></i>
+                </div>
+                <input 
+                  type="text" 
+                  class="custom-input" 
+                  v-model="tmdbSettings.apiKey" 
+                  placeholder="输入TMDB API密钥"
+                >
+              </div>
+              <div class="form-text">
+                用于访问TMDB API的密钥，可从<a href="https://www.themoviedb.org/settings/api" target="_blank">TMDB官网</a>获取。留空将使用环境变量中的密钥或系统默认密钥。
+              </div>
+            </div>
+            
+            <!-- TMDB保存按钮 -->
+            <div class="form-actions">
+              <button 
+                type="button" 
+                class="btn-custom btn-primary" 
+                @click="saveTMDBSettings"
+                :disabled="tmdbLoading"
+              >
+                <div v-if="tmdbLoading" class="spinner"></div>
+                <i class="bi bi-save"></i>
+                <span class="btn-text">{{ tmdbLoading ? '保存中...' : '保存配置' }}</span>
+              </button>
+            </div>
+        </div>
+        
+        <!-- 网站设置info保存按钮 -->
+          <div class="form-actions" v-if="activeSettingsTab !== 'tmdb'">
           <!-- 成功提示在按钮上方 -->
             <div v-if="settingsSuccess" class="settings-success-message">
               <i class="bi bi-check-circle-fill"></i> 设置保存成功！
@@ -1523,6 +1578,22 @@ const fetchResources = async () => {
     loading.value = false
   }
 }
+
+// 加载网站设置
+const loadSiteSettings = async (settingType) => {
+  try {
+    console.log(`加载${settingType}设置...`);
+    
+    // 这里我们实际上不需要单独加载各种设置类型
+    // 因为loadFooterSettings已经加载了所有需要的数据
+    // 这个函数保留为兼容性目的，实际不做额外操作
+    
+    return true;
+  } catch (error) {
+    console.error(`加载${settingType}设置失败:`, error);
+    return false;
+  }
+};
 
 // 获取待审批资源
 const fetchPendingResources = async () => {
@@ -2190,6 +2261,14 @@ onMounted(async () => {
     loading.value = false
     loadingPending.value = false
   }
+  
+  // 加载各种设置
+  await Promise.all([
+    loadSiteSettings('info'),
+    loadSiteSettings('footer'),
+    loadSiteSettings('about'),
+    loadTMDBConfig() // 加载TMDB配置
+  ]);
 })
 
 // 页面Meta信息设置
@@ -2629,6 +2708,88 @@ watch(activeSettingsTab, async (newTab) => {
     }
   }
 });
+
+// TMDB配置
+const tmdbSettings = reactive({
+  apiKey: ''
+});
+
+const tmdbLoading = ref(false);
+const tmdbSuccess = ref(false);
+const tmdbError = ref(null);
+
+// 加载TMDB配置
+const loadTMDBConfig = async () => {
+  try {
+    // 获取令牌并验证
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      console.error('加载TMDB配置失败: 未找到认证令牌');
+      return;
+    }
+    
+    // 请求TMDB配置
+    const response = await axios.get('/api/admin/tmdb/config', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // 更新设置
+    if (response.data && response.data.setting_value) {
+      tmdbSettings.apiKey = response.data.setting_value.api_key || '';
+    }
+    
+  } catch (error) {
+    console.error('加载TMDB配置失败:', error);
+  }
+};
+
+// 保存TMDB配置
+const saveTMDBSettings = async () => {
+  tmdbLoading.value = true;
+  tmdbError.value = null;
+  tmdbSuccess.value = false;
+  
+  try {
+    // 获取令牌并验证
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      tmdbError.value = '您的登录已过期，请重新登录';
+      console.error('保存TMDB配置失败: 未找到认证令牌');
+      return;
+    }
+    
+    // 更新TMDB配置
+    tmdbSettings.apiKey = tmdbSettings.apiKey.trim();
+    
+    // 保存TMDB配置
+    await axios.put('/api/admin/tmdb/config', {
+      api_key: tmdbSettings.apiKey
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // 显示成功消息
+    tmdbSuccess.value = true;
+    setTimeout(() => {
+      tmdbSuccess.value = false;
+    }, 3000);
+    
+  } catch (error) {
+    console.error('保存TMDB配置失败:', error);
+    
+    if (error.response && error.response.status === 401) {
+      tmdbError.value = '认证失败，请刷新页面或重新登录';
+    } else {
+      tmdbError.value = '保存TMDB配置失败，请稍后重试';
+    }
+  } finally {
+    tmdbLoading.value = false;
+  }
+};
 
 </script>
 

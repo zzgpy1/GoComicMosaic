@@ -6,6 +6,9 @@ import (
 
 // SetupRoutes 设置API路由
 func SetupRoutes(router *gin.Engine) {
+	// 加载TMDB配置
+	LoadTMDBConfig()
+	
 	// API路由组
 	api := router.Group("/api")
 	
@@ -39,6 +42,17 @@ func SetupRoutes(router *gin.Engine) {
 	{
 		// 网站图标上传
 		admin.POST("/upload/favicon", UploadFavicon)
+		
+		// TMDB配置
+		admin.GET("/tmdb/config", GetTMDBConfig)
+		admin.PUT("/tmdb/config", UpdateTMDBConfig)
+	}
+	
+	// TMDB API路由
+	tmdb := api.Group("/tmdb")
+	{
+		tmdb.GET("/search", SearchTMDB)
+		tmdb.POST("/create", CreateResourceFromTMDB)
 	}
 	
 	// 资源路由 - 需要认证

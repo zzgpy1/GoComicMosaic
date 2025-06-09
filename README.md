@@ -126,6 +126,10 @@ docker run -d --name dongman \
 会写爬虫的用户可以自己添加数据源，更加灵活
 ![image|690x397](docs/27.gif)
 
+## 支持从TMDB一键导入资源库
+可以从TMDB搜索、预览、一键导入资源
+![image|690x397](docs/28.gif)
+
 ---
 
 # 美漫资源共建平台部署
@@ -140,84 +144,10 @@ docker run -d --name dongman \
 /home/work/dongman/
 ├── assets/                   # 资源文件目录（用户上传的图片）
 │   ├── imgs/
+│   ├── public/               # 用户上传的favicon.ico
 │   └── uploads/
-├── gobackend/
-│   ├── cmd/                  # 应用入口点
-│   │   ├── api/              # API服务入口
-│   │   │   └── main.go       # 主程序
-│   │   ├── diagnostic/       # 诊断工具
-│   │   ├── test/             # 测试工具
-│   │   └── webp/             # WebP图片转换工具
-│   │       └── main.go       # WebP转换命令行工具
-│   ├── internal/             # 内部包
-│   │   ├── auth/             # 认证工具
-│   │   │   └── auth.go       # JWT认证相关功能
-│   │   ├── models/           # 数据模型
-│   │   │   ├── models.go     # 数据模型结构定义
-│   │   │   └── database.go   # 数据库连接和初始化
-│   │   ├── handlers/         # HTTP处理器
-│   │   │   ├── auth_handlers.go  # 认证相关处理器
-│   │   │   ├── proxy_handler.go  # CORS代理功能
-│   │   │   ├── middleware.go     # 中间件
-│   │   │   ├── resource_handlers.go # 资源基本操作处理器
-│   │   │   ├── resource_approval.go # 资源审批和补充处理器
-│   │   │   ├── upload_handlers.go # 图片上传处理器
-│   │   │   └── routes.go         # 路由定义
-│   │   └── utils/            # 工具函数
-│   │       ├── image_utils.go # 图像处理工具
-│   │       └── webp_utils.go  # WebP图像转换工具
-│   ├── go.mod                # Go模块定义
-│   └── README.md             # 项目说明文件
-├── frontend/                 # 前端代码目录
-│   ├── .env.production       # 生产环境配置
-│   ├── .eslintrc.json        # ESLint配置
-│   ├── README.md             # 项目说明文档
-│   ├── assets/               # 静态资产目录
-│   ├── index.html            # 项目入口HTML文件
-│   ├── node_modules/         # 依赖包目录
-│   ├── package-lock.json     # 依赖包锁定文件
-│   ├── package.json          # 项目配置和依赖管理
-│   ├── public/               # 公共资源目录
-│   │   ├── apple-touch-icon.png # iOS设备图标
-│   │   ├── favicon.ico       # 网站图标
-│   │   ├── robots.txt        # 搜索引擎爬虫规则文件
-│   │   └── sitemap.xml       # 网站地图
-│   ├── scripts/              # 项目脚本目录
-│   │   └── generate-sitemap.js # 生成网站地图的脚本
-│   ├── src/                  # 源代码目录
-│   │   ├── App.vue           # 根组件
-│   │   ├── assets/           # 项目内部资源
-│   │   │   └── streamsPage.css # 视频流页面样式
-│   │   ├── components/       # 组件目录
-│   │   │   ├── EpisodeSelector.vue # 集数选择器组件
-│   │   │   ├── LocalSearch.vue # 本地搜索组件
-│   │   │   └── VideoPlayer.vue # 视频播放器组件
-│   │   ├── main.js           # 应用程序入口文件
-│   │   ├── router/           # 路由配置
-│   │   │   └── index.js      # 路由定义文件
-│   │   ├── styles/           # 样式目录
-│   │   ├── utils/            # 工具函数目录
-│   │   │   ├── api.js        # API请求工具
-│   │   │   ├── auth.js       # 身份验证工具
-│   │   │   ├── corsProxy.js  # CORS代理工具
-│   │   │   ├── dataSourceManager.js # 数据源管理工具
-│   │   │   ├── dataSources/  # 数据源实现
-│   │   │   │   ├── heimuer.js # 黑幕数据源
-│   │   │   │   ├── mockSource.js # 模拟数据源
-│   │   │   │   └── testApi.js # 测试API数据源
-│   │   │   └── imageUtils.js # 图片处理工具
-│   │   └── views/            # 页面视图
-│   │       ├── About.vue     # 关于页面
-│   │       ├── Admin.vue     # 管理后台页面
-│   │       ├── Home.vue      # 首页
-│   │       ├── Login.vue     # 登录页面
-│   │       ├── ResourceDetail.vue # 资源详情页面
-│   │       ├── ResourceReview.vue # 资源审核页面
-│   │       ├── StreamsPage.vue # 视频流页面
-│   │       └── SubmitResource.vue # 资源提交页面
-│   └── vite.config.js        # Vite配置文件
-├── migrations/               # 数据库迁移脚本
-└── prompt.md                 # 项目概述文档
+├── gobackend/                # 后端代码目录
+└── frontend/                 # 前端代码目录
 ``` 
 
 ## 二、前端部署
@@ -620,7 +550,9 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
-
+-202506091954  
+✅ 支持从TMDB一键导入资源库  
+✅ 支持从环境变量、管理后台配置TDMB_API_KEY  
 -202506081248  
 ✅ 后台网站设置改为标签切换配置  
 ✅ 后台支持配置采集解析数据源  

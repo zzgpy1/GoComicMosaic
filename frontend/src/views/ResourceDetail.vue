@@ -354,7 +354,8 @@
             </div>
             
             <!-- 资源链接部分 -->
-            <div class="links-card" v-if="hasLinks">
+            <!-- <div class="links-card" v-if="hasLinks"> -->
+            <div class="links-card" >
               <div class="card-header">
                 <h3>资源链接</h3>
                 <!-- 添加点播图标按钮 -->
@@ -453,7 +454,6 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" @click="showDeleteModal = false">取消</button>
             <button type="button" class="btn btn-danger" @click="deleteResource" :disabled="deleting">
-              <span v-if="deleting" class="spinner-border spinner-border-sm me-1"></span>
               确认删除
             </button>
           </div>

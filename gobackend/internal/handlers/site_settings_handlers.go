@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"dongman/internal/config"
+	"dongman/internal/utils"
 )
 
 // GetSiteSettings 获取指定key的网站设置
@@ -203,4 +204,122 @@ func UploadFavicon(c *gin.Context) {
 		"message": "网站图标已更新", 
 		"faviconPath": "/assets/public/favicon.ico",
 	})
+}
+
+// GetTMDBConfig 获取TMDB配置
+func GetTMDBConfig(c *gin.Context) {
+	var settings models.SiteSettings
+	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	
+	if err != nil {
+		// 如果找不到配置，返回一个空的配置
+		c.JSON(http.StatusOK, gin.H{
+			"setting_key": "tmdb_config",
+			"setting_value": gin.H{
+				"api_key": "",
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+// UpdateTMDBConfig 更新TMDB配置
+func UpdateTMDBConfig(c *gin.Context) {
+	var update struct {
+		APIKey string `json:"api_key" binding:"required"`
+	}
+	
+	if err := c.ShouldBindJSON(&update); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据", "details": err.Error()})
+		return
+	}
+	
+	// 检查配置是否已存在
+	var settingsUpdate models.SiteSettingsUpdate
+	settingsUpdate.SettingValue = models.JsonMap{
+		"api_key": update.APIKey,
+	}
+	
+	db := models.GetDB()
+	
+	// 检查设置是否存在
+	var settingExists int
+	err := db.Get(&settingExists, "SELECT COUNT(*) FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	
+	if err != nil || settingExists == 0 {
+		// 创建新设置
+		settingValue, err := settingsUpdate.SettingValue.Value()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "序列化设置值失败"})
+			return
+		}
+		
+		_, err = db.Exec(
+			"INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) VALUES (?, ?, ?, ?)",
+			"tmdb_config", settingValue, time.Now(), time.Now(),
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存设置失败", "details": err.Error()})
+			return
+		}
+	} else {
+		// 更新现有设置
+		settingValue, err := settingsUpdate.SettingValue.Value()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "序列化设置值失败"})
+			return
+		}
+		
+		_, err = db.Exec(
+			"UPDATE site_settings SET setting_value = ?, updated_at = ? WHERE setting_key = ?",
+			settingValue, time.Now(), "tmdb_config",
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设置失败", "details": err.Error()})
+			return
+		}
+	}
+
+	// 更新TMDB API密钥缓存
+	utils.SetTMDBAPIKey(update.APIKey)
+
+	// 返回更新后的设置
+	var settings models.SiteSettings
+	err = models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取更新后的设置失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+// LoadTMDBConfig 从数据库加载TMDB配置并设置API密钥
+// 此函数应在服务启动时被调用
+func LoadTMDBConfig() {
+	// 尝试从数据库加载TMDB配置
+	var settings models.SiteSettings
+	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	
+	if err == nil && settings.SettingValue != nil {
+		// 检查是否有api_key字段
+		if apiKey, ok := settings.SettingValue["api_key"].(string); ok && apiKey != "" {
+			// 设置TMDB API密钥
+			utils.SetTMDBAPIKey(apiKey)
+			log.Printf("已从数据库加载TMDB API密钥")
+			return
+		}
+	}
+	
+	// 如果数据库中没有配置或加载失败，尝试从环境变量获取
+	apiKey := os.Getenv("TMDB_API_KEY")
+	if apiKey != "" {
+		utils.SetTMDBAPIKey(apiKey)
+		log.Printf("已从环境变量加载TMDB API密钥")
+		return
+	}
+	
+	log.Printf("未找到TMDB API密钥配置，将使用默认值")
 }

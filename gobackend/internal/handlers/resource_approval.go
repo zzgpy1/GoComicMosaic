@@ -106,6 +106,22 @@ func ApproveResource(c *gin.Context) {
 					continue
 				}
 				
+				// 检查是否为TMDB外部图片链接
+				if strings.HasPrefix(imgPath, "@https://image.tmdb.org/") {
+					// 对于TMDB外部图片链接，直接保存原始链接，无需移动
+					log.Printf("[DEBUG] 检测到TMDB外部图片链接: %s，直接保存原始链接", imgPath)
+					newImagePaths = append(newImagePaths, imgPath)
+					continue
+				}
+				
+				// 检查是否为TMDB外部图片链接（无@前缀）
+				if strings.HasPrefix(imgPath, "https://image.tmdb.org/") {
+					// 对于TMDB外部图片链接，直接保存原始链接，无需移动
+					log.Printf("[DEBUG] 检测到TMDB外部图片链接: %s，直接保存原始链接", imgPath)
+					newImagePaths = append(newImagePaths, imgPath)
+					continue
+				}
+				
 				// 提取文件名
 				filename := filepath.Base(imgPath)
 				log.Printf("[DEBUG] 处理图片: %s, 文件名: %s", imgPath, filename)
@@ -210,13 +226,23 @@ func ApproveResource(c *gin.Context) {
 		// 处理海报图片
 		if approval.PosterImage != "" {
 			log.Printf("[DEBUG] 开始移动海报图片，资源ID: %d, 原路径: %s", resource.ID, approval.PosterImage)	
-			// 提取文件名
-			filename := filepath.Base(approval.PosterImage)
-			log.Printf("[DEBUG] 海报文件名: %s", filename)
-			// 生成新路径
-			newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
-			log.Printf("[INFO] 更新资源海报图片路径，从 %v 变为 %s", resource.PosterImage, newPosterPath)
-			resource.PosterImage = &newPosterPath
+			
+			// 检查是否为TMDB外部图片链接
+			if strings.HasPrefix(approval.PosterImage, "@https://image.tmdb.org/") || 
+			   strings.HasPrefix(approval.PosterImage, "https://image.tmdb.org/") {
+				// 对于TMDB外部图片链接，直接保存原始链接，无需移动
+				log.Printf("[DEBUG] 检测到TMDB外部海报图片链接: %s，直接保存原始链接", approval.PosterImage)
+				posterPath := approval.PosterImage
+				resource.PosterImage = &posterPath
+			} else {
+				// 提取文件名
+				filename := filepath.Base(approval.PosterImage)
+				log.Printf("[DEBUG] 海报文件名: %s", filename)
+				// 生成新路径
+				newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
+				log.Printf("[INFO] 更新资源海报图片路径，从 %v 变为 %s", resource.PosterImage, newPosterPath)
+				resource.PosterImage = &newPosterPath
+			}
 			
 			// 异步调用WebP转换工具处理海报图片
 			if resource.PosterImage != nil {
@@ -478,6 +504,22 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 					continue
 				}
 				
+				// 检查是否为TMDB外部图片链接
+				if strings.HasPrefix(imgPath, "@https://image.tmdb.org/") {
+					// 对于TMDB外部图片链接，直接保存原始链接，无需移动
+					log.Printf("[DEBUG] 检测到TMDB外部图片链接: %s，直接保存原始链接", imgPath)
+					newImagePaths = append(newImagePaths, imgPath)
+					continue
+				}
+				
+				// 检查是否为TMDB外部图片链接（无@前缀）
+				if strings.HasPrefix(imgPath, "https://image.tmdb.org/") {
+					// 对于TMDB外部图片链接，直接保存原始链接，无需移动
+					log.Printf("[DEBUG] 检测到TMDB外部图片链接: %s，直接保存原始链接", imgPath)
+					newImagePaths = append(newImagePaths, imgPath)
+					continue
+				}
+				
 				// 提取文件名
 				filename := filepath.Base(imgPath)
 				log.Printf("[DEBUG] 处理图片: %s, 文件名: %s", imgPath, filename)
@@ -591,14 +633,23 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 		if approval.PosterImage != "" {
 			log.Printf("[DEBUG] 处理补充内容的海报图片，资源ID: %d, 原路径: %s", resource.ID, approval.PosterImage)
 			
-			// 提取文件名
-			filename := filepath.Base(approval.PosterImage)
-			log.Printf("[DEBUG] 海报文件名: %s", filename)
-			
-			// 更新资源的海报图片
-			newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
-			log.Printf("[INFO] 更新资源海报图片，从 %v 变为 %s", resource.PosterImage, newPosterPath)
-			resource.PosterImage = &newPosterPath
+			// 检查是否为TMDB外部图片链接
+			if strings.HasPrefix(approval.PosterImage, "@https://image.tmdb.org/") || 
+			   strings.HasPrefix(approval.PosterImage, "https://image.tmdb.org/") {
+				// 对于TMDB外部图片链接，直接保存原始链接，无需移动
+				log.Printf("[DEBUG] 检测到TMDB外部海报图片链接: %s，直接保存原始链接", approval.PosterImage)
+				posterPath := approval.PosterImage
+				resource.PosterImage = &posterPath
+			} else {
+				// 提取文件名
+				filename := filepath.Base(approval.PosterImage)
+				log.Printf("[DEBUG] 海报文件名: %s", filename)
+				
+				// 更新资源的海报图片
+				newPosterPath := fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename)
+				log.Printf("[INFO] 更新资源海报图片，从 %v 变为 %s", resource.PosterImage, newPosterPath)
+				resource.PosterImage = &newPosterPath
+			}
 			
 			// 异步调用WebP转换工具处理海报图片
 			if resource.PosterImage != nil {
@@ -768,25 +819,33 @@ func convertImagesToWebP(imagePaths []string) {
 	log.Printf("[INFO] 开始将 %d 张批准的图片转换为WebP格式", len(imagePaths))
 	startTime := time.Now()
 	
-	// 将图片路径调整为相对路径格式 ../assets/...
-	adjustedPaths := make([]string, 0, len(imagePaths))
+	// 过滤掉TMDB外部图片链接，这些不需要转换为WebP
+	localImagePaths := make([]string, 0, len(imagePaths))
+	
 	for _, path := range imagePaths {
+		// 跳过TMDB外部图片链接
+		if strings.HasPrefix(path, "@https://image.tmdb.org/") || 
+		   strings.HasPrefix(path, "https://image.tmdb.org/") {
+			log.Printf("[INFO] 跳过TMDB外部图片链接: %s，不进行WebP转换", path)
+			continue
+		}
+		
 		// 将 /assets/... 转换为 ../assets/...
 		if strings.HasPrefix(path, "/assets/") {
 			adjustedPath := "../" + strings.TrimPrefix(path, "/")
-			adjustedPaths = append(adjustedPaths, adjustedPath)
+			localImagePaths = append(localImagePaths, adjustedPath)
 		} else {
 			log.Printf("[WARN] 图片路径格式不符合预期: %s，跳过处理", path)
 		}
 	}
 	
-	if len(adjustedPaths) == 0 {
+	if len(localImagePaths) == 0 {
 		log.Printf("[WARN] 没有有效的图片路径可供转换")
 		return
 	}
 	
 	// 将路径转换为JSON字符串
-	pathsJSON, errJSON := json.Marshal(adjustedPaths)
+	pathsJSON, errJSON := json.Marshal(localImagePaths)
 	if errJSON != nil {
 		log.Printf("[ERROR] 无法将图片路径转为JSON: %v", errJSON)
 		return

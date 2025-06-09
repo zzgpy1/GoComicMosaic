@@ -96,24 +96,44 @@ frontend/
 ├── src/                 # 源代码
 │   ├── assets/          # 资源文件
 │   ├── components/      # Vue组件
-│   ├── composables/     # 组合式函数
+│   │   ├── EpisodeSelector.vue    # 剧集选择
+│   │   ├── LocalSearch.vue        # 搜索引擎
+│   │   └── VideoPlayer.vue        # 播放器
 │   ├── extDS/           # 外部数据源
 │   │   ├── heimuer.js         # 黑木影视数据源
 │   │   ├── wolong.js          # 卧龙影视数据源
 │   │   ├── template.js        # 数据源模板
 │   │   └── 外接数据源开发文档.md # 开发文档
-│   ├── layouts/         # 布局组件
 │   ├── router/          # 路由配置
-│   ├── store/           # Pinia存储
 │   ├── styles/          # 样式文件
 │   ├── utils/           # 工具函数
-│   │   ├── corsProxy.js        # CORS代理工具
-│   │   ├── dataSourceManager.js # 数据源管理器
-│   │   └── dataSourcesConfig.js # 数据源配置
-│   ├── views/           # 页面视图
+│   │   ├── dataSources/            # 数据源定义
+│   │   │   ├── index.js            # 数据源索引文件   
+│   │   │   └── template.js.example # 数据源模板文件
+│   │   ├── api.js                  # 点播api
+│   │   ├── auth.js                 # 认证工具
+│   │   ├── corsProxy.js            # CORS代理工具
+│   │   ├── dataSourceFactory.js    # 数据源工厂
+│   │   ├── dataSourceManager.js    # 数据源管理器
+│   │   ├── dataSourcesConfig.js    # 数据源配置
+│   │   ├── externalDataSourceLoader.js # 外部数据源加载器
+│   │   ├── icons.js                    # 字体图标
+│   │   ├── InfoManager.js              # 网站信息管理
+│   │   └── imageUtils.js               # 图片工具
+│   ├── views/                  # 页面视图
+│   │   ├── About.vue           # 关于页面
+│   │   ├── Admin.vue           # 管理后台页面
+│   │   ├── Home.vue            # 首页
+│   │   ├── Login.vue           # 登录页面
+│   │   ├── ResourceDetail.vue  # 资源详情页面
+│   │   ├── ResourceReview.vue  # 资源审核页面
+│   │   ├── StreamsPage.vue     # 在线点播页面
+│   │   ├── TMDBSearch.vue      # TMDB搜索页面
+│   │   └── SubmitResource.vue  # 资源提交页面
 │   ├── App.vue          # 根组件
-│   ├── main.js          # 入口文件
-├── .eslintrc.js         # ESLint配置
+│   └── main.js          # 入口文件
+├── index.html           # HTML入口文件
+├── .env.production      # 环境配置
 ├── package.json         # 项目依赖
 └── vite.config.js       # Vite配置
 ```
@@ -143,8 +163,8 @@ npm run build
 在`.env`文件中可配置以下项：
 
 ```
-VITE_API_BASE_URL=http://localhost:8000 # 后端API地址
-VITE_APP_TITLE=动漫资源共享平台 # 应用标题
+BASE_URL=https://dm.xueximeng.com # 默认 http://localhost:8000
+ASSETS_PATH=../data/assets # 默认 "../assets"
 ```
 
 ## 环境要求
