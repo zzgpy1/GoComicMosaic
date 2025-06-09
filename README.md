@@ -4,6 +4,9 @@
 正式上线地址：https://dm.xueximeng.com/  
 套CF CDN地址：https://mm.252035.xyz/
 
+Demo演示（每小时重置1次数据）：https://demo.xueximeng.com/  
+管理员账号：admin / admin123  
+
 如果喜欢，点个star  
 
 ---
