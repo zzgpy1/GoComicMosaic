@@ -683,11 +683,11 @@
   transform: rotate(90deg);
 }
 
-.image-close-btn:before {
+/* .image-close-btn:before {
   content: "\F62A";
   font-family: "bootstrap-icons";
   display: inline-block;
-}
+} */
 
 /* 添加btn-close样式 */
 .btn-close {
