@@ -14,7 +14,8 @@
 // 导入数据源配置和工厂
 import dataSourcesConfig from '../dataSourcesConfig';
 import { createDataSource } from '../dataSourceFactory';
-import infoManager from '../InfoManager';
+// 移除直接导入InfoManager，避免循环依赖
+// import infoManager from '../InfoManager';
 
 // 使用Vite的动态导入功能自动加载所有数据源文件（传统模式）
 const dataSourceModules = import.meta.glob('./*.js', { eager: true });
@@ -25,18 +26,33 @@ const dataSources = {};
 // 添加日志
 console.log('开始加载数据源');
 
+// 从localStorage获取网站设置
+const getSavedSiteInfo = () => {
+  try {
+    const cachedData = localStorage.getItem('site_info_cache');
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      console.log('已从本地存储加载网站设置缓存');
+      return parsed.data;
+    }
+  } catch (error) {
+    console.error('加载缓存的网站设置失败:', error);
+  }
+  return null;
+};
+
 // 创建加载数据源的异步函数
 const initDataSources = async () => {
   try {
-    // 尝试从InfoManager获取数据源配置
-    const siteInfo = await infoManager.getInfo();
+    // 尝试从localStorage获取数据源配置，避免循环依赖
+    const siteInfo = getSavedSiteInfo();
     let configDataSources = [];
     
     if (siteInfo && siteInfo.dataSources && Array.isArray(siteInfo.dataSources)) {
-      console.log('从网站设置加载数据源配置');
+      console.log('从本地缓存加载数据源配置');
       configDataSources = siteInfo.dataSources;
     } else {
-      console.log('网站设置中没有数据源配置，使用默认配置');
+      console.log('本地缓存中没有数据源配置，使用默认配置');
       configDataSources = dataSourcesConfig;
     }
     
