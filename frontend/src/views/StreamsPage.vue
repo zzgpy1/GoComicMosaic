@@ -222,7 +222,6 @@ import VideoPlayer from '../components/VideoPlayer.vue';
 import EpisodeSelector from '../components/EpisodeSelector.vue';
 import { searchMovies, getMovieDetail, parseEpisodes } from '../utils/api';
 import { getDataSourceManager } from '../utils/dataSourceManager';
-import '../assets/streamsPage.css'; // 引入新的CSS样式文件
 
 export default {
   name: 'StreamsPage',
