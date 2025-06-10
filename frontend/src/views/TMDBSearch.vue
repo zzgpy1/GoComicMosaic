@@ -131,7 +131,7 @@
     <!-- 图片预览模态框 -->
     <div v-if="showImagePreview" class="custom-modal" @click.self="closeImagePreview">
       <div class="modal-image-container">
-        <button type="button" class="btn-close image-close-btn" @click="closeImagePreview"></button>
+        <button type="button" class="btn-close image-close-btn bi bi-x-lg me-2" @click="closeImagePreview"></button>
         <img :src="previewImageUrl" class="preview-large-image" :alt="tmdbResource?.title || '图片预览'">
       </div>
     </div>

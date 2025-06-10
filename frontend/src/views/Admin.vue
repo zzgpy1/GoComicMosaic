@@ -970,6 +970,24 @@
               </div>
             </div>
             
+            <!-- 启用TMDB功能开关 -->
+            <div class="form-group">
+              <label class="form-label d-flex align-items-center">
+                <span class="me-2">启用TMDB功能</span>
+                <div class="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    id="tmdb-enabled" 
+                    v-model="tmdbSettings.enabled"
+                  >
+                  <label for="tmdb-enabled"></label>
+                </div>
+              </label>
+              <div class="form-text">
+                开启后，导航栏将显示TMDB搜索按钮，允许用户使用TMDB搜索和导入资源。关闭后，将隐藏此功能。
+              </div>
+            </div>
+            
             <!-- TMDB保存按钮 -->
             <div class="form-actions">
               <button 
@@ -2711,7 +2729,8 @@ watch(activeSettingsTab, async (newTab) => {
 
 // TMDB配置
 const tmdbSettings = reactive({
-  apiKey: ''
+  apiKey: '',
+  enabled: true
 });
 
 const tmdbLoading = ref(false);
@@ -2738,6 +2757,7 @@ const loadTMDBConfig = async () => {
     // 更新设置
     if (response.data && response.data.setting_value) {
       tmdbSettings.apiKey = response.data.setting_value.api_key || '';
+      tmdbSettings.enabled = response.data.setting_value.enabled !== false; // 如果未设置，默认为true
     }
     
   } catch (error) {
@@ -2765,7 +2785,8 @@ const saveTMDBSettings = async () => {
     
     // 保存TMDB配置
     await axios.put('/api/admin/tmdb/config', {
-      api_key: tmdbSettings.apiKey
+      api_key: tmdbSettings.apiKey,
+      enabled: tmdbSettings.enabled
     }, {
       headers: {
         'Authorization': `Bearer ${token}`

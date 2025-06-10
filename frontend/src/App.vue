@@ -25,7 +25,7 @@
               <button @click="handleLogout" class="btn-custom btn-outline">
                 <i class="bi bi-box-arrow-right me-1"></i><span class="btn-text">登出</span>
               </button>
-              <router-link to="/tmdb-search" class="btn-custom btn-secondary">
+              <router-link to="/tmdb-search" class="btn-custom btn-secondary" v-if="tmdbEnabled">
                 <i class="bi bi-collection-play me-1"></i><span class="btn-text">TMDB搜索</span>
               </router-link>
               <router-link to="/submit" class="btn-custom btn-primary">
@@ -38,7 +38,7 @@
               <router-link to="/login" class="btn-custom btn-outline" aria-label="管理员登录">
                 <i class="bi bi-shield-lock me-1"></i><span class="btn-text">管理员登录</span>
               </router-link>
-              <router-link to="/tmdb-search" class="btn-custom btn-secondary">
+              <router-link to="/tmdb-search" class="btn-custom btn-secondary" v-if="tmdbEnabled">
                 <i class="bi bi-search me-1"></i><span class="btn-text">TMDB搜索</span>
               </router-link>
               <router-link to="/submit" class="btn-custom btn-primary" aria-label="提交资源">
@@ -145,6 +145,7 @@ const siteInfo = ref({
   description: '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。',
   keywords: '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建'
 })
+const tmdbEnabled = ref(false)
 
 // 计算当前是否在管理员页面
 const isAdminPage = computed(() => {
@@ -201,6 +202,18 @@ const loadSiteInfo = async () => {
   } catch (error) {
     console.error('获取网站基本信息失败:', error);
     // 默认值已在siteInfo的ref初始化中设置
+  }
+}
+
+// 加载TMDB配置
+const loadTMDBConfig = async () => {
+  try {
+    const response = await axios.get('/api/settings/tmdb_config');
+    if (response.data && response.data.setting_value) {
+      tmdbEnabled.value = response.data.setting_value.enabled === true;
+    }
+  } catch (error) {
+    console.error('加载TMDB配置失败:', error);
   }
 }
 
@@ -370,6 +383,9 @@ onMounted(() => {
   bszScript.async = true;
   bszScript.src = "//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js";
   document.head.appendChild(bszScript);
+
+  // 加载TMDB配置
+  loadTMDBConfig();
 })
 
 // 页面卸载时移除事件监听器

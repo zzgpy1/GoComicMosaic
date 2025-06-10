@@ -550,6 +550,9 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
+-202506100835  
+✅ 后台读取到环境变量配置的TMDB_API_KEY会自动保存到数据库  
+✅ 支持开启/关闭TMDB功能，自由控制顶栏显示  
 -202506091954  
 ✅ 支持从TMDB一键导入资源库  
 ✅ 支持从环境变量、管理后台配置TDMB_API_KEY  

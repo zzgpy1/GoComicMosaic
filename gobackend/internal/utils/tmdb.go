@@ -13,7 +13,6 @@ import (
 
 // TMDB API 配置
 const (
-	// DEFAULT_TMDB_API_KEY = "76c6e829b55a15a250df1dc67c118d03" // 默认API密钥，仅作为回退使用
 	DEFAULT_TMDB_API_KEY = "" // 默认API密钥，仅作为回退使用
 	BASE_URL     = "https://api.tmdb.org/3"
 	POSTER_W     = "w500"

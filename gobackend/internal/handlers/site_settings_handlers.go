@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"dongman/internal/config"
 	"dongman/internal/utils"
+	"encoding/json"
+	"fmt"
 )
 
 // GetSiteSettings 获取指定key的网站设置
@@ -209,14 +211,15 @@ func UploadFavicon(c *gin.Context) {
 // GetTMDBConfig 获取TMDB配置
 func GetTMDBConfig(c *gin.Context) {
 	var settings models.SiteSettings
-	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", utils.TMDB_SETTINGS_KEY)
 	
 	if err != nil {
 		// 如果找不到配置，返回一个空的配置
 		c.JSON(http.StatusOK, gin.H{
-			"setting_key": "tmdb_config",
+			"setting_key": utils.TMDB_SETTINGS_KEY,
 			"setting_value": gin.H{
 				"api_key": "",
+				"enabled": false,
 			},
 		})
 		return
@@ -228,7 +231,8 @@ func GetTMDBConfig(c *gin.Context) {
 // UpdateTMDBConfig 更新TMDB配置
 func UpdateTMDBConfig(c *gin.Context) {
 	var update struct {
-		APIKey string `json:"api_key" binding:"required"`
+		APIKey  string `json:"api_key" binding:"required"`
+		Enabled bool   `json:"enabled"`
 	}
 	
 	if err := c.ShouldBindJSON(&update); err != nil {
@@ -240,13 +244,14 @@ func UpdateTMDBConfig(c *gin.Context) {
 	var settingsUpdate models.SiteSettingsUpdate
 	settingsUpdate.SettingValue = models.JsonMap{
 		"api_key": update.APIKey,
+		"enabled": update.Enabled,
 	}
 	
 	db := models.GetDB()
 	
 	// 检查设置是否存在
 	var settingExists int
-	err := db.Get(&settingExists, "SELECT COUNT(*) FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	err := db.Get(&settingExists, "SELECT COUNT(*) FROM site_settings WHERE setting_key = ?", utils.TMDB_SETTINGS_KEY)
 	
 	if err != nil || settingExists == 0 {
 		// 创建新设置
@@ -258,7 +263,7 @@ func UpdateTMDBConfig(c *gin.Context) {
 		
 		_, err = db.Exec(
 			"INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) VALUES (?, ?, ?, ?)",
-			"tmdb_config", settingValue, time.Now(), time.Now(),
+			utils.TMDB_SETTINGS_KEY, settingValue, time.Now(), time.Now(),
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存设置失败", "details": err.Error()})
@@ -274,7 +279,7 @@ func UpdateTMDBConfig(c *gin.Context) {
 		
 		_, err = db.Exec(
 			"UPDATE site_settings SET setting_value = ?, updated_at = ? WHERE setting_key = ?",
-			settingValue, time.Now(), "tmdb_config",
+			settingValue, time.Now(), utils.TMDB_SETTINGS_KEY,
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设置失败", "details": err.Error()})
@@ -287,7 +292,7 @@ func UpdateTMDBConfig(c *gin.Context) {
 
 	// 返回更新后的设置
 	var settings models.SiteSettings
-	err = models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	err = models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", utils.TMDB_SETTINGS_KEY)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取更新后的设置失败"})
 		return
@@ -296,19 +301,82 @@ func UpdateTMDBConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, settings)
 }
 
+// SaveTMDBAPIKeyToDB 将TMDB API密钥保存到数据库
+func SaveTMDBAPIKeyToDB(apiKey string) {
+	// 确保数据库连接已初始化
+	db := models.GetDB()
+	if db == nil {
+		log.Printf("数据库连接未初始化，无法保存TMDB API密钥")
+		return
+	}
+
+	// 检查是否已存在TMDB配置
+	var count int
+	err := db.Get(&count, "SELECT COUNT(*) FROM site_settings WHERE setting_key = ?", utils.TMDB_SETTINGS_KEY)
+	if err != nil {
+		log.Printf("查询TMDB配置失败: %v", err)
+		return
+	}
+
+	// 准备保存的数据
+	settingValue := map[string]interface{}{
+		"api_key": apiKey,
+		"enabled": true, // 默认启用TMDB功能
+	}
+	valueJSON, err := json.Marshal(settingValue)
+	if err != nil {
+		log.Printf("序列化TMDB配置失败: %v", err)
+		return
+	}
+
+	// 插入或更新配置
+	if count == 0 {
+		// 创建新配置
+		_, err = db.Exec(
+			"INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) VALUES (?, ?, ?, ?)",
+			utils.TMDB_SETTINGS_KEY, string(valueJSON), time.Now(), time.Now(),
+		)
+	} else {
+		// 更新现有配置
+		_, err = db.Exec(
+			"UPDATE site_settings SET setting_value = JSON_PATCH(setting_value, ?), updated_at = ? WHERE setting_key = ?",
+			fmt.Sprintf(`{"api_key": "%s"}`, apiKey), time.Now(), utils.TMDB_SETTINGS_KEY,
+		)
+	}
+
+	if err != nil {
+		log.Printf("保存TMDB配置到数据库失败: %v", err)
+		return
+	}
+
+	log.Printf("已成功将环境变量中的TMDB API密钥保存到数据库")
+}
+
 // LoadTMDBConfig 从数据库加载TMDB配置并设置API密钥
 // 此函数应在服务启动时被调用
 func LoadTMDBConfig() {
 	// 尝试从数据库加载TMDB配置
 	var settings models.SiteSettings
-	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", utils.TMDB_SETTINGS_KEY)
 	
 	if err == nil && settings.SettingValue != nil {
 		// 检查是否有api_key字段
 		if apiKey, ok := settings.SettingValue["api_key"].(string); ok && apiKey != "" {
-			// 设置TMDB API密钥
-			utils.SetTMDBAPIKey(apiKey)
-			log.Printf("已从数据库加载TMDB API密钥")
+			// 检查是否启用了TMDB功能
+			enabled := true // 默认启用
+			if val, ok := settings.SettingValue["enabled"].(bool); ok {
+				enabled = val
+			}
+			
+			// 如果启用了TMDB功能，设置TMDB API密钥
+			if enabled {
+				utils.SetTMDBAPIKey(apiKey)
+				log.Printf("已从数据库加载TMDB API密钥，TMDB功能已启用")
+			} else {
+				// 如果未启用，设置为空字符串
+				utils.SetTMDBAPIKey("")
+				log.Printf("TMDB功能已禁用")
+			}
 			return
 		}
 	}
@@ -318,6 +386,14 @@ func LoadTMDBConfig() {
 	if apiKey != "" {
 		utils.SetTMDBAPIKey(apiKey)
 		log.Printf("已从环境变量加载TMDB API密钥")
+		
+		// 异步保存API密钥到数据库
+		go func() {
+			// 等待一段时间确保数据库已初始化
+			time.Sleep(2 * time.Second)
+			SaveTMDBAPIKeyToDB(apiKey)
+		}()
+		
 		return
 	}
 	
