@@ -45,9 +45,10 @@
 </template>
 
 <script setup>
-import { ref, watch, defineExpose } from 'vue'
+import { ref, watch, defineExpose, onMounted } from 'vue'
 import QRCode from 'qrcode'
 import { getImageUrl } from '@/utils/imageUtils'
+import infoManager from '@/utils/InfoManager'
 
 // 添加处理跨域图片URL的工具函数
 const getProxiedImageUrl = (url) => {
@@ -79,6 +80,26 @@ const shareImageUrl = ref(null)
 const isGeneratingImage = ref(false)
 const copySuccess = ref(false)
 const showToast = ref(false)
+const siteInfo = ref({
+  logoText: '美漫资源共建' // 默认值
+})
+
+// 加载站点信息
+const loadSiteInfo = async () => {
+  try {
+    const info = await infoManager.getSiteBasicInfo()
+    siteInfo.value = info
+    console.log('站点信息加载成功:', siteInfo.value)
+  } catch (error) {
+    console.error('获取站点信息失败:', error)
+    // 使用默认值
+  }
+}
+
+// 在组件挂载时加载信息
+onMounted(() => {
+  loadSiteInfo()
+})
 
 // 显示一个临时的Toast提示
 const showTemporaryToast = () => {
@@ -92,6 +113,11 @@ const showTemporaryToast = () => {
 const openShareModal = async () => {
   showModal.value = true
   document.body.style.overflow = 'hidden'
+  
+  // 确保站点信息已加载
+  if (!siteInfo.value.logoText || siteInfo.value.logoText === '美漫资源共建') {
+    await loadSiteInfo()
+  }
   
   if (!shareImageUrl.value) {
     await generateShareImage()
@@ -481,18 +507,8 @@ const copyShareLink = async () => {
   
   const resourceUrl = `${window.location.origin}/resource/${props.resource.id}`
   
-  // 从浏览器存储中获取logoText作为网站名称
-  let siteName = localStorage.getItem('logoText') || ''
-  
-  // 如果localStorage中没有logoText，尝试从sessionStorage获取
-  if (!siteName) {
-    siteName = sessionStorage.getItem('logoText') || ''
-  }
-  
-  // 如果仍然没有找到，则使用一个默认值
-  if (!siteName) {
-    siteName = '动漫资源'
-  }
+  // 使用siteInfo中的logoText
+  const siteName = siteInfo.value.logoText || '美漫资源共建'
   
   // 更新后的分享文本格式
   const shareText = `我正在${siteName}看【${props.resource.title}】\n${props.resource.description?.substring(0, 50)}${props.resource.description?.length > 50 ? '...' : ''}\n「${siteName}」免费无广告，提供多种网盘下载，还能在线点播，等你哦！ ${resourceUrl}\n\n`
