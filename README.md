@@ -564,9 +564,9 @@ sudo systemctl status nginx
 
 # 更新日志
 -202506112021  
-✅ 修复TMDB_API_KEY泄露问题 
-✅ 详情页增加一键分享功能  
-✅ 修复GO使用sqlite3时开启WAL导致数据丢失问题  
+✅ 修复TMDB_API_KEY泄露问题   
+✅ 详情页增加一键分享功能    
+✅ 修复GO使用sqlite3时开启WAL导致数据丢失问题    
 -202506100835  
 ✅ 后台读取到环境变量配置的TMDB_API_KEY会自动保存到数据库  
 ✅ 支持开启/关闭TMDB功能，自由控制顶栏显示  
