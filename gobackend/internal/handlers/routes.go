@@ -33,6 +33,9 @@ func SetupRoutes(router *gin.Engine) {
 		settings.GET("/:key", GetSiteSettings)
 		settings.GET("/", GetAllSiteSettings)
 		
+		// TMDB状态API - 公开API，只返回是否启用，不返回密钥
+		settings.GET("/tmdb_status", GetTMDBStatus)
+		
 		// 更新设置 - 需要管理员权限
 		settings.PUT("/:key", JWTAuthMiddleware(), AdminAuthMiddleware(), UpdateSiteSettings)
 	}

@@ -399,3 +399,27 @@ func LoadTMDBConfig() {
 	
 	log.Printf("未找到TMDB API密钥配置，将使用默认值")
 }
+
+// GetTMDBStatus 获取TMDB功能是否启用，只返回enabled状态，不返回API密钥
+func GetTMDBStatus(c *gin.Context) {
+	var settings models.SiteSettings
+	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", utils.TMDB_SETTINGS_KEY)
+	
+	if err != nil {
+		// 如果找不到配置，返回未启用状态
+		c.JSON(http.StatusOK, gin.H{
+			"enabled": false,
+		})
+		return
+	}
+
+	// 从配置中只提取enabled字段
+	enabled := false
+	if val, ok := settings.SettingValue["enabled"].(bool); ok {
+		enabled = val
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"enabled": enabled,
+	})
+}

@@ -208,12 +208,15 @@ const loadSiteInfo = async () => {
 // 加载TMDB配置
 const loadTMDBConfig = async () => {
   try {
-    const response = await axios.get('/api/settings/tmdb_config');
-    if (response.data && response.data.setting_value) {
-      tmdbEnabled.value = response.data.setting_value.enabled === true;
+    // 修改为使用专门的端点，只获取TMDB功能是否启用状态，不暴露API密钥
+    const response = await axios.get('/api/settings/tmdb_status');
+    if (response.data && response.data.enabled !== undefined) {
+      tmdbEnabled.value = response.data.enabled === true;
     }
   } catch (error) {
-    console.error('加载TMDB配置失败:', error);
+    console.error('加载TMDB状态失败:', error);
+    // 默认不启用
+    tmdbEnabled.value = false;
   }
 }
 

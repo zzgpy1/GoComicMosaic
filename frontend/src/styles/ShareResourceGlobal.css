@@ -1,0 +1,155 @@
+/* ShareResource全局样式 - 用于模态框和其他需要全局生效的样式 */
+
+.share-modal.custom-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;  /* 使用视口宽度 */
+  height: 100vh; /* 使用视口高度 */
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+  overflow-y: auto; /* 允许在小屏幕上滚动 */
+}
+
+.share-modal .modal-dialog {
+  width: 100%;
+  max-width: 450px; /* 稍微减小宽度，更适合手机屏幕 */
+  margin: 0 auto;
+  max-height: 95vh; /* 增大最大高度以显示更多内容 */
+  display: flex;
+  flex-direction: column;
+}
+
+.share-modal .modal-content {
+  width: 100%;
+  background-color: #ffffff; /* 使用白色背景，更符合浅色主题 */
+  border-radius: 12px; /* 更圆润的圆角 */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  border: none; /* 移除边框 */
+  animation: modal-appear 0.3s ease-out;
+  overflow: hidden; /* 确保内容不会溢出 */
+  position: relative; /* 用于关闭按钮定位 */
+}
+
+/* 关闭按钮样式 */
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.modal-close-btn .btn-close {
+  width: 32px;
+  height: 32px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.modal-close-btn .btn-close i {
+  font-size: 20px;
+  color: #64748b;
+}
+
+.modal-close-btn .btn-close:hover {
+  background-color: #ffffff;
+}
+
+.modal-close-btn .btn-close:hover i {
+  color: #1e293b;
+}
+
+.copy-success-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(16, 185, 129, 0.9);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  animation: toast-in-out 3s ease-in-out;
+}
+
+.copy-success-toast i {
+  font-size: 18px;
+}
+
+@keyframes toast-in-out {
+  0% { 
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% { 
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+}
+
+@keyframes modal-appear {
+  from { 
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 576px) {
+  .share-modal.custom-modal {
+    padding: 10px;
+    align-items: flex-start; /* 在移动设备上顶部对齐 */
+    padding-top: 50px; /* 增加顶部间距 */
+  }
+  
+  .share-modal .modal-dialog {
+    max-width: 100%;
+    margin: 0 auto;
+    max-height: 90vh;
+  }
+  
+  .share-modal .modal-content {
+    border-radius: 10px;
+  }
+  
+  .share-modal .share-modal-body {
+    padding: 15px;
+  }
+  
+  .modal-close-btn {
+    top: 8px;
+    right: 8px;
+  }
+  
+  .modal-close-btn .btn-close {
+    width: 28px;
+    height: 28px;
+  }
+} 

@@ -89,8 +89,14 @@ func InitDB() (*sqlx.DB, error) {
 	dbPath := utils.GetDbPath()
 	log.Printf("连接数据库: %s", dbPath)
 	
-	// 连接SQLite数据库
-	db, err := sqlx.Connect("sqlite3", fmt.Sprintf("file:%s?_journal=WAL&_foreign_keys=on", dbPath))
+	// 连接SQLite数据库，使用WAL模式，并添加额外的健壮性参数
+	// _journal=WAL: 使用WAL模式
+	// _foreign_keys=on: 启用外键约束
+	// _busy_timeout=5000: 设置繁忙超时为5秒，减少"database is locked"错误
+	// _synchronous=NORMAL: 设置同步模式为NORMAL，平衡性能和安全性
+	// _cache_size=-20000: 设置较大的缓存大小（单位是KB，负值表示以KB为单位）
+	db, err := sqlx.Connect("sqlite3", fmt.Sprintf("file:%s?_journal=WAL&_foreign_keys=on&_busy_timeout=5000&_synchronous=NORMAL&_cache_size=-20000", dbPath))
+	
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败: %w", err)
 	}
@@ -110,6 +116,9 @@ func InitDB() (*sqlx.DB, error) {
 
 	// 保存全局数据库连接
 	DB = db
+
+	// 启动定期检查点执行
+	go PerformPeriodicCheckpoints()
 
 	return db, nil
 }
@@ -371,4 +380,52 @@ func InitSiteSettings() error {
 	
 	log.Printf("网站设置初始化完成")
 	return nil
+}
+
+// CloseDB 安全关闭数据库连接，确保WAL数据被写入主数据库
+func CloseDB() error {
+	if DB == nil {
+		log.Println("数据库连接未初始化，无需关闭")
+		return nil
+	}
+
+	log.Println("执行数据库检查点操作...")
+	_, err := DB.Exec("PRAGMA wal_checkpoint(FULL);")
+	if err != nil {
+		log.Printf("执行检查点操作失败: %v", err)
+		// 即使检查点失败，我们仍然尝试关闭数据库连接
+	} else {
+		log.Println("检查点操作成功完成")
+	}
+
+	log.Println("关闭数据库连接...")
+	if err := DB.Close(); err != nil {
+		log.Printf("关闭数据库连接时出错: %v", err)
+		return fmt.Errorf("关闭数据库连接失败: %w", err)
+	}
+
+	log.Println("数据库连接已安全关闭")
+	return nil
+}
+
+// PerformPeriodicCheckpoints 定期执行数据库检查点操作，保证WAL文件不会无限增长
+func PerformPeriodicCheckpoints() {
+	// 每30分钟执行一次检查点
+	ticker := time.NewTicker(30 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if DB == nil {
+			log.Println("数据库连接未初始化，跳过检查点操作")
+			continue
+		}
+
+		log.Println("执行定期数据库检查点...")
+		_, err := DB.Exec("PRAGMA wal_checkpoint(PASSIVE);")
+		if err != nil {
+			log.Printf("定期检查点操作失败: %v", err)
+		} else {
+			log.Println("定期检查点操作成功完成")
+		}
+	}
 } 

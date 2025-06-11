@@ -98,6 +98,7 @@ frontend/
 │   ├── components/      # Vue组件
 │   │   ├── EpisodeSelector.vue    # 剧集选择
 │   │   ├── LocalSearch.vue        # 搜索引擎
+│   │   ├── ShareResource.vue      # 一键分享
 │   │   └── VideoPlayer.vue        # 播放器
 │   ├── extDS/           # 外部数据源
 │   │   ├── heimuer.js         # 黑木影视数据源

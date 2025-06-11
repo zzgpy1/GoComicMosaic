@@ -295,6 +295,9 @@
                 <i :class="isLiked ? 'bi bi-heart-fill' : 'bi bi-heart'"></i><span class="btn-text">{{isLiked ? '已喜欢' : '喜欢'}}</span>
                 <span class="like-count" v-if="resource.likes_count > 0">{{resource.likes_count}}</span>
               </button>
+              <button class="btn-custom btn-share" @click="handleShare">
+                <i class="bi bi-share"></i><span class="btn-text">分享</span>
+              </button>
               <button 
                 @click="goToSupplementResource" 
                 class="btn-custom btn-secondary"
@@ -468,6 +471,12 @@
         <img :src="getImageUrl(previewImageUrl)" class="preview-large-image" :alt="resource?.title || '图片预览'">
       </div>
     </div>
+    
+    <!-- 添加ShareResource组件，使用ref来引用 -->
+    <ShareResource 
+      ref="shareResourceRef" 
+      :resource="resource" 
+    />
   </div>
 </template>
 
@@ -477,6 +486,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { isAdmin } from '../utils/auth'
 import { getImageUrl } from '@/utils/imageUtils'
+import ShareResource from '@/components/ShareResource.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -489,6 +499,16 @@ const saveError = ref(null)
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const currentImage = ref(null)  // 当前选中的大图
+
+// 创建ShareResource组件的引用
+const shareResourceRef = ref(null)
+
+// 处理分享按钮点击
+const handleShare = () => {
+  if (shareResourceRef.value) {
+    shareResourceRef.value.openShareModal()
+  }
+}
 
 // 喜欢功能相关状态
 const isLiked = ref(false)
@@ -528,12 +548,6 @@ const selectedImage = ref(null)
 
 // 计算属性检查是否为管理员
 const isUserAdmin = computed(() => isAdmin())
-
-// 处理不同状态的图片路径 (审批前的uploads路径和审批后的imgs路径)
-// const getImageUrl = (imagePath) => {
-//   if (!imagePath) return 'https://via.placeholder.com/300x400';
-//   return imagePath;
-// }
 
 // 选择图片展示在大图区域
 const selectImage = (image) => {
@@ -996,3 +1010,19 @@ onMounted(() => {
 </script>
 
 <style scoped src="@/styles/ResourceDetail.css"></style>
+
+<style scoped>
+/* 添加分享按钮样式 */
+.btn-share {
+  background-color: #3a86ff;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 5px rgba(58, 134, 255, 0.3);
+}
+
+.btn-share:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
+}
+</style>

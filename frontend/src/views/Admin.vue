@@ -734,8 +734,8 @@
                           <i class="bi bi-grip-vertical"></i>
                         </div>
                         <div class="link-fields">
-                            <!-- 联系方式文本 -->
-                            <div class="link-field" data-label="联系方式">
+                          <!-- 联系方式文本 -->
+                          <div class="link-field" data-label="联系方式">
                               <input type="text" v-model="element.text" class="custom-input" placeholder="联系方式内容">
                           </div>
                           
@@ -757,8 +757,8 @@
                               </button>
                             </div>
                           </div>
+
                         </div>
-                        
                         <!-- 删除按钮 -->
                         <button 
                           type="button" 

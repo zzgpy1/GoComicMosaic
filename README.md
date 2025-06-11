@@ -38,97 +38,101 @@ docker run -d --name dongman \
 ## 适配移动端样式
 移动端也可以更好的体验美漫共建小站了
 
-![移动端|237x499](docs/1.gif)
+![移动端|237x499](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/1.gif)
 
 ## 首页
-![image|690x397](docs/2.jpg)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/2.jpg)
 
 可以根据资源中文名、英文名、简介进行搜索
-![首页|690x392](docs/3.gif)
+![首页|690x392](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/3.gif)
 
 ## 详情页
-![image|690x398](docs/4.jpg)
+![image|690x398](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/4.jpg)
 
 可以切换查看图片，选择网盘标签，一键复制网盘链接密码
-![详情页|690x392](docs/5.gif)
+![详情页|690x392](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/5.gif)
 
 ## 关于本站
-![关于|690x392](docs/6.gif)
+![关于|690x392](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/6.gif)
 
 ## 提交资源
 这个才是资源共建平台的核心，点击右上角的'提交资源'，用户可以随意提交自己喜欢的动漫资源，如果网站还不存该美漫时，会是一个新建资源的表单，需要填写中文名、英文名、类型、简介等基础信息。提交后，要等管理员在后台审批完才会在首页显示
 
 ### 提交-新建资源
-![image|690x384](docs/7.jpg)  
-![image|690x379](docs/8.jpg)  
+![image|690x384](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/7.jpg)  
+![image|690x379](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/8.jpg)  
 
 网盘链接和图片都可以提交多个
-![提交资源|690x392](docs/9.gif)
+![提交资源|690x392](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/9.gif)
 
 ### 提交-补充资源
 顾名思义，就是对已经存在的动漫资源补充一些信息，主要是图片、资源链接
 补充提交有2个入口，一个是右上角的'提交资源'，搜索已经存在的动漫名，然后选择确认即可
-![image|690x396](docs/10.jpg)  
+![image|690x396](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/10.jpg)  
 
-![补充资源|690x392](docs/11.gif)
+![补充资源|690x392](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/11.gif)
 
 从资源详情页点击'补充资源'按钮，不用自己再搜索选择了，自动绑定对应的动漫
-![详情页补充|690x392](docs/12.gif)
+![详情页补充|690x392](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/12.gif)
 
 ## 管理员登录
 不用多说了，就是输入账号密码，初始密码登录后可修改
 
-![image|690x401](docs/13.jpg)
+![image|690x401](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/13.jpg)
 
 ## 管理控制台
 主要用于审批用户提交的资源
 
-![image|690x398](docs/14.jpg)
+![image|690x398](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/14.jpg)
 
 审批用户提交的资源
-![后台审批|690x391](docs/15.gif)
+![后台审批|690x391](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/15.gif)
 
 ## 资源编辑(管理员权限)
 管理员在动漫详情页面，可以进行编辑，修改中英文标题、简介、类型、图片增删、海报设置、修改添加资源链接等
-![image|690x365](docs/16.jpg)  
-![image|690x303](docs/17.jpg)  
+![image|690x365](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/16.jpg)  
+![image|690x303](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/17.jpg)  
 
-![详情编辑|690x391](docs/18.gif)
+![详情编辑|690x391](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/18.gif)
 
 ## 新增喜欢按钮
 在详情页可以点击喜欢
-![image|690x370](docs/19.jpg)
+![image|690x370](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/19.jpg)
 首页可以根据喜欢数量排序，默认按最新发布排序
-![image|690x397](docs/20.jpg)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/20.jpg)
 
 ## 新增分页
-![image|690x397](docs/21.jpg)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/21.jpg)
 
 ## 新增在线点播功能
-![image|690x397](docs/22.gif)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/22.gif)
 
 ## 优化检测
-![image|690x397](docs/23.jpg)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/23.jpg)
 
 ## 调整底栏
 - 添加在线点播
 - 添加访问统计
 - 添加友链
-![image|690x397](docs/24.jpg)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/24.jpg)
 
 ## 详情页剧照点击放大查看
-![image|690x397](docs/25.gif)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/25.gif)
 
 ## 全面支持管理后台设置网站信息和采集解析源
-![image|690x397](docs/26.gif)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/26.gif)
 
 ## 支持外挂在线播放数据源
 会写爬虫的用户可以自己添加数据源，更加灵活
-![image|690x397](docs/27.gif)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/27.gif)
 
 ## 支持从TMDB一键导入资源库
 可以从TMDB搜索、预览、一键导入资源
-![image|690x397](docs/28.gif)
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/28.gif)
+
+## 支持一键分享
+资源详情页可以一键生成分享海报和链接
+![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/29.gif)
 
 ---
 
@@ -474,11 +478,26 @@ sudo systemctl status nginx
 - Over the Garden Wall（花园墙外）✅
 - The Dragon Prince（龙王子）✅
 - OK K.O.! Let's Be Heroes（成为英雄吧）✅
+- Gravity Falls（怪诞小镇）✅
+- Milo Murphy's Law（迈罗·墨菲定律）✅
+- Star Wats：The Clone Wars（星球大战：克隆人战争）✅
+- Star Wars：Rebels（星球大战：义军崛起）✅
+- Star Wars: The Bad Batch（星球大战：异等小队）✅
+- Murder Drones（无机杀手）✅
+- Randy Cunningham: 9th Grade Ninja（忍者好小子）✅
+- Glitch Techs（电玩先锋）✅
+- Dude, That's My Ghost!（幽灵死党）✅
+- Wakfu（沃土）✅
+- Dofus : Aux trésors de Kerubim（德弗斯战记 / 克鲁布的宝物）✅
+- Regular Show（日常工作 / 天兵公园）✅
+- Blue Eye Samurai（蓝眼武士）✅
+- Afro Samurai（爆炸头武士）✅
+- Paradise PD（天堂镇警局）✅
+- Ugly Americans（俗世乐土 / 丑陋的美国人）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
 - Guardians of Ga’Hoole（守护者）
-- Gravity Falls（怪诞小镇）
 - We Bare Bears（咱们裸熊）
 - Arcane（奥术）
 - Castlevania（恶魔城）
@@ -501,14 +520,10 @@ sudo systemctl status nginx
 - Clerks: The Animated Series（店员动画系列）
 - Static Shock（静电侠）
 - Scavengers Reign（拾荒者统治）
-- Paradise PD（天堂镇警局）
-- Ugly Americans（俗世乐土）
 - Primal（史前战纪）
-- Blue Eye Samurai（蓝眼武士）
 - HouseBroken（一家之主）
 - Star vs. the Forces of Evil（星蝶公主）
 - The Great North（东倒西歪）
-- Murder Drones（无机杀手）
 - House of Demons（恶魔之家）
 - The Amazing Digital Circus（神奇数字马戏团）
 - Summer Camp Island（夏令营岛）
@@ -539,8 +554,6 @@ sudo systemctl status nginx
 - Ed, Edd n Eddy（艾德，艾迪和艾德）
 - Johnny Bravo（强尼布拉沃）
 - Samurai Jack（武士杰克）
-- Star Wars: The Clone Wars（星球大战：克隆人战争）
-- Regular Show（普通秀）
 - Archer（间谍亚契）
 - Final Space（终空）
 - The Venture Bros.（冒险兄弟）
@@ -550,6 +563,10 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
+-202506112021  
+✅ 修复TMDB_API_KEY泄露问题 
+✅ 详情页增加一键分享功能  
+✅ 修复GO使用sqlite3时开启WAL导致数据丢失问题  
 -202506100835  
 ✅ 后台读取到环境变量配置的TMDB_API_KEY会自动保存到数据库  
 ✅ 支持开启/关闭TMDB功能，自由控制顶栏显示  
