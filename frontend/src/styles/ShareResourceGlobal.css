@@ -124,19 +124,20 @@
 
 @media (max-width: 576px) {
   .share-modal.custom-modal {
-    padding: 10px;
-    align-items: flex-start; /* 在移动设备上顶部对齐 */
-    padding-top: 50px; /* 增加顶部间距 */
+    padding: 15px;
+    align-items: center; /* 确保模态框在移动设备上居中 */
   }
   
   .share-modal .modal-dialog {
-    max-width: 100%;
+    max-width: 90%; /* 减小移动端的宽度 */
+    width: 320px; /* 设置固定宽度，避免过大 */
     margin: 0 auto;
-    max-height: 90vh;
+    max-height: 85vh; /* 降低最大高度，避免铺满整个屏幕 */
   }
   
   .share-modal .modal-content {
-    border-radius: 10px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   }
   
   .share-modal .share-modal-body {
@@ -151,5 +152,36 @@
   .modal-close-btn .btn-close {
     width: 28px;
     height: 28px;
+  }
+  
+  .copy-success-toast {
+    padding: 10px 18px;
+    font-size: 14px;
+    top: 15px;
+  }
+} 
+
+/* 添加更小屏幕的特殊处理 */
+@media (max-width: 360px) {
+  .share-modal.custom-modal {
+    padding: 10px;
+  }
+  
+  .share-modal .modal-dialog {
+    width: 92%; /* 更小屏幕使用百分比宽度 */
+    max-width: 300px;
+    max-height: 80vh;
+  }
+  
+  .share-modal .share-modal-body {
+    padding: 12px;
+  }
+}
+
+/* 添加平板设备的优化 */
+@media (min-width: 577px) and (max-width: 768px) {
+  .share-modal .modal-dialog {
+    max-width: 400px;
+    max-height: 90vh;
   }
 } 

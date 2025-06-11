@@ -39,7 +39,7 @@
                 <i class="bi bi-shield-lock me-1"></i><span class="btn-text">管理员登录</span>
               </router-link>
               <router-link to="/tmdb-search" class="btn-custom btn-secondary" v-if="tmdbEnabled">
-                <i class="bi bi-search me-1"></i><span class="btn-text">TMDB搜索</span>
+                <i class="bi bi bi-collection-play me-1"></i><span class="btn-text">TMDB搜索</span>
               </router-link>
               <router-link to="/submit" class="btn-custom btn-primary" aria-label="提交资源">
                 <i class="bi bi-plus-circle me-1"></i><span class="btn-text">提交资源</span>
