@@ -12,11 +12,11 @@ func SetupRoutes(router *gin.Engine) {
 	// API路由组
 	api := router.Group("/api")
 	
-	// CORS代理路由 - 无需认证
-	api.GET("/proxy", ProxyHandler)
+	// CORS代理路由 - 无需认证，支持所有HTTP方法
+	api.Any("/proxy", ProxyHandler)
 	
 	// 直接添加一个不带/api前缀的代理路由，适用于Vite代理重写后的路径
-	router.GET("/proxy", ProxyHandler)
+	router.Any("/proxy", ProxyHandler)
 	
 	// 认证路由
 	auth := api.Group("/auth")

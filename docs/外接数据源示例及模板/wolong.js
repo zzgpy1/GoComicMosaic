@@ -1,5 +1,5 @@
 /**
- * 黑木耳影视数据源
+ * 卧龙影视数据源
  * 示例XML格式数据源，展示如何处理XML响应
  */
 
@@ -62,15 +62,15 @@ function parseXML(xmlString) {
   return xmlToObj(xmlDoc.documentElement);
 }
 
-// 黑木耳数据源定义
+// 卧龙数据源定义
 module.exports = {
   // 必要属性
-  name: "黑木耳影视(外挂)",
+  name: "卧龙(外接)",
   // 设置为XML格式的API地址
-  // baseUrl: "https://json02.heimuer.xyz/api.php/provide/vod/",
+  // baseUrl: "http://collect.wolongzy.cc/api.php/provide/vod/",
   // 明确指定是否为XML格式
   // useXml: false,
-  baseUrl: "https://xml02.heimuer.xyz/api.php/provide/vod/at/xml/",
+  baseUrl: "http://collect.wolongzy.cc/api.php/provide/vod/at/xml/",
   useXml: true,
   
   
@@ -175,11 +175,11 @@ module.exports = {
         (typeof response === 'string' && response.trim().startsWith('<?xml'));
       
       if (isXmlResponse) {
-        console.log('[黑木耳] 解析XML响应');
+        console.log('[卧龙] 解析XML响应');
         return this.parseXMLResponse(response);
       } else {
         // 尝试解析为JSON
-        console.log('[黑木耳] 解析JSON响应');
+        console.log('[卧龙] 解析JSON响应');
         if (typeof response === 'string') {
           return JSON.parse(response);
         } else {
@@ -187,7 +187,7 @@ module.exports = {
         }
       }
     } catch (error) {
-      console.error('[黑木耳] 解析响应失败:', error);
+      console.error('[卧龙] 解析响应失败:', error);
       return null;
     }
   },
@@ -225,7 +225,7 @@ module.exports = {
   // 搜索电影
   async searchMovies(keyword, page = 1, pageSize = 20) {
     try {
-      console.log(`[黑木耳] 搜索: ${keyword}, 页码: ${page}, 每页: ${pageSize}`);
+      console.log(`[卧龙] 搜索: ${keyword}, 页码: ${page}, 每页: ${pageSize}`);
       
       // 构建API URL
       const endpoint = `?ac=detail&wd=${encodeURIComponent(keyword)}&pg=${page}`;
@@ -239,7 +239,7 @@ module.exports = {
       
       // 处理响应数据
       if (jsonData && jsonData.list && Array.isArray(jsonData.list)) {
-        console.log('[黑木耳] 搜索结果:', jsonData);
+        console.log('[卧龙] 搜索结果:', jsonData);
         
         return {
           dataList: jsonData.list.map(item => ({
@@ -261,7 +261,7 @@ module.exports = {
         throw new Error(jsonData?.msg || '搜索失败');
       }
     } catch (error) {
-      console.error('[黑木耳] 搜索失败:', error);
+      console.error('[卧龙] 搜索失败:', error);
       return {
         dataList: [],
         total: 0,
@@ -275,7 +275,7 @@ module.exports = {
   // 获取电影详情
   async getMovieDetail(id) {
     try {
-      console.log(`[黑木耳] 获取详情: ${id}`);
+      console.log(`[卧龙] 获取详情: ${id}`);
       
       // 构建API URL
       const endpoint = `?ac=detail&ids=${id}`;
@@ -289,7 +289,7 @@ module.exports = {
       
       if (jsonData && jsonData.list && jsonData.list.length > 0) {
         const movie = jsonData.list[0];
-        console.log('[黑木耳] 详情结果:', movie);
+        console.log('[卧龙] 详情结果:', movie);
         
         // 解析播放列表
         const playList = this.parsePlayList(movie.vod_play_url);
@@ -314,7 +314,7 @@ module.exports = {
         throw new Error('未找到资源详情');
       }
     } catch (error) {
-      console.error('[黑木耳] 获取详情失败:', error);
+      console.error('[卧龙] 获取详情失败:', error);
       throw error;
     }
   },

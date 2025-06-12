@@ -621,12 +621,34 @@ export default {
           // 增加playerKey以强制重新创建播放器组件
           playerKey.value += 1;
           
+          // 检查是否有自定义header信息
+          let customHeaders = null;
+          if (movieDetail.vod_play_header) {
+            try {
+              // 尝试解析header信息
+              customHeaders = JSON.parse(movieDetail.vod_play_header);
+              console.log('检测到自定义播放header:', customHeaders);
+            } catch(e) {
+              console.error('解析vod_play_header失败:', e);
+            }
+          }
+          
           // 设置媒体信息和播放源
           streamInfo.value = mediaInfo;
-          currentStreamSources.value = [{
+          
+          // 准备视频源
+          const videoSource = {
             src: targetEpisode.url, // 使用目标集数的URL
-            type: 'application/x-mpegURL' // 默认为HLS格式
-          }];
+            type: getMediaTypeFromUrl(targetEpisode.url) // 根据URL判断媒体类型
+          };
+          
+          // 如果有自定义header，添加到视频源
+          if (customHeaders) {
+            videoSource.headers = customHeaders;
+          }
+          
+          // 设置视频源
+          currentStreamSources.value = [videoSource];
           currentPoster.value = posterUrl;
           
           // 确保播放器始终显示
@@ -672,11 +694,21 @@ export default {
         // 临时存储当前视频源和剧集信息
         const newSource = {
           src: episode.url,
-          type: 'application/x-mpegURL'
+          type: getMediaTypeFromUrl(episode.url)
         };
         
-        // 增加playerKey以强制重新创建播放器组件
-        playerKey.value += 1;
+        // 如果有自定义header，添加到视频源
+        if (streamInfo.value && streamInfo.value.apiData && streamInfo.value.apiData.vod_play_header) {
+          try {
+            const customHeaders = JSON.parse(streamInfo.value.apiData.vod_play_header);
+            if (customHeaders) {
+              console.log('为剧集应用自定义header:', customHeaders);
+              newSource.headers = customHeaders;
+            }
+          } catch(e) {
+            console.error('解析vod_play_header失败:', e);
+          }
+        }
         
         // 3. 更新剧集信息
         if (streamInfo.value) {
@@ -1074,6 +1106,34 @@ export default {
       localStorage.removeItem('playHistory');
     };
     
+    // 根据URL判断媒体类型
+    const getMediaTypeFromUrl = (url) => {
+      if (!url) return 'application/x-mpegURL'; // 默认为HLS格式
+      
+      const lowerUrl = url.toLowerCase();
+      if (lowerUrl.endsWith('.mp4')) {
+        return 'video/mp4';
+      } else if (lowerUrl.endsWith('.m3u8')) {
+        return 'application/x-mpegURL';
+      } else if (lowerUrl.endsWith('.mp3')) {
+        return 'audio/mp3';
+      } else if (lowerUrl.endsWith('.mpd')) {
+        return 'application/dash+xml';
+      } else if (lowerUrl.startsWith('rtmp://')) {
+        return 'application/x-rtmp';
+      }
+      
+      // 根据路径中的关键字判断
+      if (lowerUrl.includes('.m3u8')) {
+        return 'application/x-mpegURL';
+      } else if (lowerUrl.includes('.mp4')) {
+        return 'video/mp4';
+      }
+      
+      // 默认值
+      return 'application/x-mpegURL';
+    };
+    
     return {
       streams,
       filteredStreams,
@@ -1116,7 +1176,8 @@ export default {
       testWithMockData,
       handleSearch,
       clearPlayHistory,
-      isDescriptionCollapsed
+      isDescriptionCollapsed,
+      getMediaTypeFromUrl
     };
   }
 }

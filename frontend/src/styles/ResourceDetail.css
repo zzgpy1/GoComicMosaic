@@ -184,6 +184,8 @@
 
 .resource-poster {
   width: 100%;
+  max-height: 400px; /* 增加海报图片高度 */
+  object-fit: contain; /* 保持比例完整显示图片 */
   display: block;
   transition: transform 0.5s ease;
 }

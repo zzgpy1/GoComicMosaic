@@ -563,6 +563,9 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
+-202506121410  
+✅ 后端跨域转发代理支持所有请求方法，支持透传headers   
+✅ 重新优化外接数据源，解决跨域问题，提供外接数据源爬虫示例lanmei.js和模板template.js   
 -202506112021  
 ✅ 修复TMDB_API_KEY泄露问题   
 ✅ 详情页增加一键分享功能    

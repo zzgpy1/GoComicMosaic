@@ -1,7 +1,7 @@
 <template>
   <div class="video-player-container">
     <div class="player-wrapper">
-      <video ref="videoElement" class="video-js vjs-default-skin vjs-big-play-centered"></video>
+      <video ref="videoElement" class="video-js vjs-default-skin vjs-big-play-centered" crossorigin="anonymous"></video>
     </div>
     <div v-if="error" class="player-error-message">
       <div class="error-content">
@@ -251,7 +251,7 @@ export default {
         }
       }
     };
-    
+
     // 监听sources变化，更新播放器源
     watch(() => props.sources, (newSources) => {
       if (newSources && newSources.length > 0) {
