@@ -3,7 +3,10 @@
  * 用于从远程URL加载自定义数据源JS文件
  */
 
-import { addCorsProxy } from './corsProxy';
+// 导入库加载器
+import libLoader from './libLoader';
+// 导入CORS代理工具
+import corsProxy from './corsProxy';
 
 /**
  * 加载外部数据源
@@ -15,7 +18,7 @@ export async function loadExternalDataSource(url) {
     console.log(`开始加载外部数据源: ${url}`);
     
     // 使用CORS代理加载外部脚本，避免跨域问题
-    const proxyUrl = addCorsProxy(url);
+    const proxyUrl = corsProxy.addCorsProxy(url);
     
     // 加载外部脚本
     const response = await fetch(proxyUrl);
@@ -54,21 +57,39 @@ async function executeExternalScript(jsContent, sourceUrl) {
   try {
     // 使用Function构造器创建一个新的作用域
     // 注意：这并不能完全隔离代码，仅提供基本的隔离
-    const scriptFunction = new Function(`
+    const scriptFunction = new Function('libLoader', 'corsProxy', `
       "use strict";
       // 创建模块环境
       const module = { exports: {} };
       const exports = module.exports;
       
+      // 将库加载器注入到全局作用域
+      const lib = libLoader;
+      // 将代理工具注入到全局作用域
+      const proxy = corsProxy;
+      
       // 执行脚本代码
       ${jsContent}
+      
+      // 如果数据源有初始化方法，尝试调用
+      if (typeof module.exports.init === 'function') {
+        try {
+          // 异步初始化
+          (async () => {
+            await module.exports.init();
+            console.log('数据源初始化完成:', module.exports.name);
+          })();
+        } catch (e) {
+          console.warn('数据源初始化失败:', e);
+        }
+      }
       
       // 返回导出的模块
       return module.exports.__esModule ? module.exports.default : module.exports;
     `);
     
-    // 执行脚本并获取结果
-    return scriptFunction();
+    // 执行脚本并获取结果，传入libLoader和corsProxy作为参数
+    return scriptFunction(libLoader, corsProxy);
   } catch (error) {
     console.error(`执行外部脚本失败:`, error);
     throw new Error(`执行脚本失败: ${error.message}`);

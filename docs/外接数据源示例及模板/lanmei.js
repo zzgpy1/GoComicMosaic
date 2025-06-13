@@ -19,20 +19,35 @@ module.exports = {
     },
     
     // token缓存
-    token: null,
     tokenExpireTime: 0,
     
     /**
-     * 获取API访问Token
+     * 初始化方法
+     * 预加载依赖库并获取初始token
      */
-    async getToken() {
-      // 如果token有效期内，直接返回
+    async init() {
+      try {
+        console.log('[蓝莓短剧] 初始化中...');
+        // 初始化时获取token
+        await this.ensureValidToken();
+      } catch (e) {
+        console.error(`[蓝莓短剧] 初始化失败: ${e.message}`);
+      }
+    },
+    
+    /**
+     * 确保token有效，如果无效则重新获取
+     * @returns {boolean} token是否有效
+     */
+    async ensureValidToken() {
       const currentTime = Math.floor(Date.now() / 1000);
-      if (this.token && currentTime < this.tokenExpireTime) {
-        return this.token;
+      
+      // 如果token仍然有效，直接返回true
+      if (this.headers.authorization && currentTime < this.tokenExpireTime) {
+        return true;
       }
       
-      // 否则重新获取
+      // 否则重新获取token
       try {
         const tkurl = 'https://app.whjzjx.cn/v1/account/login';
         const body = "device=20caaae96b3443174bf4ebdbdcc253776";
@@ -49,63 +64,77 @@ module.exports = {
         }
         
         const jsonData = await response.json();
-        console.log(`获取token成功: ${JSON.stringify(jsonData)}`);
+        console.log(`[蓝莓短剧] 获取token成功: ${JSON.stringify(jsonData)}`);
+        
         if (jsonData.code === 0 || jsonData.code === "ok" || jsonData.status === 0) {
-          this.token = jsonData.data.token;
+          // 直接将token设置到headers中
+          this.headers.authorization = jsonData.data.token;
+          
           // 设置token过期时间为1小时
           this.tokenExpireTime = currentTime + 3600;
-          return this.token;
+          return true;
         }
         
-        console.log(`获取token失败: ${JSON.stringify(jsonData)}`);
-        return null;
+        console.log(`[蓝莓短剧] 获取token失败: ${JSON.stringify(jsonData)}`);
+        return false;
       } catch (e) {
-        console.error(`获取token异常: ${e.message}`);
-        return null;
+        console.error(`[蓝莓短剧] 获取token异常: ${e.message}`);
+        return false;
       }
     },
     
     /**
-     * 带token的网络请求
-     * 注意：此方法主要用于API请求，不使用代理
-     * 视频URL应该通过addCorsProxy方法单独处理
+     * 发送API请求
+     * @param {string} url - 请求URL
+     * @param {Object} options - 请求选项
+     * @returns {Promise<Object>} 响应数据
      */
-    async fetchWithToken(url, options = {}) {
-      const token = await this.getToken();
-      if (!token) {
-        console.log("无法获取token");
-        return null;
-      }
-      
-      const headers = {...this.headers, "authorization": token};
-      if (options.headers) {
-        Object.assign(headers, options.headers);
-      }
-      
+    async request(url, options = {}) {
       try {
-        // API请求通常不需要代理，直接使用原始URL
-        // 只有在options.forceProxy=true时才使用代理（用于特殊情况）
-        const needsProxy = options.forceProxy === true;
-        const requestUrl = needsProxy ? this.addCorsProxy(url, headers) : url;
+        // 确保token有效
+        const tokenValid = await this.ensureValidToken();
+        if (!tokenValid) {
+          console.log("[蓝莓短剧] 无法获取有效token");
+          return null;
+        }
         
+        // 合并自定义headers
+        const requestHeaders = {...this.headers};
+        if (options.headers) {
+          Object.assign(requestHeaders, options.headers);
+        }
+        
+        // 构建请求选项
         const requestOptions = {
           method: options.method || 'GET',
-          headers: headers
+          headers: requestHeaders
         };
         
         if (options.body) {
           requestOptions.body = options.body;
         }
         
-        const response = await fetch(requestUrl, requestOptions);
+        // 判断是否需要使用代理
+        const needsProxy = options.useProxy === true;
         
-        if (!response.ok) {
-          throw new Error(`HTTP错误: ${response.status}`);
+        let response;
+        if (needsProxy) {
+          // 使用代理
+          response = await proxy.fetchWithProxy(url, requestOptions);
+        } else {
+          // 直接请求
+          const rawResponse = await fetch(url, requestOptions);
+          
+          if (!rawResponse.ok) {
+            throw new Error(`HTTP错误: ${rawResponse.status}`);
+          }
+          
+          response = await rawResponse.json();
         }
         
-        return await response.json();
+        return response;
       } catch (e) {
-        console.error(`请求失败: ${url}, 错误: ${e.message}`);
+        console.error(`[蓝莓短剧] 请求失败: ${url}, 错误: ${e.message}`);
         return null;
       }
     },
@@ -122,19 +151,19 @@ module.exports = {
         const url = `${this.baseUrl}/v2/search`;
         const body = `text=${encodeURIComponent(keyword)}`;
         
-        const jsonData = await this.fetchWithToken(url, {
+        const jsonData = await this.request(url, {
           method: 'POST',
           body: body
         });
         
         if (!jsonData) {
-          console.log('搜索请求失败或返回为空');
+          console.log('[蓝莓短剧] 搜索请求失败或返回为空');
           return { dataList: [], total: 0, pagecount: 0, size: pageSize, current: page };
         }
         
         // 检查API返回状态
         if (!(jsonData.code === 0 || jsonData.code === "ok" || jsonData.status === 0)) {
-          console.log(`搜索数据失败: ${JSON.stringify(jsonData)}`);
+          console.log(`[蓝莓短剧] 搜索数据失败: ${JSON.stringify(jsonData)}`);
           return { dataList: [], total: 0, pagecount: 0, size: pageSize, current: page };
         }
         
@@ -164,7 +193,7 @@ module.exports = {
           current: parseInt(page)
         };
       } catch (e) {
-        console.error(`搜索内容异常: ${e.message}`);
+        console.error(`[蓝莓短剧] 搜索内容异常: ${e.message}`);
         return { dataList: [], total: 0, pagecount: 0, size: pageSize, current: page };
       }
     },
@@ -179,7 +208,7 @@ module.exports = {
       try {
         // 构建详情页请求URL
         const url = `${this.baseUrl}/v2/theater_parent/detail?theater_parent_id=${id}`;
-        const jsonData = await this.fetchWithToken(url);
+        const jsonData = await this.request(url);
         
         if (!jsonData) {
           throw new Error("获取详情数据失败");
@@ -187,7 +216,7 @@ module.exports = {
         
         // 检查API返回状态
         if (!(jsonData.code === 0 || jsonData.code === "ok" || jsonData.status === 0)) {
-          console.error(`获取详情数据失败: ${JSON.stringify(jsonData)}`);
+          console.error(`[蓝莓短剧] 获取详情数据失败: ${JSON.stringify(jsonData)}`);
           throw new Error(`获取详情数据失败: ${jsonData.msg || '未知错误'}`);
         }
         
@@ -217,8 +246,8 @@ module.exports = {
             const episodeNum = theater.num || (index + 1);
             const videoUrl = theater.son_video_url || '';
             
-            // 对所有URL都使用代理，确保一致性
-            const proxyUrl = this.addCorsProxy(videoUrl, playHeaders);
+            // 使用新的proxy接口
+            const proxyUrl = proxy.addCorsProxy(videoUrl, playHeaders);
             return `${episodeNum}$${proxyUrl}`;
           }).join('#');
           
@@ -227,8 +256,8 @@ module.exports = {
             const epName = `第${theater.num || (index+1)}集`;
             const epUrl = theater.son_video_url || '';
             
-            // 对所有URL都使用代理，确保一致性
-            const proxyUrl = this.addCorsProxy(epUrl, playHeaders);
+            // 使用新的proxy接口
+            const proxyUrl = proxy.addCorsProxy(epUrl, playHeaders);
             
             return {
               name: epName,
@@ -268,53 +297,8 @@ module.exports = {
           playList: playList // 保留旧格式，兼容现有代码
         };
       } catch (e) {
-        console.error(`获取详情内容异常: ${e.message}`);
+        console.error(`[蓝莓短剧] 获取详情内容异常: ${e.message}`);
         throw e; // 重新抛出异常，以便外部处理
       }
-    },
-    
-    /**
-     * 添加CORS代理前缀
-     * @param {string} url - 要代理的URL
-     * @param {Object} [headers] - 需要传递的请求头
-     * @returns {string} 代理后的URL
-     */
-    addCorsProxy(url, headers) {
-      // 如果URL已经包含了代理前缀，则直接返回
-      if (url.includes('/proxy?url=')) {
-        return url;
-      }
-      
-      // 如果URL为空，直接返回
-      if (!url) {
-        return '';
-      }
-      
-      // 始终使用代理，不再进行条件判断
-      // 使用系统内置的CORS代理服务
-      let PROXY_BASE_URL = '/proxy?url=';
-      
-      // 将headers转换为JSON字符串并进行编码
-      if (headers && Object.keys(headers).length > 0) {
-        // 确保headers是一个包含所有必要信息的干净对象
-        const cleanHeaders = {};
-        
-        // 只保留重要的头信息
-        if (headers.Referer || headers.referer) {
-          cleanHeaders.Referer = headers.Referer || headers.referer;
-        }
-        
-        if (headers["User-Agent"]) {
-          cleanHeaders["User-Agent"] = headers["User-Agent"];
-        }
-        
-        // 转换为JSON字符串并编码
-        const encodedHeaders = encodeURIComponent(JSON.stringify(cleanHeaders));
-        PROXY_BASE_URL = `/proxy?headers=${encodedHeaders}&url=`;
-      }
-      
-      // 使用encodeURIComponent编码整个URL
-      const encodedUrl = encodeURIComponent(url);
-      return `${PROXY_BASE_URL}${encodedUrl}`;
     }
   };
