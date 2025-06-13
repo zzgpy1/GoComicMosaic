@@ -15,11 +15,6 @@ import (
 // 支持GET、POST等各种HTTP方法，并保持请求方法的一致性
 func ProxyHandler(c *gin.Context) {
 	// 从查询参数中获取目标URL
-	method1 := c.Request.Method
-	log.Printf("000000000000000000请求方法: %s", method1)
-	log.Printf("000000000000000000请求URL: %s", c.Request.URL)
-	log.Printf("000000000000000000请求体: %s", c.Request.Body)
-
 	targetURL := c.Query("url")
 	if targetURL == "" {
 		c.JSON(http.StatusBadRequest, gin.H{

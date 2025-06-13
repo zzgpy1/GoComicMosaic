@@ -64,7 +64,6 @@ module.exports = {
         }
         
         const jsonData = await response.json();
-        console.log(`[蓝莓短剧] 获取token成功: ${JSON.stringify(jsonData)}`);
         
         if (jsonData.code === 0 || jsonData.code === "ok" || jsonData.status === 0) {
           // 直接将token设置到headers中

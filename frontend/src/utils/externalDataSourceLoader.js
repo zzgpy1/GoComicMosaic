@@ -128,6 +128,21 @@ function validateDataSource(dataSource) {
 }
 
 /**
+ * 简单的字符串哈希函数
+ * @param {string} str - 要哈希的字符串
+ * @returns {string} - 哈希结果（16进制）
+ */
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转换为32位整数
+  }
+  return Math.abs(hash).toString(16).substring(0, 8); // 取绝对值并转为16进制，截取前8位
+}
+
+/**
  * 生成数据源ID
  * @param {string} name - 数据源名称
  * @param {string} url - 数据源URL
@@ -136,6 +151,8 @@ function validateDataSource(dataSource) {
 function generateDataSourceId(name, url) {
   // 从URL中提取文件名作为前缀
   const fileName = url.split('/').pop().replace('.js', '');
-  // 组合ID: ext_{文件名}_{时间戳}
-  return `ext_${fileName}_${Date.now()}`;
+  
+  // 使用URL的哈希值作为唯一标识符，而不是时间戳
+  // 这样可以确保相同的URL每次生成相同的ID
+  return `ext_${fileName}_${hashString(url)}`;
 } 
