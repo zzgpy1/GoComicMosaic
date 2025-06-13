@@ -691,6 +691,9 @@ export default {
       isChangingVideo.value = true; // 标记正在切换视频，避免显示搜索结果
       
       try {
+        // 增加playerKey以强制重新创建播放器组件
+        playerKey.value += 1;
+        
         // 临时存储当前视频源和剧集信息
         const newSource = {
           src: episode.url,
