@@ -68,6 +68,12 @@
 
     <!-- 播放器区域 -->
     <div v-if="isPlaying" class="player-section">
+      <div class="player-header">
+        <h2>{{ streamInfo.title }}</h2>
+        <div class="stream-info">
+          <span v-if="playerError" class="error-text">{{ playerError }}</span>
+        </div>
+      </div>
       <div class="player-container">
         <VideoPlayer 
           :sources="currentStreamSources"
@@ -79,16 +85,11 @@
           @pause="onPlayerPause"
           @ended="onPlayerEnded"
           @error="onPlayerError"
-          @quality-changed="onQualityChanged"
         />
 
         <div class="stream-info" v-if="streamInfo">
           <div class="stream-info-header">
             <h2>{{ streamInfo.title }}</h2>
-            <div class="stream-quality-info" v-if="currentQuality">
-              <span class="quality-label">质量:</span>
-              <span class="quality-value">{{ currentQuality }}</span>
-            </div>
           </div>
 
           <!-- 添加简介折叠功能，包含演职人员信息 -->
@@ -257,7 +258,6 @@ export default {
     const isLoading = ref(false);
     const isVideoLoading = ref(false); // 新增：专门用于视频加载状态，不显示全屏遮罩
     const isChangingVideo = ref(false); // 新增：标记视频切换过程中，避免显示搜索结果
-    const currentQuality = ref('');
     const playHistory = ref([]);
     const playerError = ref(null);
     const searchResults = ref([]); // 存储API搜索结果
@@ -931,17 +931,20 @@ export default {
           const dataSourceManager = getDataSourceManager();
           dataSourceManager.setCurrentDataSource(selectedDataSource.value);
           
-          // 如果当前有搜索关键词，使用新数据源重新搜索
-          if (searchQuery.value.trim()) {
+          // 仅在搜索结果界面且有搜索关键词时，才使用新数据源重新搜索
+          if (searchQuery.value.trim() && (!isPlaying.value || showingSearchResults.value)) {
             performApiSearch();
           }
         }
         
-        // 更新URL参数，清除播放相关参数
-        router.replace({
-          path: '/streams',
-          query: {}
-        });
+        // 仅在非播放状态时清除URL参数
+        if (!isPlaying.value) {
+          // 更新URL参数，清除播放相关参数
+          router.replace({
+            path: '/streams',
+            query: {}
+          });
+        }
       } catch (error) {
         console.error('切换数据源失败:', error);
         alert(`切换数据源失败: ${error.message}`);
@@ -1003,11 +1006,6 @@ export default {
     const onPlayerError = (error) => {
       console.error('播放器错误:', error);
       playerError.value = error;
-    };
-    
-    const onQualityChanged = (quality) => {
-      console.log('视频质量改变:', quality);
-      currentQuality.value = quality;
     };
     
     const changePage = (page) => {
@@ -1152,7 +1150,6 @@ export default {
       isLoading,
       isVideoLoading,
       isChangingVideo,
-      currentQuality,
       playHistory,
       playerError,
       searchResults,
@@ -1175,7 +1172,6 @@ export default {
       onPlayerPause,
       onPlayerEnded,
       onPlayerError,
-      onQualityChanged,
       testWithMockData,
       handleSearch,
       clearPlayHistory,

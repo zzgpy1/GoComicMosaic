@@ -120,10 +120,11 @@ docker run -d --name dongman \
 ![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/25.gif)
 
 ## 全面支持管理后台设置网站信息和采集解析源
+目前美漫共建官网内置30条数据源  
 ![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/26.gif)
 
 ## 支持外挂在线播放数据源
-会写爬虫的用户可以自己添加数据源，更加灵活
+会写爬虫的用户可以自己添加数据源，更加灵活。参考[外接数据源开发者文档](https://github.com/fish2018/GoComicMosaic/blob/main/docs/%E5%A4%96%E6%8E%A5%E6%95%B0%E6%8D%AE%E6%BA%90%E5%BC%80%E5%8F%91%E6%96%87%E6%A1%A3.md)，提供[爬虫示例及模板](https://github.com/fish2018/GoComicMosaic/tree/main/docs/%E5%A4%96%E6%8E%A5%E6%95%B0%E6%8D%AE%E6%BA%90%E7%A4%BA%E4%BE%8B%E5%8F%8A%E6%A8%A1%E6%9D%BF)  
 ![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/27.gif)
 
 ## 支持从TMDB一键导入资源库
@@ -429,6 +430,34 @@ sudo supervisorctl status dm
 sudo systemctl status nginx
 ```
 
+### 附录(梳理了一些采集站)
+黑木耳 https://www.heimuer.tv/  
+魔都 https://moduzy2.com/  
+卧龙 https://wolongzy.tv  
+爱坤 https://ikunzy.vip/  
+速播 https://subocaiji.com  
+量子 https://lzizy.net/  
+极速 https://www.jisuzy.com/  
+淘片 https://www.taopianzy.com/index.html  
+华为吧 https://huawei8.live/  
+豆瓣资源 https://dbzy.tv/  
+茅台 https://mtzy.me/  
+非凡资源 http://www.ffzy.tv/  
+红牛 https://hongniuziyuan.com/  
+无线 https://wuxianzy5.com/  
+金马 https://www.jmzy1.com/  
+魔爪 https://mzzy.me/  
+暴风 https://bfzy2.tv/  
+无尽 https://www.wujinzy.net/  
+优质 https://yzzy.tv/  
+U酷 https://www.ukuzy.com/  
+最大 https://zuidafile.com/  
+360 https://360zy.com/  
+如意 https://www.ryzy9.tv/  
+天堂 http://dyttzyw.tv/  
+爱奇艺 https://www.iqiyizy.com/  
+天涯 https://tyyszy.com/  
+
 ### 美漫资源共建进度
 - Rick and Morty（瑞克和莫蒂）✅
 - South Park（南方公园）✅
@@ -494,6 +523,24 @@ sudo systemctl status nginx
 - Afro Samurai（爆炸头武士）✅
 - Paradise PD（天堂镇警局）✅
 - Ugly Americans（俗世乐土 / 丑陋的美国人）✅
+- Your Friendly Neighborhood Spider-Man（你的友好邻居蜘蛛侠）✅
+- CatDog（猫狗）✅
+- Creature Commandos（生物突击队）✅
+- Scavengers Reign（拾荒者统治）✅
+- Primal（史前战纪）✅
+- Pantheon（万神殿）✅
+- Summer Camp Island（夏令营岛）✅
+- Teen Titans（少年泰坦）✅
+- My Life as a Teenage Robot（青少年机器人）✅
+- Bordertown（边城小镇）✅
+- Motorcity（热血车城）✅
+- Invader Zim（外星侵略者吉姆）✅
+- The Transformers（变形金刚）✅
+- Challenge of the GoBots（百变雄师）✅
+- Ultraman（奥特曼）✅ 
+- Goof Troop（高飞家族）✅
+- Disney's House of Mouse（米老鼠群星会）✅
+- Bee and PuppyCat（蜂妹与狗狗猫）✅
 - Bob's Burgers（开心汉堡店）
 - SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
@@ -501,7 +548,6 @@ sudo systemctl status nginx
 - We Bare Bears（咱们裸熊）
 - Arcane（奥术）
 - Castlevania（恶魔城）
-- Teen Titans Go!（少年泰坦出击）
 - Dexter's Laboratory（德克斯特的实验室）
 - Hey Arnold!（嘿！阿诺德）
 - Robot Chicken（机器鸡）
@@ -519,16 +565,12 @@ sudo systemctl status nginx
 - Love, Death & Robots（爱，死亡与机器人）
 - Clerks: The Animated Series（店员动画系列）
 - Static Shock（静电侠）
-- Scavengers Reign（拾荒者统治）
-- Primal（史前战纪）
 - HouseBroken（一家之主）
 - Star vs. the Forces of Evil（星蝶公主）
 - The Great North（东倒西歪）
 - House of Demons（恶魔之家）
 - The Amazing Digital Circus（神奇数字马戏团）
-- Summer Camp Island（夏令营岛）
 - The Midnight Gospel（午夜福音）
-- Pantheon（万神殿）
 - Ten Year Old Tom（十岁的汤姆）
 - The Boys Presents: Diabolical（黑袍纠察队劣迹）
 - Dead End: Paranormal Park（灵异游乐园无处可逃）
@@ -563,9 +605,14 @@ sudo systemctl status nginx
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
+-202506141634   
+✅ 去掉点播时的质量设置，提升加载速度  
+✅ 播放器界面切换数据源时，不再自动搜索  
+✅ 资源详情页大图预览区限制高度，避免出现竖图时过于突兀  
+✅ 梳理文档，集中放到docs目录下  
 -202506121410  
 ✅ 后端跨域转发代理支持所有请求方法，支持透传headers   
-✅ 重新优化外接数据源，解决跨域问题，提供外接数据源爬虫示例lanmei.js和模板template.js   
+✅ 重新优化外接数据源，解决跨域问题，提供外接数据源爬虫示例lanmei.js、rebo.js和模板 
 -202506112021  
 ✅ 修复TMDB_API_KEY泄露问题   
 ✅ 详情页增加一键分享功能    

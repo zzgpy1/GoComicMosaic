@@ -1,6 +1,6 @@
 module.exports = {
   // 必要属性
-  name: "热播APP",
+  name: "热播APP(自定义爬虫)",
   baseUrl: "http://v.rbotv.cn",
   
   // 请求头

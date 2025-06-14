@@ -49,12 +49,11 @@ export default {
       default: 'auto'
     }
   },
-  emits: ['ready', 'play', 'pause', 'ended', 'error', 'quality-changed'],
+  emits: ['ready', 'play', 'pause', 'ended', 'error'],
   setup(props, { emit }) {
     const videoElement = ref(null);
     const player = ref(null);
     const error = ref('');
-    const currentQuality = ref('auto');
     const isFullscreen = ref(false);
     
     // 初始化播放器
@@ -86,7 +85,6 @@ export default {
               'playToggle',
               'progressControl',
               'volumePanel',
-              'qualitySelector', // 启用质量选择器
               'fullscreenToggle',
             ]
           },
@@ -119,18 +117,6 @@ export default {
             isFullscreen.value = player.value.isFullscreen();
             handleFullscreenChange(isFullscreen.value);
           });
-          
-          // 监听质量变化
-          if (this.qualityLevels && typeof this.qualityLevels === 'function') {
-            const qualityLevels = this.qualityLevels();
-            qualityLevels.on('change', () => {
-              const activeQuality = qualityLevels.selectedIndex > -1 ? 
-                `${Math.round(qualityLevels[qualityLevels.selectedIndex].bandwidth / 1000)} kbps` : 
-                'auto';
-              currentQuality.value = activeQuality;
-              emit('quality-changed', activeQuality);
-            });
-          }
           
           // 优化HLS播放设置
           const isHLS = props.sources.length > 0 && 
@@ -311,7 +297,6 @@ export default {
       videoElement,
       player,
       error,
-      currentQuality,
       isFullscreen,
       retryPlayback
     };

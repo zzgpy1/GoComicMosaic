@@ -5,7 +5,7 @@
 
 module.exports = {
     // 必要属性
-    name: "蓝莓短剧",
+    name: "蓝莓短剧(自定义爬虫)",
     baseUrl: "https://app.whjzjx.cn",
        
     // 请求头
