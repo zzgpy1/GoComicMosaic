@@ -211,10 +211,6 @@ export default {
     },
     
     async importResource() {
-      if (!this.isLoggedIn) {
-        this.$router.push('/login?redirect=/tmdb-search');
-        return;
-      }
       
       this.importing = true;
       
