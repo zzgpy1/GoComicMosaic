@@ -173,6 +173,21 @@ const loadFooterSettings = async () => {
     console.log('页脚设置加载成功:', footerSettings.value);
   } catch (error) {
     console.error('获取页脚设置失败:', error);
+    // 尝试从localStorage直接获取
+    try {
+      const cachedData = localStorage.getItem('site_info_cache');
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        if (parsed.data && parsed.data.links) {
+          console.log('从localStorage直接恢复页脚设置');
+          footerSettings.value = parsed.data;
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('从localStorage恢复页脚设置失败:', e);
+    }
+    
     // 使用默认设置
     footerSettings.value = {
       links: [

@@ -332,53 +332,60 @@ func ConvertJsonFieldsToText() error {
 
 // InitSiteSettings 初始化网站设置
 func InitSiteSettings() error {
-	// 默认的页脚设置
-	footerSettings := JsonMap{
-		"links": []map[string]interface{}{
-			{"text": "关于我们", "url": "/about", "type": "internal"},
-			{"text": "Telegram", "url": "https://t.me/xueximeng", "icon": "bi-telegram", "type": "external"},
-			{"text": "GitHub", "url": "https://github.com/fish2018/GoComicMosaic", "icon": "bi-github", "type": "external"},
-			{"text": "在线点播", "url": "/streams", "type": "internal"},
-			{"text": "漫迪小站", "url": "https://mdsub.top/", "type": "external"},
-			{"text": "三次元成瘾者康复中心", "url": "https://www.kangfuzhongx.in/", "type": "external"},
-		},
-		"copyright": "© 2025 美漫资源共建. 保留所有权利",
-		"show_visitor_count": true,
-	}
-	
-	// 将设置转为JSON
-	footerJSON, err := json.Marshal(footerSettings)
-	if err != nil {
-		return fmt.Errorf("序列化页脚设置失败: %w", err)
-	}
-	
-	// 插入或更新页脚设置
-	_, err = DB.Exec(`
-		INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) 
-		VALUES ('footer', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-		ON CONFLICT(setting_key) DO UPDATE SET 
-		setting_value = ?, 
-		updated_at = CURRENT_TIMESTAMP
-	`, string(footerJSON), string(footerJSON))
-	
-	if err != nil {
-		return fmt.Errorf("保存页脚设置失败: %w", err)
+	// 检查是否已经存在设置
+	var count int
+	if err := DB.Get(&count, "SELECT COUNT(*) FROM site_settings WHERE setting_key = 'info'"); err != nil {
+		return fmt.Errorf("检查网站设置失败: %w", err)
 	}
 
-	// 插入或更新info设置
-	_, err = DB.Exec(`
-		INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) 
-		VALUES ('info', '{"title": "动漫资源平台", "description": "分享优质动漫资源", "logoText": "动漫资源", "keywords": "动漫,资源,分享", "show_visitor_count": true}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-		ON CONFLICT(setting_key) DO UPDATE SET 
-		setting_value = EXCLUDED.setting_value,
-		updated_at = CURRENT_TIMESTAMP
-	`)
-	
-	if err != nil {
-		return fmt.Errorf("保存info设置失败: %w", err)
+	// 如果已经有info设置，不进行覆盖
+	if count == 0 {
+		log.Printf("未检测到网站基本信息设置，创建默认设置...")
+		// 默认的页脚设置
+		footerSettings := JsonMap{
+			"links": []map[string]interface{}{
+				{"text": "关于我们", "url": "/about", "type": "internal"},
+				{"text": "Telegram", "url": "https://t.me/xueximeng", "icon": "bi-telegram", "type": "external"},
+				{"text": "GitHub", "url": "https://github.com/fish2018/GoComicMosaic", "icon": "bi-github", "type": "external"},
+				{"text": "在线点播", "url": "/streams", "type": "internal"},
+				{"text": "漫迪小站", "url": "https://mdsub.top/", "type": "external"},
+				{"text": "三次元成瘾者康复中心", "url": "https://www.kangfuzhongx.in/", "type": "external"},
+			},
+			"copyright": "© 2025 美漫资源共建. 保留所有权利",
+			"show_visitor_count": true,
+		}
+		
+		// 将设置转为JSON
+		footerJSON, err := json.Marshal(footerSettings)
+		if err != nil {
+			return fmt.Errorf("序列化页脚设置失败: %w", err)
+		}
+		
+		// 插入页脚设置（仅在不存在时）
+		_, err = DB.Exec(`
+			INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) 
+			VALUES ('footer', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		`, string(footerJSON))
+		
+		if err != nil {
+			return fmt.Errorf("保存页脚设置失败: %w", err)
+		}
+
+		// 插入info设置（仅在不存在时）
+		_, err = DB.Exec(`
+			INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) 
+			VALUES ('info', '{"title": "动漫资源平台", "description": "分享优质动漫资源", "logoText": "动漫资源", "keywords": "动漫,资源,分享", "show_visitor_count": true}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		`)
+		
+		if err != nil {
+			return fmt.Errorf("保存info设置失败: %w", err)
+		}
+		
+		log.Printf("网站设置初始化完成")
+	} else {
+		log.Printf("检测到已有网站设置，跳过初始化")
 	}
 	
-	log.Printf("网站设置初始化完成")
 	return nil
 }
 
