@@ -155,6 +155,7 @@
                   <div class="links-edit-card">
                     <p class="link-info-text">
                       您可以管理网盘链接或在线观看地址，方便用户获取资源。每种类型可添加多个链接。
+                      <span class="drag-tip"><i class="bi bi-arrows-move"></i> 提示：可拖拽链接项进行排序</span>
                     </p>
                     
                     <!-- 链接类型选项卡 -->
@@ -181,59 +182,72 @@
                           <p>暂无{{ getCategoryDisplayName(category) }}链接，点击下方按钮添加</p>
                         </div>
                         
-                        <!-- 已添加的链接 -->
+                        <!-- 已添加的链接 - 使用 vuedraggable 实现拖拽排序 -->
                         <div class="links-list">
-                          <div class="link-item" v-for="(link, index) in editLinks[category]" :key="index">
-                            <div class="link-inputs">
-                              <div class="input-group">
-                                <div class="input-prefix">
-                                  <i class="bi bi-link-45deg"></i>
-                                  <span>链接</span>
+                          <draggable 
+                            v-model="editLinks[category]" 
+                            item-key="tempId"
+                            handle=".drag-handle"
+                            ghost-class="link-ghost"
+                            animation="300"
+                          >
+                            <template #item="{ element, index }">
+                              <div class="link-item">
+                                <div class="drag-handle">
+                                  <i class="bi bi-grip-vertical"></i>
                                 </div>
-                                <input 
-                                  type="text" 
-                                  class="form-control custom-input" 
-                                  v-model="link.url" 
-                                  placeholder="输入链接地址"
-                                >
-                              </div>
-                              
-                              <div class="input-group">
-                                <div class="input-prefix">
-                                  <i class="bi bi-key"></i>
-                                  <span>密码</span>
+                                <div class="link-inputs">
+                                  <div class="input-group">
+                                    <div class="input-prefix">
+                                      <i class="bi bi-link-45deg"></i>
+                                      <span>链接</span>
+                                    </div>
+                                    <input 
+                                      type="text" 
+                                      class="form-control custom-input" 
+                                      v-model="element.url" 
+                                      placeholder="输入链接地址"
+                                    >
+                                  </div>
+                                  
+                                  <div class="input-group">
+                                    <div class="input-prefix">
+                                      <i class="bi bi-key"></i>
+                                      <span>密码</span>
+                                    </div>
+                                    <input 
+                                      type="text" 
+                                      class="form-control custom-input" 
+                                      v-model="element.password" 
+                                      placeholder="提取码(可选)"
+                                    >
+                                  </div>
+                                  
+                                  <div class="input-group">
+                                    <div class="input-prefix">
+                                      <i class="bi bi-info-circle"></i>
+                                      <span>备注</span>
+                                    </div>
+                                    <input 
+                                      type="text" 
+                                      class="form-control custom-input" 
+                                      v-model="element.note" 
+                                      placeholder="如:第1季"
+                                    >
+                                  </div>
                                 </div>
-                                <input 
-                                  type="text" 
-                                  class="form-control custom-input" 
-                                  v-model="link.password" 
-                                  placeholder="提取码(可选)"
+                                
+                                <button 
+                                  type="button" 
+                                  class="remove-link-btn"
+                                  @click="removeEditLink(category, index)"
+                                  title="删除链接"
                                 >
+                                  <i class="bi bi-trash"></i>
+                                </button>
                               </div>
-                              
-                              <div class="input-group">
-                                <div class="input-prefix">
-                                  <i class="bi bi-info-circle"></i>
-                                  <span>备注</span>
-                                </div>
-                                <input 
-                                  type="text" 
-                                  class="form-control custom-input" 
-                                  v-model="link.note" 
-                                  placeholder="如:第1季"
-                                >
-                              </div>
-                            </div>
-                            
-                            <button 
-                              type="button" 
-                              class="remove-link-btn"
-                              @click="removeEditLink(category, index)"
-                              title="删除链接"
-                            >
-                              <i class="bi bi-trash"></i>
-                            </button>
-                          </div>
+                            </template>
+                          </draggable>
                         </div>
                         
                         <!-- 添加链接按钮 -->
@@ -487,6 +501,7 @@ import axios from 'axios'
 import { isAdmin } from '../utils/auth'
 import { getImageUrl } from '@/utils/imageUtils'
 import ShareResource from '@/components/ShareResource.vue'
+import draggable from 'vuedraggable'  // 导入 vuedraggable 组件
 
 const route = useRoute()
 const router = useRouter()
@@ -657,12 +672,20 @@ const startEdit = () => {
   if (resource.value.links) {
     for (const category in resource.value.links) {
       if (editLinks[category] && resource.value.links[category]) {
-        // 确保链接格式一致，处理字符串和对象两种格式
+        // 确保链接格式一致，处理字符串和对象两种格式，并添加唯一的tempId
         editLinks[category] = resource.value.links[category].map(link => {
           if (typeof link === 'string') {
-            return { url: link, password: '', note: '' }
+            return { 
+              url: link, 
+              password: '', 
+              note: '',
+              tempId: Date.now() + Math.random().toString(36).substr(2, 9) // 添加唯一的tempId
+            }
           } else {
-            return { ...link }
+            return { 
+              ...link,
+              tempId: Date.now() + Math.random().toString(36).substr(2, 9) // 添加唯一的tempId
+            }
           }
         })
       }
@@ -685,7 +708,8 @@ const addEditLink = (category) => {
   editLinks[category].push({
     url: '',
     password: '',
-    note: ''
+    note: '',
+    tempId: Date.now() + Math.random().toString(36).substr(2, 9) // 添加唯一的tempId
   })
 }
 
@@ -788,7 +812,11 @@ const saveChanges = async () => {
       // 过滤掉空链接
       const validLinks = editLinks[category].filter(link => link.url.trim() !== '')
       if (validLinks.length > 0) {
-        linksToSubmit[category] = validLinks
+        // 移除tempId属性，不需要保存到后端
+        linksToSubmit[category] = validLinks.map(link => {
+          const { tempId, ...linkWithoutTempId } = link;
+          return linkWithoutTempId;
+        });
         hasLinks = true
       }
     }
@@ -1024,5 +1052,45 @@ onMounted(() => {
   background-color: #2563eb;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
+}
+
+/* 拖拽相关样式 */
+.drag-handle {
+  cursor: move;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--text-muted);
+}
+
+.drag-handle i {
+  font-size: 1.2rem;
+}
+
+.drag-tip {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background-color: var(--card-bg);
+  transition: all 0.2s ease;
+}
+
+.link-ghost {
+  opacity: 0.5;
+  background: var(--highlight-bg);
+  border: 1px dashed var(--primary-color);
+}
+
+.link-inputs {
+  flex: 1;
+  padding: 12px;
 }
 </style>
