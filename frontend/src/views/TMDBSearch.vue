@@ -39,82 +39,415 @@
     <div v-else-if="importSuccess" class="success-message">
       <i class="bi bi-check-circle-fill"></i>
       <p>资源已成功导入！</p>
-
     </div>
 
     <!-- 搜索结果和预览 -->
-    <div v-else-if="tmdbResource" class="preview-container">
+    <div v-else-if="tmdbResource">
       <div class="resource-detail">
-        <!-- 预览界面，重新组织结构 -->
-        <div class="resource-content">
-          <!-- 左侧：图片区域 -->
-          <div class="media-section">
-            <!-- 大图展示区 -->
-            <div class="main-image-container" @click="previewImage(currentImage)">
-              <img
-                :src="currentImage"
-                class="resource-poster"
-                :alt="tmdbResource.title || tmdbResource.title_en"
-              >
+        <!-- 编辑模式 -->
+        <div v-if="isEditing" class="edit-form-container">
+          <form @submit.prevent="saveChanges" class="edit-card">
+            <div class="edit-card-header">
+              <h3>编辑TMDB资源</h3>
+              <button type="button" class="btn-close" @click="cancelEdit"></button>
             </div>
             
-            <!-- 缩略图滚动区 -->
-            <div class="thumbnails-container" v-if="tmdbResource.images && tmdbResource.images.length > 1">
-              <div class="thumbnails-scroll">
-                <div
-                  v-for="(image, index) in tmdbResource.images"
-                  :key="index"
-                  class="thumbnail"
-                  :class="{ active: currentImage === image }"
-                  @click="selectImage(image)"
-                >
-                  <img
-                    :src="image"
-                    class="thumbnail-img"
-                    :alt="`缩略图${index+1}`"
+            <div class="edit-card-body">
+              <div class="form-group">
+                <label for="title" class="form-label">中文标题</label>
+                <input type="text" class="form-control custom-input" id="title" v-model="editForm.title" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="title_en" class="form-label">英文标题</label>
+                <input type="text" class="form-control custom-input" id="title_en" v-model="editForm.title_en">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">资源类型</label>
+                <div class="resource-type-options">
+                  <div 
+                    v-for="type in resourceTypes" 
+                    :key="type"
+                    class="resource-type-option"
+                    :class="{'selected': isTypeSelected(type)}"
+                    @click="selectResourceType(type)"
                   >
+                    <span class="option-text">{{ type }}</span>
+                    <i v-if="isTypeSelected(type)" class="bi bi-check-circle-fill check-icon"></i>
+                  </div>
+                </div>
+                <div class="selected-types-preview">
+                  <span>已选类型：</span>
+                  <span v-if="editForm.resource_type" class="selected-type-text">{{ editForm.resource_type }}</span>
+                  <span v-else class="text-muted">未选择</span>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="description" class="form-label">简介</label>
+                <textarea class="form-control custom-textarea" id="description" rows="6" v-model="editForm.description" required></textarea>
+              </div>
+              
+              <!-- 图片管理部分 -->
+              <div class="form-group">
+                <label class="form-label">图片管理</label>
+                
+                <!-- 现有图片展示和管理 -->
+                <div class="image-management-section">
+                  <h6 class="section-subtitle">已有图片 ({{ editForm.images.length }})</h6>
+                  <div class="image-grid">
+                    <div v-for="(image, index) in editForm.images" :key="index" class="image-item" :class="{'is-poster': image === editForm.poster_image}">
+                      <div class="image-preview-container">
+                        <img 
+                          :src="image" 
+                          class="image-preview" 
+                          alt="资源图片" 
+                          @click="previewEditImage(image)"
+                        >
+                        <div class="image-overlay">
+                          <button 
+                            type="button" 
+                            class="image-action-btn set-poster-btn" 
+                            @click.stop="setPosterImage(image)"
+                            :disabled="image === editForm.poster_image"
+                          >
+                            <i class="bi bi-star-fill me-1"></i>
+                            {{ image === editForm.poster_image ? '当前海报' : '设为海报' }}
+                          </button>
+                          <button 
+                            type="button" 
+                            class="image-action-btn remove-btn" 
+                            @click.stop="removeImage(index)"
+                            :disabled="editForm.images.length <= 1"
+                          >
+                            <i class="bi bi-trash me-1"></i>删除
+                          </button>
+                        </div>
+                      </div>
+                      <div class="poster-badge" v-if="image === editForm.poster_image">
+                        <i class="bi bi-star-fill"></i> 海报图片
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 添加新图片 -->
+                <div class="upload-section">
+                  <h6 class="section-subtitle">添加新图片</h6>
+                  <div 
+                    class="dropzone-container" 
+                    :class="{'active-dropzone': isDragging}"
+                    @dragenter.prevent="isDragging = true"
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    @drop.prevent="handleFileDrop"
+                  >
+                    <div class="dropzone-content">
+                      <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
+                      <p>拖拽图片文件到此处，或</p>
+                      <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
+                        <i class="bi bi-image me-2"></i><span class="file-btn-text">选择文件</span>
+                      </label>
+                      <input 
+                        type="file" 
+                        id="file-upload" 
+                        @change="handleFilesSelection" 
+                        multiple 
+                        accept="image/*" 
+                        class="d-none"
+                      >
+                    </div>
+                  </div>
+                  
+                  <!-- 上传进度 -->
+                  <div v-if="uploading" class="upload-progress">
+                    <div class="progress-info">
+                      <div class="spinner"></div>
+                      <div>正在上传图片 {{ currentUploadIndex }}/{{ totalUploadCount }}，请稍等...</div>
+                    </div>
+                    <div class="progress-bar-container">
+                      <div 
+                        class="progress-bar-inner" 
+                        :style="{width: `${uploadProgress}%`}" 
+                      >{{ uploadProgress }}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 链接管理部分 -->
+              <div class="form-group">
+                <label class="form-label">资源链接管理</label>
+                <div class="links-edit-card">
+                  <p class="link-info-text">
+                    您可以管理网盘链接或在线观看地址，方便用户获取资源。每种类型可添加多个链接。
+                  </p>
+                  
+                  <!-- 链接类型选项卡 -->
+                  <div class="links-tabs">
+                    <button 
+                      v-for="(category, categoryIndex) in Object.keys(editLinks)" 
+                      :key="categoryIndex"
+                      class="tab-btn"
+                      :class="{ active: editActiveCategory === category }"
+                      @click.prevent="editActiveCategory = category"
+                    >
+                      {{ getCategoryDisplayName(category) }}
+                      <span v-if="editLinks[category].length > 0" class="tab-badge">{{ editLinks[category].length }}</span>
+                    </button>
+                  </div>
+                  
+                  <!-- 链接输入区域 -->
+                  <div class="links-content">
+                    <div v-for="(category, categoryIndex) in Object.keys(editLinks)" :key="categoryIndex" 
+                         v-show="editActiveCategory === category"
+                         class="link-category-content">
+                      <div v-if="editLinks[category].length === 0" class="empty-links">
+                        <i class="bi bi-link-45deg empty-icon"></i>
+                        <p>暂无{{ getCategoryDisplayName(category) }}链接，点击下方按钮添加</p>
+                      </div>
+                      
+                      <!-- 已添加的链接 -->
+                      <div class="links-list">
+                        <div class="link-item" v-for="(link, index) in editLinks[category]" :key="index">
+                          <div class="link-inputs">
+                            <div class="input-group">
+                              <div class="input-prefix">
+                                <i class="bi bi-link-45deg"></i>
+                                <span>链接</span>
+                              </div>
+                              <input 
+                                type="text" 
+                                class="form-control custom-input" 
+                                v-model="link.url" 
+                                placeholder="输入链接地址"
+                              >
+                            </div>
+                            
+                            <div class="input-group">
+                              <div class="input-prefix">
+                                <i class="bi bi-key"></i>
+                                <span>密码</span>
+                              </div>
+                              <input 
+                                type="text" 
+                                class="form-control custom-input" 
+                                v-model="link.password" 
+                                placeholder="提取码(可选)"
+                              >
+                            </div>
+                            
+                            <div class="input-group">
+                              <div class="input-prefix">
+                                <i class="bi bi-info-circle"></i>
+                                <span>备注</span>
+                              </div>
+                              <input 
+                                type="text" 
+                                class="form-control custom-input" 
+                                v-model="link.note" 
+                                placeholder="如:第1季"
+                              >
+                            </div>
+                          </div>
+                          
+                          <button 
+                            type="button" 
+                            class="remove-link-btn"
+                            @click="removeEditLink(category, index)"
+                            title="删除链接"
+                          >
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <!-- 添加链接按钮 -->
+                      <div class="add-link-container">
+                        <button 
+                          type="button" 
+                          class="btn-custom btn-outline add-link-btn"
+                          @click="addEditLink(category)"
+                        >
+                          <i class="bi bi-plus-circle me-2"></i> 添加{{ getCategoryDisplayName(category) }}链接
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-if="saveError" class="save-error">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                {{ saveError }}
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-custom btn-primary save-btn" :disabled="saving">
+                  <span v-if="saving" class="spinner small-spinner me-1"></span>
+                  <i v-else class="bi bi-check-circle me-2"></i>
+                  保存
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+        
+        <!-- 预览界面 -->
+        <div v-else>
+          <!-- 顶部横幅 -->
+          <div class="preview-banner">
+            <div class="banner-content">
+              <!-- 左侧：标题区域 -->
+              <div class="banner-title-area">
+                <div class="title-text">
+                  <h1 class="title">{{ tmdbResource.title }}</h1>
+                  <h2 class="subtitle">{{ tmdbResource.title_en }}</h2>
+                </div>
+                <!-- 分类标签移到这里，在移动端会显示在标题右侧 -->
+                <div class="mobile-badge-container">
+                  <div class="resource-type-badge">
+                    {{ tmdbResource.resource_type }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 右侧：分类和操作按钮 -->
+              <div class="banner-action-area">
+                <!-- 桌面端分类标签 -->
+                <div class="desktop-badge-container">
+                  <div class="resource-type-badge">
+                    {{ tmdbResource.resource_type }}
+                  </div>
+                </div>
+                <div class="action-buttons">
+                  <button 
+                    @click="startEdit"
+                    class="btn-custom btn-outline me-2"
+                  >
+                    <i class="bi bi-pencil-square me-1"></i>
+                    <span class="btn-text">编辑</span>
+                  </button>
+                  <button 
+                    @click="importResource"
+                    class="btn-custom btn-primary import-button"
+                    :disabled="importing"
+                  >
+                    <i class="bi bi-cloud-download me-1"></i>
+                    <span class="import-text">{{ importing ? '导入中...' : '一键导入' }}</span>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
           
-          <!-- 右侧：信息区域 -->
-          <div class="info-section">
-            <!-- 右上：标题区域 -->
-            <div class="resource-header">
-              <div class="header-content">
-                <!-- 标题区域重新组织 -->
-                <div class="title-area">
-                  <!-- 标题和分类/导入按钮 -->
-                  <div class="title-main">
-                    <h1 class="title">{{ tmdbResource.title }}</h1>
-                    <h2 class="subtitle">{{ tmdbResource.title_en }}</h2>
-                  </div>
-                  <!-- 右侧操作区：分类和导入按钮 -->
-                  <div class="action-area">
-                    <div class="resource-type-badge">
-                      {{ tmdbResource.resource_type }}
-                    </div>
-                    <button 
-                      @click="importResource"
-                      class="btn-custom btn-primary import-button-top"
-                      :disabled="importing"
+          <!-- 内容区域容器 -->
+          <div class="content-container">
+            <!-- 左侧：图片区域 -->
+            <div class="media-section">
+              <!-- 大图展示区 -->
+              <div class="main-image-container" @click="previewImage(currentImage)">
+                <img
+                  :src="currentImage"
+                  class="resource-poster"
+                  :alt="tmdbResource.title || tmdbResource.title_en"
+                >
+              </div>
+              
+              <!-- 缩略图滚动区 -->
+              <div class="thumbnails-container" v-if="tmdbResource.images && tmdbResource.images.length > 1">
+                <div class="thumbnails-scroll">
+                  <div
+                    v-for="(image, index) in tmdbResource.images"
+                    :key="index"
+                    class="thumbnail"
+                    :class="{ active: currentImage === image }"
+                    @click="selectImage(image)"
+                  >
+                    <img
+                      :src="image"
+                      class="thumbnail-img"
+                      :alt="`缩略图${index+1}`"
                     >
-                      <i class="bi bi-cloud-download me-1"></i>
-                      <span class="import-text">{{ importing ? '导入中...' : '一键导入' }}</span>
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
             
-            <!-- 右中：简介 -->
-            <div class="description-card">
-              <div class="card-header">
-                <h3>简介</h3>
+            <!-- 右侧：信息区域 -->
+            <div class="info-section">
+              <!-- 简介 -->
+              <div class="description-card">
+                <div class="card-header">
+                  <h3>简介</h3>
+                </div>
+                <div class="card-body">
+                  <p>{{ tmdbResource.description }}</p>
+                </div>
               </div>
-              <div class="card-body">
-                <p>{{ tmdbResource.description }}</p>
+              
+              <!-- 资源链接预览 -->
+              <div v-if="hasResourceLinks" class="links-preview-card">
+                <div class="card-header">
+                  <h3>资源链接</h3>
+                </div>
+                <div class="card-body">
+                  <div class="links-tabs">
+                    <button 
+                      v-for="(links, category) in tmdbResource.links" 
+                      :key="category" 
+                      class="tab-btn" 
+                      :class="{ active: activeCategory === category }" 
+                      @click.prevent="activeCategory = category"
+                      v-show="links.length > 0"
+                    >
+                      {{ getCategoryDisplayName(category) }}
+                      <span class="tab-badge">{{ links.length }}</span>
+                    </button>
+                  </div>
+                  
+                  <div class="links-content">
+                    <div v-for="(links, category) in tmdbResource.links" :key="`content-${category}`" 
+                         class="tab-pane" 
+                         :class="{ active: activeCategory === category }"
+                         v-show="links.length > 0 && activeCategory === category">
+                      
+                      <div class="links-table">
+                        <div class="table-header">
+                          <div class="col-link">链接</div>
+                          <div class="col-password">提取码</div>
+                          <div class="col-note">备注</div>
+                        </div>
+                        <div class="table-body">
+                          <div class="table-row" v-for="(link, index) in links" :key="index">
+                            <div class="col-link" data-label="链接">
+                              <a 
+                                :href="link.url" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                class="link-url"
+                              >
+                                <i class="bi bi-link-45deg"></i>
+                                <span class="url-text">{{ link.url }}</span>
+                                <i class="bi bi-box-arrow-up-right"></i>
+                              </a>
+                            </div>
+                            <div class="col-password" data-label="提取码">
+                              <div v-if="link.password" class="password-text">
+                                {{ link.password }}
+                              </div>
+                              <span v-else class="no-password">-</span>
+                            </div>
+                            <div class="col-note" data-label="备注">
+                              <span class="note-text">{{ link.note || '-' }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -157,12 +490,75 @@ export default {
       importing: false,
       // 图片预览相关
       showImagePreview: false,
-      previewImageUrl: ''
+      previewImageUrl: '',
+      
+      // 编辑模式相关
+      isEditing: false,
+      _resourceWasEdited: false, // 内部标记，用于跟踪资源是否被编辑过
+      editForm: {
+        title: '',
+        title_en: '',
+        description: '',
+        resource_type: '',
+        poster_image: '',
+        images: []
+      },
+      // 链接编辑相关数据
+      editLinks: {
+        "magnet": [],
+        "ed2k": [],
+        "uc": [],
+        "mobile": [],
+        "tianyi": [],
+        "quark": [],
+        "115": [],
+        "aliyun": [],
+        "pikpak": [],
+        "baidu": [],
+        "123": [],
+        "xunlei": [],
+        "online": [],
+        "others": []
+      },
+      editActiveCategory: "magnet",
+      
+      // 上传图片相关
+      isDragging: false,
+      uploading: false,
+      uploadProgress: 0,
+      currentUploadIndex: 0,
+      totalUploadCount: 0,
+      
+      // 保存相关
+      saving: false,
+      saveError: null,
+      
+      // 资源类型选项
+      resourceTypes: ['动画', '电影', '纪录片', '综艺', '其他'],
+      activeCategory: null
     };
   },
   computed: {
     isLoggedIn() {
       return isAuthenticated();
+    },
+    // 判断资源是否已被编辑
+    hasBeenEdited() {
+      // 如果tmdbResource为空，则返回false
+      if (!this.tmdbResource) return false;
+      
+      // 检查是否有自定义链接
+      const hasCustomLinks = this.tmdbResource.links && Object.keys(this.tmdbResource.links).length > 0;
+      
+      // 检查是否上传了自定义图片
+      // 原始TMDB资源的图片URL通常包含tmdb.org域名
+      const hasCustomImages = this.tmdbResource.images && 
+        this.tmdbResource.images.some(img => !img.includes('tmdb.org'));
+      
+      return hasCustomLinks || hasCustomImages || this._resourceWasEdited;
+    },
+    hasResourceLinks() {
+      return this.tmdbResource && this.tmdbResource.links && Object.keys(this.tmdbResource.links).length > 0;
     }
   },
   methods: {
@@ -185,6 +581,18 @@ export default {
         if (this.tmdbResource && this.tmdbResource.images && this.tmdbResource.images.length > 0) {
           this.currentImage = this.tmdbResource.poster_image || this.tmdbResource.images[0];
         }
+        
+        // 设置默认的活动链接类别
+        if (this.tmdbResource && this.tmdbResource.links) {
+          const categories = Object.keys(this.tmdbResource.links);
+          for (const category of categories) {
+            if (this.tmdbResource.links[category] && this.tmdbResource.links[category].length > 0) {
+              this.activeCategory = category;
+              break;
+            }
+          }
+        }
+        
         this.hasSearched = true;
       } catch (error) {
         console.error('TMDB搜索失败:', error);
@@ -205,19 +613,38 @@ export default {
       document.body.style.overflow = 'hidden'; // 防止背景滚动
     },
     
+    previewEditImage(image) {
+      this.previewImageUrl = image;
+      this.showImagePreview = true;
+      document.body.style.overflow = 'hidden';
+    },
+    
     closeImagePreview() {
       this.showImagePreview = false;
       document.body.style.overflow = ''; // 恢复滚动
     },
     
     async importResource() {
-      
       this.importing = true;
       
       try {
-        const response = await axios.post('/api/tmdb/create', {
-          query: this.searchQuery.trim()
-        });
+        // 构建要提交的数据
+        const submitData = {
+          query: this.searchQuery.trim(),
+          // 如果资源已被编辑，则添加自定义字段
+          title: this.tmdbResource.title,
+          title_en: this.tmdbResource.title_en,
+          description: this.tmdbResource.description,
+          resource_type: this.tmdbResource.resource_type,
+          poster_image: this.tmdbResource.poster_image,
+          images: this.tmdbResource.images,
+          links: this.tmdbResource.links,
+          // 检查资源是否已被编辑过
+          is_custom: this.hasBeenEdited
+        };
+        
+        // 调用API创建资源
+        const response = await axios.post('/api/tmdb/create', submitData);
         
         this.importSuccess = true;
         this.importedResourceId = response.data.id;
@@ -236,11 +663,288 @@ export default {
       this.hasSearched = false;
       this.importSuccess = false;
       this.importedResourceId = null;
+      this.isEditing = false;
+      this.activeCategory = null;
     },
     
     resetSearch() {
       this.resetState();
       this.searchQuery = '';
+    },
+    
+    // 编辑模式相关方法
+    startEdit() {
+      if (!this.tmdbResource) return;
+      
+      // 复制当前资源数据到表单
+      this.editForm.title = this.tmdbResource.title || '';
+      this.editForm.title_en = this.tmdbResource.title_en || '';
+      this.editForm.description = this.tmdbResource.description || '';
+      this.editForm.resource_type = this.tmdbResource.resource_type || '';
+      this.editForm.poster_image = this.tmdbResource.poster_image || '';
+      this.editForm.images = [...(this.tmdbResource.images || [])];
+      
+      // 初始化编辑链接
+      for (const category in this.editLinks) {
+        this.editLinks[category] = [];
+      }
+      
+      // 加载已有的链接数据
+      if (this.tmdbResource.links) {
+        for (const category in this.tmdbResource.links) {
+          if (this.editLinks.hasOwnProperty(category) && this.tmdbResource.links[category]) {
+            // 深拷贝链接数据，避免直接引用
+            this.editLinks[category] = JSON.parse(JSON.stringify(this.tmdbResource.links[category]));
+          }
+        }
+        
+        // 设置默认的编辑链接类别为第一个有链接的类别
+        let foundActiveCategory = false;
+        for (const category in this.editLinks) {
+          if (this.editLinks[category] && this.editLinks[category].length > 0) {
+            this.editActiveCategory = category;
+            foundActiveCategory = true;
+            break;
+          }
+        }
+        
+        // 如果没有找到有链接的类别，则使用默认值
+        if (!foundActiveCategory) {
+          this.editActiveCategory = "magnet";
+        }
+      }
+      
+      this.isEditing = true;
+    },
+    
+    cancelEdit() {
+      this.isEditing = false;
+      this.saveError = null;
+    },
+    
+    isTypeSelected(type) {
+      return this.editForm.resource_type === type;
+    },
+    
+    selectResourceType(type) {
+      this.editForm.resource_type = type;
+    },
+    
+    setPosterImage(image) {
+      this.editForm.poster_image = image;
+    },
+    
+    removeImage(index) {
+      // 如果删除的是海报图片，则清空海报字段
+      if (this.editForm.images[index] === this.editForm.poster_image) {
+        this.editForm.poster_image = '';
+      }
+      this.editForm.images.splice(index, 1);
+    },
+    
+    addEditLink(category) {
+      this.editLinks[category].push({
+        url: '',
+        password: '',
+        note: ''
+      });
+    },
+    
+    removeEditLink(category, index) {
+      this.editLinks[category].splice(index, 1);
+    },
+    
+    getCategoryDisplayName(category) {
+      const displayNames = {
+        "magnet": "磁力链接",
+        "ed2k": "电驴链接",
+        "uc": "UC网盘",
+        "mobile": "移动云盘",
+        "tianyi": "天翼云盘",
+        "quark": "夸克网盘",
+        "115": "115网盘",
+        "aliyun": "阿里云盘",
+        "pikpak": "PikPak",
+        "baidu": "百度网盘",
+        "123": "123网盘",
+        "xunlei": "迅雷云盘",
+        "online": "在线播放",
+        "others": "其他链接"
+      };
+      return displayNames[category] || category;
+    },
+    
+    // 文件上传相关方法
+    handleFileDrop(event) {
+      this.isDragging = false;
+      const files = [...event.dataTransfer.files];
+      if (files.length > 0) {
+        this.uploadFiles(files);
+      }
+    },
+    
+    handleFilesSelection(event) {
+      const files = [...event.target.files];
+      if (files.length > 0) {
+        this.uploadFiles(files);
+      }
+    },
+    
+    async uploadFiles(files) {
+      // 过滤非图片文件
+      const imageFiles = files.filter(file => file.type.startsWith('image/'));
+      
+      if (imageFiles.length === 0) return;
+      
+      this.uploading = true;
+      this.saveError = null;
+      this.uploadProgress = 0;
+      this.currentUploadIndex = 0;
+      this.totalUploadCount = imageFiles.length;
+      
+      try {
+        for (let i = 0; i < imageFiles.length; i++) {
+          this.currentUploadIndex = i + 1;
+          
+          const file = imageFiles[i];
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const response = await axios.post('/api/resources/upload-images/', formData);
+          
+          // 添加图片URL到已上传列表
+          this.editForm.images.push(response.data.filename);
+          
+          // 更新进度
+          this.uploadProgress = Math.round(((i + 1) / imageFiles.length) * 100);
+        }
+        
+        // 清除选择的文件
+        document.getElementById('file-upload').value = '';
+      } catch (err) {
+        console.error('上传图片失败:', err);
+        this.saveError = '上传图片失败，请稍后重试';
+      } finally {
+        this.uploading = false;
+      }
+    },
+    
+    // 保存并导入资源
+    async saveChanges() {
+      // 移除登录检查
+      this.saving = true;
+      this.saveError = null;
+      
+      try {
+        // 处理资源链接
+        const linksToSubmit = {};
+        let hasLinks = false;
+        
+        for (const category in this.editLinks) {
+          // 过滤掉空链接
+          const validLinks = this.editLinks[category].filter(link => link.url.trim() !== '');
+          if (validLinks.length > 0) {
+            linksToSubmit[category] = validLinks;
+            hasLinks = true;
+          }
+        }
+        
+        // 更新本地数据，而不是提交到服务器
+        this.tmdbResource = {
+          ...this.tmdbResource,
+          title: this.editForm.title,
+          title_en: this.editForm.title_en,
+          description: this.editForm.description,
+          resource_type: this.editForm.resource_type,
+          poster_image: this.editForm.poster_image,
+          images: [...this.editForm.images],
+          links: linksToSubmit
+        };
+        
+        // 标记资源已被编辑
+        this._resourceWasEdited = true;
+        
+        // 确保当前图片设置正确
+        if (this.tmdbResource.images && this.tmdbResource.images.length > 0) {
+          this.currentImage = this.tmdbResource.poster_image || this.tmdbResource.images[0];
+        }
+        
+        // 退出编辑模式
+        this.isEditing = false;
+      } catch (err) {
+        console.error('保存资源失败:', err);
+        this.saveError = err.message || '保存失败，请稍后重试';
+      } finally {
+        this.saving = false;
+      }
+    },
+    formatLinkUrl(url) {
+      // 格式化链接URL，使其更友好显示
+      if (!url) return '';
+      
+      try {
+        // 移除协议前缀
+        let formattedUrl = url.replace(/^(https?:\/\/)?(www\.)?/i, '');
+        
+        // 如果链接太长，截断显示
+        if (formattedUrl.length > 40) {
+          formattedUrl = formattedUrl.substring(0, 37) + '...';
+        }
+        
+        return formattedUrl;
+      } catch (e) {
+        return url;
+      }
+    },
+    copyToClipboard(text) {
+      if (!text) return;
+      
+      // 创建一个临时文本区域元素
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      
+      try {
+        // 选中并复制文本
+        textarea.select();
+        document.execCommand('copy');
+        
+        // 创建并显示一个临时提示元素
+        const toast = document.createElement('div');
+        toast.textContent = '已复制到剪贴板';
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.padding = '10px 20px';
+        toast.style.backgroundColor = '#28a745';
+        toast.style.color = '#fff';
+        toast.style.borderRadius = '4px';
+        toast.style.zIndex = '9999';
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        
+        document.body.appendChild(toast);
+        
+        // 显示提示
+        setTimeout(() => { toast.style.opacity = '1'; }, 10);
+        
+        // 删除提示
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 300);
+        }, 2000);
+      } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动复制');
+      } finally {
+        // 移除临时元素
+        document.body.removeChild(textarea);
+      }
     }
   },
   beforeDestroy() {

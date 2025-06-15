@@ -14,7 +14,16 @@ import (
 
 // TMDBSearchRequest TMDB搜索请求
 type TMDBSearchRequest struct {
-	Query string `json:"query" binding:"required"`
+	Query       string              `json:"query" binding:"required"`
+	// 添加自定义字段，支持自定义资源创建
+	Title       string              `json:"title"`
+	TitleEn     string              `json:"title_en"`
+	Description string              `json:"description"`
+	ResourceType string             `json:"resource_type"`
+	PosterImage string              `json:"poster_image"`
+	Images      []string            `json:"images"`
+	Links       map[string][]map[string]string `json:"links"`
+	IsCustom    bool                `json:"is_custom"` // 标识是否为自定义资源
 }
 
 // SearchTMDB 搜索TMDB API
@@ -51,7 +60,7 @@ func SearchTMDB(c *gin.Context) {
 
 // CreateResourceFromTMDB 从TMDB搜索结果创建资源
 // @Summary 从TMDB创建资源
-// @Description 根据TMDB搜索结果创建新的资源
+// @Description 根据TMDB搜索结果或用户自定义内容创建新的资源
 // @Tags TMDB
 // @Accept json
 // @Produce json
@@ -61,7 +70,6 @@ func SearchTMDB(c *gin.Context) {
 // @Failure 500 {object} gin.H
 // @Router /api/tmdb/create [post]
 func CreateResourceFromTMDB(c *gin.Context) {
-
 	var req TMDBSearchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("解析请求失败: %v", err)
@@ -75,33 +83,71 @@ func CreateResourceFromTMDB(c *gin.Context) {
 		return
 	}
 
-	// 使用TMDB工具搜索
-	tmdbResource, err := utils.SearchTMDB(req.Query)
-	if err != nil {
-		log.Printf("TMDB搜索失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
 	// 转换为需要插入数据库的资源
 	now := time.Now()
 	defaultStatus := models.ResourceStatusPending
+	var resource *models.Resource
 	
-	// 确保PosterImage不为空
-	posterImage := tmdbResource.PosterImage
-	
-	// 创建资源对象
-	resource := &models.Resource{
-		Title:        tmdbResource.Title,
-		TitleEn:      tmdbResource.TitleEn,
-		Description:  tmdbResource.Description,
-		ResourceType: tmdbResource.ResourceType,
-		PosterImage:  &posterImage,
-		Images:       tmdbResource.Images,
-		Links:        models.JsonMap(tmdbResource.Links),
-		Status:       defaultStatus,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	// 根据是否为自定义资源处理不同的逻辑
+	if req.IsCustom {
+		// 自定义资源处理逻辑
+		if strings.TrimSpace(req.Title) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "自定义资源的标题不能为空"})
+			return
+		}
+		
+		// 确保PosterImage不为空
+		var posterImage *string
+		if req.PosterImage != "" {
+			posterImage = &req.PosterImage
+		} else if len(req.Images) > 0 {
+			posterImage = &req.Images[0]
+		}
+		
+		// 将 req.Links 转换为 models.JsonMap 类型
+		linksMap := make(models.JsonMap)
+		for key, value := range req.Links {
+			linksMap[key] = value
+		}
+		
+		// 创建自定义资源对象
+		resource = &models.Resource{
+			Title:        req.Title,
+			TitleEn:      req.TitleEn,
+			Description:  req.Description,
+			ResourceType: req.ResourceType,
+			PosterImage:  posterImage,
+			Images:       req.Images,
+			Links:        linksMap,
+			Status:       defaultStatus,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+	} else {
+		// 标准TMDB资源处理逻辑
+		tmdbResource, err := utils.SearchTMDB(req.Query)
+		if err != nil {
+			log.Printf("TMDB搜索失败: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		
+		// 确保PosterImage不为空
+		posterImage := tmdbResource.PosterImage
+		
+		// 创建资源对象
+		resource = &models.Resource{
+			Title:        tmdbResource.Title,
+			TitleEn:      tmdbResource.TitleEn,
+			Description:  tmdbResource.Description,
+			ResourceType: tmdbResource.ResourceType,
+			PosterImage:  &posterImage,
+			Images:       tmdbResource.Images,
+			Links:        models.JsonMap(tmdbResource.Links),
+			Status:       defaultStatus,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
 	}
 
 	// 执行SQL插入

@@ -1698,6 +1698,27 @@
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.links-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.links-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.links-list::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.3);
+  border-radius: 10px;
+}
+
+.links-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 58, 237, 0.5);
 }
 
 .link-item {
@@ -1720,7 +1741,7 @@
 
 .link-inputs {
   display: grid;
-  grid-template-columns: 1fr 120px 120px;
+  grid-template-columns: 2fr 0.5fr 2fr;
   gap: 1rem;
   width: 100%;
 }
