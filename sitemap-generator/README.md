@@ -17,8 +17,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/sitemap-generator.git
-cd sitemap-generator
+git clone https://github.com/fish2018/GoComicMosaic/
+cd GoComicMosaic/sitemap-generator
 
 # 安装依赖并构建
 go mod tidy

@@ -195,6 +195,68 @@
   line-height: 1.7;
 }
 
+/* 免责声明部分 */
+.disclaimer-section {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: var(--card-radius);
+  padding: 3.5rem;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.06),
+    inset 0 0 0 1px rgba(99, 102, 241, 0.1);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.disclaimer-section::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.07) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.disclaimer-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.1),
+    inset 0 0 0 1px rgba(99, 102, 241, 0.2);
+}
+
+.disclaimer-content {
+  color: var(--gray-color);
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+  font-size: 1.05rem;
+}
+
+.disclaimer-section-content {
+  padding: 1rem;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  border-radius: var(--border-radius);
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.disclaimer-section-content p {
+  margin-bottom: 1rem;
+}
+
+.disclaimer-section-content p:last-child {
+  margin-bottom: 0;
+}
+
+.disclaimer-section-content strong {
+  color: var(--dark-color);
+  font-weight: 600;
+}
+
 /* 联系我们部分 */
 .contact-section {
   background: var(--primary-gradient);

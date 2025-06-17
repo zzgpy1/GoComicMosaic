@@ -24,6 +24,15 @@
         </div>
       </div>
       
+      <!-- 免责声明模块 -->
+      <div class="disclaimer-section" v-if="aboutConfig.disclaimer && aboutConfig.disclaimer.enabled">
+        <div class="section-icon">
+          <i :class="`bi bi-${aboutConfig.disclaimer.icon || 'shield-exclamation'}`"></i>
+        </div>
+        <h2 class="section-title">{{ aboutConfig.disclaimer.title || '免责声明' }}</h2>
+        <div class="disclaimer-content" v-html="aboutConfig.disclaimer.content || ''"></div>
+      </div>
+      
       <div class="contact-section">
         <div class="contact-container">
           <div class="contact-left">
@@ -66,6 +75,12 @@ export default {
           icon: ''
         },
         featureItems: [],
+        disclaimer: {
+          enabled: true,
+          title: '免责声明',
+          content: '',
+          icon: 'shield-exclamation'
+        },
         contactSection: {
           title: '',
           description: '',

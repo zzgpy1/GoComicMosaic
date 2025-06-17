@@ -658,6 +658,88 @@
               </div>
             </div>
             
+            <!-- 免责声明设置 -->
+            <div class="form-group">
+              <h6 class="subsection-title"><i class="bi bi-shield-exclamation"></i> 免责声明</h6>
+              
+              <!-- 启用开关 -->
+              <div class="form-group">
+                <label class="form-label">显示免责声明</label>
+                <div class="switch-toggle-wrapper">
+                  <div class="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      id="disclaimer-enabled" 
+                      v-model="aboutPageConfig.disclaimer.enabled"
+                    >
+                    <label for="disclaimer-enabled" class="switch-label"></label>
+                  </div>
+                  <span class="switch-text">{{ aboutPageConfig.disclaimer.enabled ? '已启用' : '已禁用' }}</span>
+                </div>
+              </div>
+              
+              <!-- 标题 -->
+              <div class="form-group" v-if="aboutPageConfig.disclaimer.enabled">
+                <label class="form-label">标题</label>
+                <div class="input-group">
+                  <div class="input-prefix">
+                    <i class="bi bi-type-h1"></i>
+                  </div>
+                  <input 
+                    type="text" 
+                    class="custom-input" 
+                    v-model="aboutPageConfig.disclaimer.title" 
+                    placeholder="免责声明"
+                  >
+                </div>
+              </div>
+              
+              <!-- 内容 -->
+              <div class="form-group" v-if="aboutPageConfig.disclaimer.enabled">
+                <label class="form-label">内容 <small class="text-muted">(支持HTML)</small></label>
+                <div class="input-group">
+                  <div class="input-prefix">
+                    <i class="bi bi-code-square"></i>
+                  </div>
+                  <textarea 
+                    class="custom-input code-editor" 
+                    v-model="aboutPageConfig.disclaimer.content" 
+                    rows="8"
+                    placeholder="输入免责声明内容，支持HTML标签..."
+                  ></textarea>
+                </div>
+                <div class="form-text mt-1">
+                  <button 
+                    type="button" 
+                    class="btn-custom btn-sm btn-text template-btn" 
+                    @click="loadDisclaimerTemplate"
+                  >
+                    <i class="bi bi-file-earmark-text"></i> 加载默认模板
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 图标 -->
+              <div class="form-group" v-if="aboutPageConfig.disclaimer.enabled">
+                <label class="form-label">图标</label>
+                <div class="icon-selector-button" 
+                  @click="openDisclaimerIconSelector" 
+                  :title="aboutPageConfig.disclaimer.icon ? '更改图标' : '选择图标'"
+                >
+                  <i v-if="aboutPageConfig.disclaimer.icon" :class="`bi bi-${aboutPageConfig.disclaimer.icon}`"></i>
+                  <span v-else class="no-icon">无</span>
+                  <button v-if="aboutPageConfig.disclaimer.icon" 
+                    type="button" 
+                    class="clear-icon-btn" 
+                    @click.stop="aboutPageConfig.disclaimer.icon = ''" 
+                    title="清除图标"
+                  >
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <!-- 联系我们设置 -->
             <div class="form-group">
               <h6 class="subsection-title"><i class="bi bi-chat-text"></i> 联系我们</h6>
@@ -2166,6 +2248,8 @@ const selectIcon = (icon) => {
     aboutPageConfig.contactSection.icon = icon;
   } else if (iconSelectorTarget.value === 'contactItem' && iconSelectorIndex.value >= 0) {
     aboutPageConfig.contactItems[iconSelectorIndex.value].icon = icon;
+  } else if (iconSelectorTarget.value === 'disclaimer') {
+    aboutPageConfig.disclaimer.icon = icon;
   }
   
   closeIconSelector();
@@ -2458,7 +2542,13 @@ const aboutPageConfig = reactive({
     description: '',
     icon: ''
   },
-  contactItems: []
+  contactItems: [],
+  disclaimer: {
+    enabled: false,
+    title: '',
+    content: '',
+    icon: ''
+  }
 });
 
 const aboutSettingsLoading = ref(false);
@@ -2479,6 +2569,12 @@ const initAboutPageConfig = async (config) => {
     icon: 'chat-text-fill'
   };
   aboutPageConfig.contactItems = config.contactItems || [];
+  aboutPageConfig.disclaimer = config.disclaimer || {
+    enabled: false,
+    title: '免责声明',
+    content: '',
+    icon: ''
+  };
   
   // 确保featureItems和contactItems有唯一ID
   aboutPageConfig.featureItems.forEach((item, index) => {
@@ -2809,6 +2905,38 @@ const saveTMDBSettings = async () => {
     }
   } finally {
     tmdbLoading.value = false;
+  }
+};
+
+// 打开免责声明图标选择器
+const openDisclaimerIconSelector = () => {
+  iconSelectorTarget.value = 'disclaimer';
+  currentIcon.value = aboutPageConfig.disclaimer.icon;
+  openIconSelector();
+};
+
+// 加载默认免责声明模板
+const loadDisclaimerTemplate = () => {
+  // 确认对话框
+  if (confirm('加载默认模板将覆盖当前内容，确认继续？')) {
+    // 默认免责声明模板
+    const defaultDisclaimerTemplate = `
+<div class="disclaimer-section-content">
+  <p><strong>内容来源：</strong>影视信息来自 TMDB，资源链接来自互联网公开搜索。</p>
+  <p><strong>用户责任：</strong>用户需自行判断链接的安全性与合法性，遵守当地法律法规。</p>
+  <p><strong>免责条款：</strong>本网站不对内容的准确性、合法性或可用性负责，不承担因使用本网站产生的任何损害责任。</p>
+  <p><strong>版权声明：</strong>本网站不拥有任何资源版权，如有侵权请联系我们处理。</p>
+  <p><strong>适用法律：</strong>本声明受您所在国家/地区适用法律管辖。</p>
+</div>`;
+    
+    // 设置免责声明内容
+    aboutPageConfig.disclaimer.content = defaultDisclaimerTemplate.trim();
+    aboutPageConfig.disclaimer.enabled = true;
+    aboutPageConfig.disclaimer.title = '免责声明';
+    aboutPageConfig.disclaimer.icon = 'shield-exclamation';
+    
+    // 提示成功
+    alert('已加载默认免责声明模板');
   }
 };
 
