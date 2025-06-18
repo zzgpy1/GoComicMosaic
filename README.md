@@ -253,8 +253,18 @@ U酷 https://www.ukuzy.com/
 - Super Robot Monkey Team Hyperforce Go!（超级战猴）✅
 - Fanboy and Chum Chum（小幻与冲冲）✅
 - The Loud House（喧闹一家亲）✅ 
+- Uncle Grandpa（天才阿公 / 天才叔公）✅
+- Infinity Train（无尽列车）✅
+- Detentionaire（非典型高中生活）✅
+- SpongeBob SquarePants（海绵宝宝）✅
+- Phineas and Ferb（飞哥与小佛）✅
+- Justice League Action（正义联盟行动） ✅
+- Ed Edd n Eddy（捣蛋三傻 / 三个艾德）✅
+- Time Squad（时空特工队 / 时间保安队）✅
+- American Dragon: Jake Long（美国龙：杰克龙）✅
+- The Secret Saturdays（神秘特攻队 / 秘密星期六）✅
+- The Grim Adventures of Billy and Mandy（比利曼蒂和死神的大冒险）✅
 - Bob's Burgers（开心汉堡店）
-- SpongeBob SquarePants（海绵宝宝）
 - Harley Quinn（哈莉·奎茵）
 - Guardians of Ga’Hoole（守护者）
 - We Bare Bears（咱们裸熊）
@@ -316,6 +326,9 @@ U酷 https://www.ukuzy.com/
 - Space Ghost Coast to Coast（太空幽灵海岸到海岸）
 
 # 更新日志
+-202506180813  
+✅ 后台网站设置增加免责声明模块，支持html代码  
+✅ 播放器增加倍速选择、增加快捷键功能  
 -202506151233  
 ✅ TMDB搜索后支持直接编辑，然后再一键导入  
 ✅ 调整TMDB搜索预览界面，和实际资源详情页保持风格一致  
