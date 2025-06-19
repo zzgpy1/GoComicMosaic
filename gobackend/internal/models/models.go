@@ -193,6 +193,7 @@ type Resource struct {
 	ApprovalHistory    JsonMap        `db:"approval_history" json:"approval_history"`
 	IsSupplementApproval bool         `db:"is_supplement_approval" json:"is_supplement_approval"`
 	LikesCount         int            `db:"likes_count" json:"likes_count"`
+	TmdbID             *int           `db:"tmdb_id" json:"tmdb_id"`
 	CreatedAt          time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time      `db:"updated_at" json:"updated_at"`
 	TotalCount         *int           `db:"-" json:"total_count,omitempty"` // 不存储在数据库中，用于分页
@@ -228,6 +229,7 @@ type ResourceUpdate struct {
 	Images       []string  `json:"images"`
 	PosterImage  *string   `json:"poster_image"`
 	Links        JsonMap   `json:"links"`
+	TmdbID       *int      `json:"tmdb_id"`
 }
 
 // ResourceApproval 资源审批请求
@@ -296,4 +298,4 @@ type SiteSettings struct {
 // SiteSettingsUpdate 网站设置更新请求
 type SiteSettingsUpdate struct {
 	SettingValue JsonMap `json:"setting_value" binding:"required"`
-} 
+}

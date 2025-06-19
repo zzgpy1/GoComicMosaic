@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 // TMDBSearchRequest TMDB搜索请求
 type TMDBSearchRequest struct {
 	Query       string              `json:"query" binding:"required"`
+	// TMDB ID
+	ID          int                 `json:"id"`
 	// 添加自定义字段，支持自定义资源创建
 	Title       string              `json:"title"`
 	TitleEn     string              `json:"title_en"`
@@ -110,6 +113,12 @@ func CreateResourceFromTMDB(c *gin.Context) {
 			linksMap[key] = value
 		}
 		
+		// 处理TMDB ID
+		var tmdbID *int
+		if req.ID > 0 {
+			tmdbID = &req.ID
+		}
+		
 		// 创建自定义资源对象
 		resource = &models.Resource{
 			Title:        req.Title,
@@ -120,6 +129,7 @@ func CreateResourceFromTMDB(c *gin.Context) {
 			Images:       req.Images,
 			Links:        linksMap,
 			Status:       defaultStatus,
+			TmdbID:       tmdbID,
 			CreatedAt:    now,
 			UpdatedAt:    now,
 		}
@@ -135,6 +145,9 @@ func CreateResourceFromTMDB(c *gin.Context) {
 		// 确保PosterImage不为空
 		posterImage := tmdbResource.PosterImage
 		
+		// 设置TMDB ID
+		tmdbID := tmdbResource.ID
+		
 		// 创建资源对象
 		resource = &models.Resource{
 			Title:        tmdbResource.Title,
@@ -145,6 +158,7 @@ func CreateResourceFromTMDB(c *gin.Context) {
 			Images:       tmdbResource.Images,
 			Links:        models.JsonMap(tmdbResource.Links),
 			Status:       defaultStatus,
+			TmdbID:       &tmdbID,
 			CreatedAt:    now,
 			UpdatedAt:    now,
 		}
@@ -154,10 +168,10 @@ func CreateResourceFromTMDB(c *gin.Context) {
 	result, err := models.DB.NamedExec(`
 		INSERT INTO resources (
 			title, title_en, description, resource_type, poster_image, 
-			images, links, status, created_at, updated_at
+			images, links, status, tmdb_id, created_at, updated_at
 		) VALUES (
 			:title, :title_en, :description, :resource_type, :poster_image, 
-			:images, :links, :status, :created_at, :updated_at
+			:images, :links, :status, :tmdb_id, :created_at, :updated_at
 		)
 	`, resource)
 
@@ -178,5 +192,66 @@ func CreateResourceFromTMDB(c *gin.Context) {
 	// 设置返回资源的ID
 	resource.ID = int(id)
 
+	c.JSON(http.StatusOK, resource)
+}
+
+// UpdateResourceTmdbID 更新资源的TMDB ID
+// @Summary 更新资源的TMDB ID
+// @Description 根据资源ID更新对应资源的TMDB ID
+// @Tags TMDB
+// @Accept json
+// @Produce json
+// @Param id path int true "资源ID"
+// @Param tmdb_id path int true "TMDB ID"
+// @Success 200 {object} models.Resource
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /api/tmdb/update-resource-id/{id}/{tmdb_id} [put]
+func UpdateResourceTmdbID(c *gin.Context) {
+	// 获取路径参数
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+	
+	tmdbID, err := strconv.Atoi(c.Param("tmdb_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的TMDB ID"})
+		return
+	}
+	
+	log.Printf("开始更新资源ID: %d 的TMDB ID为: %d", resourceID, tmdbID)
+	
+	// 检查资源是否存在
+	var resource models.Resource
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		log.Printf("无法找到资源: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+	
+	log.Printf("已找到资源: %+v", resource)
+	
+	// 更新TMDB ID
+	resource.TmdbID = &tmdbID
+	resource.UpdatedAt = time.Now()
+	
+	// 更新记录
+	_, err = models.DB.Exec(
+		`UPDATE resources SET tmdb_id = ?, updated_at = ? WHERE id = ?`,
+		resource.TmdbID, resource.UpdatedAt, resourceID,
+	)
+	
+	if err != nil {
+		log.Printf("更新资源失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新资源失败"})
+		return
+	}
+	
+	log.Printf("成功更新资源ID: %d 的TMDB ID为: %d", resourceID, tmdbID)
+	
+	// 返回更新后的资源
 	c.JSON(http.StatusOK, resource)
 } 

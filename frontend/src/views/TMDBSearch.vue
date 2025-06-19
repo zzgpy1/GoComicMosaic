@@ -302,7 +302,20 @@
               <!-- 左侧：标题区域 -->
               <div class="banner-title-area">
                 <div class="title-text">
-                  <h1 class="title">{{ tmdbResource.title }}</h1>
+                  <h1 class="title">
+                    <span class="title-text-content">{{ tmdbResource.title }}</span>
+                    <span v-if="tmdbResource.id" class="tmdb-id-badge">
+                      ID: {{ tmdbResource.id }}
+                      <a 
+                        :href="`https://www.themoviedb.org/tv/${tmdbResource.id}`" 
+                        target="_blank" 
+                        class="tmdb-link-small"
+                        title="在TMDB上查看"
+                      >
+                        <i class="bi bi-box-arrow-up-right"></i>
+                      </a>
+                    </span>
+                  </h1>
                   <h2 class="subtitle">{{ tmdbResource.title_en }}</h2>
                 </div>
                 <!-- 分类标签移到这里，在移动端会显示在标题右侧 -->
@@ -639,6 +652,8 @@ export default {
           poster_image: this.tmdbResource.poster_image,
           images: this.tmdbResource.images,
           links: this.tmdbResource.links,
+          // 添加TMDB ID
+          id: this.tmdbResource.id,
           // 检查资源是否已被编辑过
           is_custom: this.hasBeenEdited
         };

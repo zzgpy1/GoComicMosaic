@@ -108,12 +108,13 @@ type TMDBImageResponse struct {
 
 // TMDBResource 最终整合的TMDB结果，用于替代models.ResourceCreate
 type TMDBResource struct {
-	Title       string   `json:"title"`
-	TitleEn     string   `json:"title_en"`
-	Description string   `json:"description"`
-	ResourceType string  `json:"resource_type"`
-	PosterImage string   `json:"poster_image"`
-	Images      []string `json:"images"`
+	ID          int       `json:"id"`            // TMDB ID
+	Title       string    `json:"title"`
+	TitleEn     string    `json:"title_en"`
+	Description string    `json:"description"`
+	ResourceType string   `json:"resource_type"`
+	PosterImage string    `json:"poster_image"`
+	Images      []string  `json:"images"`
 	Links       map[string]interface{} `json:"links"`
 }
 
@@ -293,6 +294,7 @@ func SearchTMDB(query string) (*TMDBResource, error) {
 	
 	// 5. 构建适合资源表的结构
 	resource := &TMDBResource{
+		ID:          animeID,
 		Title:       details.Name,
 		TitleEn:     details.OriginalName,
 		Description: details.Overview,

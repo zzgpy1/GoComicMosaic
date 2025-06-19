@@ -110,6 +110,11 @@ const defaultMetaInfo = {
   home_description: '美漫共建平台是一个开源的美漫资源共享网站，用户可以自由提交动漫信息，像马赛克一样，由多方贡献拼凑成完整资源。',
   home_keywords: '美漫, 动漫资源, 资源共享, 开源平台, 美漫共建',
   
+  // 剧集测试页
+  episode_test_title: '剧集概览测试 - 美漫资源共建平台',
+  episode_test_description: '测试TMDB剧集概览功能，包括季节信息、剧集列表、剧照和演员信息的展示。',
+  episode_test_keywords: '剧集概览, TMDB数据, 季节信息, 演员列表',
+  
   // 资源详情页
   resource_detail_title: '资源详情 - 美漫资源共建平台',
   resource_detail_description: '查看详细的动漫资源信息，包括简介、图片、下载链接等。在这里您可以浏览由社区贡献的美漫资源详情。',

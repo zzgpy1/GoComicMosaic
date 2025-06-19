@@ -31,6 +31,11 @@
                 </div>
                 
                 <div class="form-group">
+                  <label for="tmdbId" class="form-label">TMDB ID <small class="text-muted">(选填)</small></label>
+                  <input type="number" class="form-control custom-input" id="tmdbId" v-model="editForm.tmdb_id" placeholder="输入TMDB ID">
+                </div>
+                
+                <div class="form-group">
                   <label for="titleEn" class="form-label">英文标题</label>
                   <input type="text" class="form-control custom-input" id="titleEn" v-model="editForm.title_en">
                 </div>
@@ -312,6 +317,11 @@
               <button class="btn-custom btn-share" @click="handleShare">
                 <i class="bi bi-share"></i><span class="btn-text">分享</span>
               </button>
+              <button class="btn-custom btn-episode" @click="toggleEpisodeExplorer" 
+                      :class="{'active': showingEpisodeExplorer}"
+                      v-if="tmdbEnabled">
+                <i class="bi bi-film"></i><span class="btn-text">{{ showingEpisodeExplorer ? '返回详情' : '剧集探索' }}</span>
+              </button>
               <button 
                 @click="goToSupplementResource" 
                 class="btn-custom btn-secondary"
@@ -329,7 +339,8 @@
           </div>
         </div>
 
-        <div class="resource-content">
+        <!-- 添加条件渲染，根据显示模式切换显示内容 -->
+        <div v-if="!showingEpisodeExplorer" class="resource-content">
           <div class="media-section">
             <!-- 大图展示区 -->
             <div class="main-image-container" @click="previewEditImage(currentImage)">
@@ -449,6 +460,9 @@
             </div>
           </div>
         </div>
+
+        <!-- 使用剧集探索组件 -->
+        <EpisodeOverview v-else :tmdbId="resource.tmdb_id" :title_en="resource.title_en" :resourceId="resource.id" />
       </template>
     </div>
     
@@ -502,6 +516,7 @@ import { isAdmin } from '../utils/auth'
 import { getImageUrl } from '@/utils/imageUtils'
 import ShareResource from '@/components/ShareResource.vue'
 import draggable from 'vuedraggable'  // 导入 vuedraggable 组件
+import EpisodeOverview from '@/components/EpisodeOverview.vue' // 导入剧集探索组件
 
 const route = useRoute()
 const router = useRouter()
@@ -514,6 +529,10 @@ const saveError = ref(null)
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const currentImage = ref(null)  // 当前选中的大图
+const tmdbEnabled = ref(false)  // TMDB功能是否启用
+
+// 剧集探索相关状态
+const showingEpisodeExplorer = ref(false)
 
 // 创建ShareResource组件的引用
 const shareResourceRef = ref(null)
@@ -523,6 +542,29 @@ const handleShare = () => {
   if (shareResourceRef.value) {
     shareResourceRef.value.openShareModal()
   }
+}
+
+// 加载TMDB配置
+const loadTMDBConfig = async () => {
+  try {
+    const response = await axios.get('/api/settings/tmdb_status');
+    if (response.data && response.data.enabled !== undefined) {
+      tmdbEnabled.value = response.data.enabled === true;
+    }
+  } catch (error) {
+    console.error('加载TMDB状态失败:', error);
+    // 默认不启用
+    tmdbEnabled.value = false;
+  }
+}
+
+// 切换剧集探索显示状态
+const toggleEpisodeExplorer = () => {
+  if (!resource.value?.tmdb_id && !resource.value?.title_en) {
+    alert('该资源没有关联的TMDB ID或英文标题，无法查看剧集信息');
+    return;
+  }
+  showingEpisodeExplorer.value = !showingEpisodeExplorer.value;
 }
 
 // 喜欢功能相关状态
@@ -535,7 +577,8 @@ const editForm = reactive({
   description: '',
   resource_type: '',
   poster_image: '',
-  images: [] // 添加images数组存储所有图片
+  images: [], // 添加images数组存储所有图片
+  tmdb_id: null // 添加TMDB ID字段
 })
 
 // 链接编辑相关数据
@@ -662,6 +705,7 @@ const startEdit = () => {
   editForm.resource_type = resource.value.resource_type || ''
   editForm.poster_image = resource.value.poster_image || ''
   editForm.images = [...(resource.value.images || [])] // 复制所有图片
+  editForm.tmdb_id = resource.value.tmdb_id || null // 复制TMDB ID
   
   // 初始化编辑链接
   for (const category in editLinks) {
@@ -829,7 +873,8 @@ const saveChanges = async () => {
       resource_type: editForm.resource_type,
       poster_image: editForm.poster_image,
       images: editForm.images, // 提交所有图片
-      links: hasLinks ? linksToSubmit : undefined // 提交链接数据
+      links: hasLinks ? linksToSubmit : undefined, // 提交链接数据
+      tmdb_id: editForm.tmdb_id // 提交TMDB ID
     })
     
     // 更新本地资源数据
@@ -1034,63 +1079,8 @@ const toggleResourceType = (type) => {
 
 onMounted(() => {
   fetchResource()
+  loadTMDBConfig()
 })
 </script>
 
 <style scoped src="@/styles/ResourceDetail.css"></style>
-
-<style scoped>
-/* 添加分享按钮样式 */
-.btn-share {
-  background-color: #3a86ff;
-  color: white;
-  border: none;
-  box-shadow: 0 2px 5px rgba(58, 134, 255, 0.3);
-}
-
-.btn-share:hover {
-  background-color: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
-}
-
-/* 拖拽相关样式 */
-.drag-handle {
-  cursor: move;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  color: var(--text-muted);
-}
-
-.drag-handle i {
-  font-size: 1.2rem;
-}
-
-.drag-tip {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-left: 8px;
-}
-
-.link-item {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-bottom: 12px;
-  background-color: var(--card-bg);
-  transition: all 0.2s ease;
-}
-
-.link-ghost {
-  opacity: 0.5;
-  background: var(--highlight-bg);
-  border: 1px dashed var(--primary-color);
-}
-
-.link-inputs {
-  flex: 1;
-  padding: 12px;
-}
-</style>

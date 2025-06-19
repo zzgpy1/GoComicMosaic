@@ -2216,3 +2216,129 @@
   overflow-wrap: break-word;
   word-break: break-word;
 }
+
+
+/* 添加分享按钮样式 */
+.btn-share {
+  background-color: #3a86ff;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 5px rgba(58, 134, 255, 0.3);
+}
+
+.btn-share:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
+}
+
+/* TMDB ID 显示样式 */
+.tmdb-id-info {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tmdb-id-label {
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.tmdb-id-value {
+  font-weight: 600;
+  color: var(--text-color);
+  background-color: rgba(var(--primary-color-rgb), 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.tmdb-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.tmdb-link:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.1);
+}
+
+@media (max-width: 768px) {
+  .tmdb-id-info {
+    margin-top: 8px;
+  }
+}
+
+/* 拖拽相关样式 */
+.drag-handle {
+  cursor: move;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--text-muted);
+}
+
+.drag-handle i {
+  font-size: 1.2rem;
+}
+
+.drag-tip {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background-color: var(--card-bg);
+  transition: all 0.2s ease;
+}
+
+.link-ghost {
+  opacity: 0.5;
+  background: var(--highlight-bg);
+  border: 1px dashed var(--primary-color);
+}
+
+.link-inputs {
+  flex: 1;
+  padding: 12px;
+}
+
+.btn-episode {
+  background: linear-gradient(145deg, #4f46e5, #7c3aed);
+  color: white;
+}
+
+.btn-episode:hover {
+  background: linear-gradient(145deg, #4338ca, #6d28d9);
+  color: white;
+}
+
+.btn-episode.active {
+  background: linear-gradient(145deg, #059669, #10b981);
+  color: white;
+}
+
+.btn-episode.active:hover {
+  background: linear-gradient(145deg, #047857, #0d9488);
+  color: white;
+}
+
+.btn-episode i,
+.btn-episode .btn-text {
+  color: white;
+}

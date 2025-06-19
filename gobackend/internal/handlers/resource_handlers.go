@@ -675,6 +675,12 @@ func UpdateResource(c *gin.Context) {
 		updated = true
 	}
 
+	if resourceUpdate.TmdbID != nil {
+		resource.TmdbID = resourceUpdate.TmdbID
+		updated = true
+		log.Printf("更新TMDB ID: %v", *resourceUpdate.TmdbID)
+	}
+
 	if !updated {
 		log.Printf("无字段更新")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无任何字段需要更新"})
@@ -688,10 +694,10 @@ func UpdateResource(c *gin.Context) {
 	_, err = models.DB.Exec(
 		`UPDATE resources SET 
 			title = ?, title_en = ?, description = ?, resource_type = ?,
-			images = ?, poster_image = ?, links = ?, updated_at = ?
+			images = ?, poster_image = ?, links = ?, updated_at = ?, tmdb_id = ?
 		WHERE id = ?`,
 		resource.Title, resource.TitleEn, resource.Description, resource.ResourceType,
-		resource.Images, resource.PosterImage, resource.Links, resource.UpdatedAt,
+		resource.Images, resource.PosterImage, resource.Links, resource.UpdatedAt, resource.TmdbID,
 		resource.ID,
 	)
 
