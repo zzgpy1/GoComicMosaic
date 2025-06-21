@@ -4,6 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
+	"time"
+)
+
+// 缓存结构
+type cacheItem struct {
+	data      interface{}
+	timestamp time.Time
+}
+
+// 内存缓存
+var (
+	// 季节缓存
+	seasonDetailsCache sync.Map
+	// 剧照缓存
+	episodeImagesCache sync.Map
+	// 演员信息缓存
+	episodeCreditsCache sync.Map
+	// 缓存过期时间
+	cacheTTL = 1 * time.Hour
 )
 
 // Season 季节信息结构体
@@ -110,6 +130,19 @@ func GetAnimeSeasons(seriesID int) (*AnimeInfo, error) {
 
 // GetEpisodeDetails 获取某季的所有集详情
 func GetEpisodeDetails(seriesID int, seasonNumber int) (*SeasonDetailsResponse, error) {
+	// 生成缓存键
+	cacheKey := fmt.Sprintf("season_%d_%d", seriesID, seasonNumber)
+	
+	// 从缓存中获取
+	if cachedItem, found := seasonDetailsCache.Load(cacheKey); found {
+		if item, ok := cachedItem.(cacheItem); ok {
+			// 检查缓存是否过期
+			if time.Since(item.timestamp) < cacheTTL {
+				return item.data.(*SeasonDetailsResponse), nil
+			}
+		}
+	}
+	
 	// 构建URL，使用GetTMDBAPIKey()获取API密钥
 	requestURL := fmt.Sprintf("%s/tv/%d/season/%d?api_key=%s&language=%s", BASE_URL, seriesID, seasonNumber, GetTMDBAPIKey(), "zh-CN")
 	
@@ -167,6 +200,12 @@ func GetEpisodeDetails(seriesID int, seasonNumber int) (*SeasonDetailsResponse, 
 		}
 	}
 	
+	// 保存到缓存
+	seasonDetailsCache.Store(cacheKey, cacheItem{
+		data:      &seasonDetails,
+		timestamp: time.Now(),
+	})
+	
 	return &seasonDetails, nil
 }
 
@@ -199,6 +238,19 @@ func getEnglishEpisodeDetails(seriesID int, seasonNumber int) (SeasonDetailsResp
 
 // GetEpisodeImages 获取某集的剧照列表
 func GetEpisodeImages(seriesID int, seasonNumber int, episodeNumber int) ([]string, error) {
+	// 生成缓存键
+	cacheKey := fmt.Sprintf("images_%d_%d_%d", seriesID, seasonNumber, episodeNumber)
+	
+	// 从缓存中获取
+	if cachedItem, found := episodeImagesCache.Load(cacheKey); found {
+		if item, ok := cachedItem.(cacheItem); ok {
+			// 检查缓存是否过期
+			if time.Since(item.timestamp) < cacheTTL {
+				return item.data.([]string), nil
+			}
+		}
+	}
+	
 	// 构建URL，使用GetTMDBAPIKey()获取API密钥
 	requestURL := fmt.Sprintf("%s/tv/%d/season/%d/episode/%d/images?api_key=%s", BASE_URL, seriesID, seasonNumber, episodeNumber, GetTMDBAPIKey())
 	
@@ -228,11 +280,30 @@ func GetEpisodeImages(seriesID int, seasonNumber int, episodeNumber int) ([]stri
 		imageURLs = append(imageURLs, imageURL)
 	}
 	
+	// 保存到缓存
+	episodeImagesCache.Store(cacheKey, cacheItem{
+		data:      imageURLs,
+		timestamp: time.Now(),
+	})
+	
 	return imageURLs, nil
 }
 
 // GetEpisodeCredits 获取演员信息
 func GetEpisodeCredits(seriesID int, seasonNumber int, episodeNumber int) (*CreditsResponse, error) {
+	// 生成缓存键
+	cacheKey := fmt.Sprintf("credits_%d_%d_%d", seriesID, seasonNumber, episodeNumber)
+	
+	// 从缓存中获取
+	if cachedItem, found := episodeCreditsCache.Load(cacheKey); found {
+		if item, ok := cachedItem.(cacheItem); ok {
+			// 检查缓存是否过期
+			if time.Since(item.timestamp) < cacheTTL {
+				return item.data.(*CreditsResponse), nil
+			}
+		}
+	}
+	
 	// 构建URL，使用GetTMDBAPIKey()获取API密钥
 	requestURL := fmt.Sprintf("%s/tv/%d/season/%d/episode/%d/credits?api_key=%s&language=%s", BASE_URL, seriesID, seasonNumber, episodeNumber, GetTMDBAPIKey(), "zh-CN")
 	
@@ -254,6 +325,12 @@ func GetEpisodeCredits(seriesID int, seasonNumber int, episodeNumber int) (*Cred
 	if err != nil {
 		return nil, fmt.Errorf("解析演员信息失败: %w", err)
 	}
+	
+	// 保存到缓存
+	episodeCreditsCache.Store(cacheKey, cacheItem{
+		data:      &creditsResp,
+		timestamp: time.Now(),
+	})
 	
 	return &creditsResp, nil
 } 

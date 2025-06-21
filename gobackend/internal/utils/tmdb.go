@@ -316,4 +316,15 @@ func GetTMDBResource(query string) (*TMDBResource, error) {
 	}
 	
 	return resource, nil
+}
+
+// GetTmdbIdByQuery 简单快速地获取TMDB ID（仅用于剧集探索）
+func GetTmdbIdByQuery(query string) (int, error) {
+	// 直接调用SearchAnime函数，仅获取ID
+	animeID, err := SearchAnime(query, "zh-CN")
+	if err != nil {
+		return 0, fmt.Errorf("TMDB搜索ID失败: %w", err)
+	}
+	
+	return animeID, nil
 } 

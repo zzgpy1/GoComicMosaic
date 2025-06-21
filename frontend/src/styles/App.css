@@ -1091,3 +1091,24 @@ body {
 .visit-count {
   display: none; /* 这个不再使用 */
 }
+
+/* 返回推荐按钮样式 */
+.floating-btn.recommend-btn {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(240, 244, 255, 0.9));
+  color: #9c27b0; /* 使用紫色，与其他按钮区分 */
+  box-shadow: 
+    0 10px 20px rgba(156, 39, 176, 0.15),
+    0 5px 10px rgba(156, 39, 176, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  margin-bottom: 10px;
+}
+
+.floating-btn.recommend-btn:hover {
+  color: white;
+  background: linear-gradient(145deg, #9c27b0, #673ab7); /* 紫色渐变 */
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 
+    0 15px 25px rgba(156, 39, 176, 0.15),
+    0 8px 15px rgba(156, 39, 176, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}

@@ -164,8 +164,16 @@
         </div>
       </div>
 
-      <!-- 流媒体内容网格 -->
+      <!-- 推荐主页 - 当没有搜索结果时显示 -->
+      <RecommendationContainer
+        v-if="!isSearching && !searchError && searchResults.length === 0 && searchQuery.trim() === ''" 
+        @search="handleRecommendationSearch" 
+        class="recommendation-section"
+      />
+
+      <!-- 流媒体内容网格 - 当有搜索结果时显示 -->
       <div class="streams-grid" v-if="filteredStreams.length">
+
         <div v-for="stream in filteredStreams" :key="stream.id" class="stream-card">
           <div class="stream-thumbnail" :style="{ backgroundImage: `url(${stream.poster})` }">
             <div class="play-overlay" @click="playStream(stream)">
@@ -217,18 +225,22 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import VideoPlayer from '../components/VideoPlayer.vue';
 import EpisodeSelector from '../components/EpisodeSelector.vue';
 import { searchMovies, getMovieDetail, parseEpisodes } from '../utils/api';
 import { getDataSourceManager } from '../utils/dataSourceManager';
+import RecommendationHome from '../components/RecommendationHome.vue';
+import RecommendationContainer from '../components/RecommendationContainer.vue';
 
 export default {
   name: 'StreamsPage',
   components: {
     VideoPlayer,
-    EpisodeSelector
+    EpisodeSelector,
+    RecommendationHome,
+    RecommendationContainer
   },
   props: {
     id: String,
@@ -1018,13 +1030,26 @@ export default {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
     
+    // 使用模拟数据进行测试
     const testWithMockData = () => {
       // 设置搜索关键词为"灵笼"，这样可以触发模拟数据
       searchQuery.value = "灵笼";
       searchError.value = null; // 清除错误
       
-      // 执行搜索
-      performApiSearch();
+      // 直接使用模拟数据
+      searchResults.value = mockStreams;
+      
+      // 更新UI状态
+      isSearching.value = false;
+      showingSearchResults.value = true;
+    };
+    
+    // 处理推荐项点击，自动搜索剧名
+    const handleRecommendationSearch = (title) => {
+      if (title) {
+        searchQuery.value = title;
+        handleSearch();
+      }
     };
     
     // 防抖函数：等待一段时间后执行函数，如果在等待期间再次调用则重新计时
@@ -1135,6 +1160,33 @@ export default {
       return 'application/x-mpegURL';
     };
     
+    // 返回推荐主页
+    const returnToHome = () => {
+      searchQuery.value = '';
+      searchResults.value = [];
+      isPlaying.value = false;
+      streamInfo.value = null;
+      showingSearchResults.value = false;
+      isChangingVideo.value = false;
+      
+      // 确保所有可能影响按钮显示的状态都被重置
+      playerError.value = null;
+      currentPage.value = 1;
+      isSearching.value = false;
+      searchError.value = null;
+      
+      // 清除URL参数
+      router.replace({
+        path: '/streams',
+        query: {}
+      }).catch(() => {});
+      
+      // 通知父组件状态已更改
+      nextTick(() => {
+        console.log("已返回推荐主页，所有状态已重置");
+      });
+    };
+    
     return {
       streams,
       filteredStreams,
@@ -1176,7 +1228,9 @@ export default {
       handleSearch,
       clearPlayHistory,
       isDescriptionCollapsed,
-      getMediaTypeFromUrl
+      getMediaTypeFromUrl,
+      handleRecommendationSearch,
+      returnToHome
     };
   }
 }

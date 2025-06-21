@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -223,71 +224,119 @@ func GetEpisodeInfo(c *gin.Context) {
 		return
 	}
 
-	// 获取剧集详情
-	seasonDetails, err := utils.GetEpisodeDetails(seriesID, seasonNumber)
-	if err != nil {
-		log.Printf("获取季详情失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	// 使用 goroutine 并发获取数据
+	type episodeResult struct {
+		Episode    *utils.Episode
+		SeasonName string
+		SeasonID   int
+		Err        error
 	}
 
-	// 找到对应的集
-	var targetEpisode *utils.Episode
-	for i := range seasonDetails.Episodes {
-		if seasonDetails.Episodes[i].EpisodeNumber == episodeNumber {
-			targetEpisode = &seasonDetails.Episodes[i]
-			break
+	type imagesResult struct {
+		Images []string
+		Err    error
+	}
+
+	type creditsResult struct {
+		Credits *utils.CreditsResponse
+		Err     error
+	}
+
+	// 创建通道接收结果
+	episodeChan := make(chan episodeResult, 1)
+	imagesChan := make(chan imagesResult, 1)
+	creditsChan := make(chan creditsResult, 1)
+
+	// 并发获取剧集详情
+	go func() {
+		seasonDetails, err := utils.GetEpisodeDetails(seriesID, seasonNumber)
+		if err != nil {
+			episodeChan <- episodeResult{Err: err}
+			return
 		}
-	}
 
-	if targetEpisode == nil {
-		log.Printf("未找到对应的集: 第%d季第%d集", seasonNumber, episodeNumber)
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到对应的集"})
+		// 找到对应的集
+		var targetEpisode *utils.Episode
+		for i := range seasonDetails.Episodes {
+			if seasonDetails.Episodes[i].EpisodeNumber == episodeNumber {
+				targetEpisode = &seasonDetails.Episodes[i]
+				break
+			}
+		}
+
+		if targetEpisode == nil {
+			episodeChan <- episodeResult{Err: fmt.Errorf("未找到对应的集: 第%d季第%d集", seasonNumber, episodeNumber)}
+			return
+		}
+
+		episodeChan <- episodeResult{
+			Episode:    targetEpisode,
+			SeasonName: seasonDetails.Name,
+			SeasonID:   seasonDetails.ID,
+			Err:        nil,
+		}
+	}()
+
+	// 并发获取剧照
+	go func() {
+		images, err := utils.GetEpisodeImages(seriesID, seasonNumber, episodeNumber)
+		if err != nil {
+			imagesChan <- imagesResult{Err: err}
+			return
+		}
+		imagesChan <- imagesResult{Images: images, Err: nil}
+	}()
+
+	// 并发获取演员信息
+	go func() {
+		credits, err := utils.GetEpisodeCredits(seriesID, seasonNumber, episodeNumber)
+		if err != nil {
+			creditsChan <- creditsResult{Err: err}
+			return
+		}
+		creditsChan <- creditsResult{Credits: credits, Err: nil}
+	}()
+
+	// 等待所有goroutine完成并获取结果
+	episodeRes := <-episodeChan
+	imagesRes := <-imagesChan
+	creditsRes := <-creditsChan
+
+	// 处理剧集详情错误
+	if episodeRes.Err != nil {
+		log.Printf("获取剧集详情失败: %v", episodeRes.Err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": episodeRes.Err.Error()})
 		return
-	}
-
-	// 获取剧照
-	images, err := utils.GetEpisodeImages(seriesID, seasonNumber, episodeNumber)
-	if err != nil {
-		log.Printf("获取剧照失败: %v", err)
-		// 即使获取剧照失败也继续
-	}
-
-	// 获取演员信息
-	credits, err := utils.GetEpisodeCredits(seriesID, seasonNumber, episodeNumber)
-	if err != nil {
-		log.Printf("获取演员信息失败: %v", err)
-		// 即使获取演员信息失败也继续
 	}
 
 	// 组装返回数据
+	var images []string
+	if imagesRes.Err != nil {
+		log.Printf("获取剧照失败: %v", imagesRes.Err)
+		images = []string{} // 如果获取图片失败，返回空数组
+	} else {
+		images = imagesRes.Images
+	}
+
 	var castResult []utils.Actor
 	var guestStarsResult []utils.Actor
-	
-	if credits != nil {
-		if len(credits.Cast) > 0 {
-			castResult = credits.Cast
-		} else {
-			castResult = []utils.Actor{}
-		}
-		
-		if len(credits.GuestStars) > 0 {
-			guestStarsResult = credits.GuestStars
-		} else {
-			guestStarsResult = []utils.Actor{}
-		}
-	} else {
+
+	if creditsRes.Err != nil {
+		log.Printf("获取演员信息失败: %v", creditsRes.Err)
 		castResult = []utils.Actor{}
 		guestStarsResult = []utils.Actor{}
+	} else if creditsRes.Credits != nil {
+		castResult = creditsRes.Credits.Cast
+		guestStarsResult = creditsRes.Credits.GuestStars
 	}
 
 	result := gin.H{
-		"episode":      targetEpisode,
+		"episode":      episodeRes.Episode,
 		"images":       images,
 		"cast":         castResult,
 		"guest_stars":  guestStarsResult,
-		"season_name":  seasonDetails.Name,
-		"season_id":    seasonDetails.ID,
+		"season_name":  episodeRes.SeasonName,
+		"season_id":    episodeRes.SeasonID,
 	}
 
 	c.JSON(http.StatusOK, result)
@@ -332,4 +381,192 @@ func GetResourceByTMDBID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resource)
+}
+
+// GetBatchEpisodeInfo 批量获取多个剧集详细信息
+// @Summary 批量获取多个剧集的详细信息
+// @Description 批量获取多个剧集的详细信息，包括基本信息、剧照和演员信息
+// @Tags TMDB
+// @Accept json
+// @Produce json
+// @Param request body BatchEpisodeRequest true "批量请求详情"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /api/tmdb/episodes/batch [post]
+func GetBatchEpisodeInfo(c *gin.Context) {
+	// 批量请求结构
+	type EpisodeRequest struct {
+		SeriesID      int `json:"series_id"`
+		SeasonNumber  int `json:"season_number"`
+		EpisodeNumber int `json:"episode_number"`
+	}
+
+	type BatchEpisodeRequest struct {
+		Episodes []EpisodeRequest `json:"episodes" binding:"required"`
+	}
+
+	// 解析请求体
+	var req BatchEpisodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("解析批量请求失败: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
+		return
+	}
+
+	// 检查请求参数
+	if len(req.Episodes) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "未提供剧集请求"})
+		return
+	}
+	
+	// 限制批量请求数量，避免过大的请求
+	if len(req.Episodes) > 10 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "批量请求剧集数量不能超过10个"})
+		return
+	}
+
+	// 批量结果结构
+	type EpisodeData struct {
+		Episode     *utils.Episode      `json:"episode"`
+		Images      []string            `json:"images"`
+		Cast        []utils.Actor       `json:"cast"`
+		GuestStars  []utils.Actor       `json:"guest_stars"`
+		SeasonName  string              `json:"season_name"`
+		SeasonID    int                 `json:"season_id"`
+	}
+
+	// 创建结果映射
+	results := make(map[string]EpisodeData)
+	
+	// 使用goroutine并发处理每个请求
+	type resultWithKey struct {
+		Key   string
+		Data  EpisodeData
+		Error error
+	}
+	
+	// 创建通道接收结果，缓冲大小为请求数量
+	resultChan := make(chan resultWithKey, len(req.Episodes))
+	
+	// 处理每个剧集请求
+	for _, episodeReq := range req.Episodes {
+		// 为每个请求创建一个goroutine
+		go func(er EpisodeRequest) {
+			// 生成结果键
+			resultKey := fmt.Sprintf("%d_%d_%d", er.SeriesID, er.SeasonNumber, er.EpisodeNumber)
+			
+			// 获取季节详情
+			seasonDetails, err := utils.GetEpisodeDetails(er.SeriesID, er.SeasonNumber)
+			if err != nil {
+				resultChan <- resultWithKey{Key: resultKey, Error: fmt.Errorf("获取剧集详情失败: %w", err)}
+				return
+			}
+			
+			// 找到对应的集
+			var targetEpisode *utils.Episode
+			for i := range seasonDetails.Episodes {
+				if seasonDetails.Episodes[i].EpisodeNumber == er.EpisodeNumber {
+					targetEpisode = &seasonDetails.Episodes[i]
+					break
+				}
+			}
+			
+			if targetEpisode == nil {
+				resultChan <- resultWithKey{Key: resultKey, Error: fmt.Errorf("未找到对应的集: 第%d季第%d集", er.SeasonNumber, er.EpisodeNumber)}
+				return
+			}
+			
+			// 并发获取图片和演员信息
+			type imagesResult struct {
+				Images []string
+				Err    error
+			}
+			
+			type creditsResult struct {
+				Credits *utils.CreditsResponse
+				Err     error
+			}
+			
+			// 创建通道
+			imagesChan := make(chan imagesResult, 1)
+			creditsChan := make(chan creditsResult, 1)
+			
+			// 获取图片
+			go func() {
+				images, err := utils.GetEpisodeImages(er.SeriesID, er.SeasonNumber, er.EpisodeNumber)
+				if err != nil {
+					imagesChan <- imagesResult{Images: []string{}, Err: err}
+					return
+				}
+				imagesChan <- imagesResult{Images: images, Err: nil}
+			}()
+			
+			// 获取演员信息
+			go func() {
+				credits, err := utils.GetEpisodeCredits(er.SeriesID, er.SeasonNumber, er.EpisodeNumber)
+				if err != nil {
+					creditsChan <- creditsResult{Credits: nil, Err: err}
+					return
+				}
+				creditsChan <- creditsResult{Credits: credits, Err: nil}
+			}()
+			
+			// 等待所有结果
+			imagesRes := <-imagesChan
+			creditsRes := <-creditsChan
+			
+			// 处理结果
+			var images []string
+			if imagesRes.Err != nil {
+				log.Printf("获取剧照失败: %v", imagesRes.Err)
+				images = []string{} // 如果获取图片失败，返回空数组
+			} else {
+				images = imagesRes.Images
+			}
+			
+			var castResult []utils.Actor
+			var guestStarsResult []utils.Actor
+			
+			if creditsRes.Err != nil {
+				log.Printf("获取演员信息失败: %v", creditsRes.Err)
+				castResult = []utils.Actor{}
+				guestStarsResult = []utils.Actor{}
+			} else if creditsRes.Credits != nil {
+				castResult = creditsRes.Credits.Cast
+				guestStarsResult = creditsRes.Credits.GuestStars
+			}
+			
+			// 发送结果
+			resultChan <- resultWithKey{
+				Key: resultKey,
+				Data: EpisodeData{
+					Episode:     targetEpisode,
+					Images:      images,
+					Cast:        castResult,
+					GuestStars:  guestStarsResult,
+					SeasonName:  seasonDetails.Name,
+					SeasonID:    seasonDetails.ID,
+				},
+				Error: nil,
+			}
+		}(episodeReq)
+	}
+	
+	// 收集所有结果
+	errors := make([]string, 0)
+	for i := 0; i < len(req.Episodes); i++ {
+		result := <-resultChan
+		if result.Error != nil {
+			errors = append(errors, result.Error.Error())
+		} else {
+			results[result.Key] = result.Data
+		}
+	}
+	
+	// 返回结果
+	c.JSON(http.StatusOK, gin.H{
+		"results": results,
+		"errors": errors,
+	})
 } 

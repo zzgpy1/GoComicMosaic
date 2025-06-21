@@ -676,9 +676,15 @@ func UpdateResource(c *gin.Context) {
 	}
 
 	if resourceUpdate.TmdbID != nil {
-		resource.TmdbID = resourceUpdate.TmdbID
+		// 处理前端清空 TMDB ID 的情况
+		// 如果前端传入的是 0 或 null，则将 TmdbID 设为 nil
+		if *resourceUpdate.TmdbID == 0 {
+			resource.TmdbID = nil
+		} else {
+			resource.TmdbID = resourceUpdate.TmdbID
+		}
 		updated = true
-		log.Printf("更新TMDB ID: %v", *resourceUpdate.TmdbID)
+		log.Printf("更新TMDB ID: %v", resource.TmdbID)
 	}
 
 	if !updated {

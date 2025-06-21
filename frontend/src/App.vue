@@ -115,6 +115,15 @@
       <router-link to="/" class="floating-btn home-btn" title="返回主页">
         <i class="bi bi-house-fill"></i>
       </router-link>
+      <!-- 添加返回推荐主页按钮 -->
+      <button 
+        v-if="showRecommendButton" 
+        @click="returnToRecommendHome" 
+        class="floating-btn recommend-btn" 
+        title="返回推荐"
+      >
+        <i class="bi bi-arrow-return-left"></i>
+      </button>
       <button @click="scrollToTop" class="floating-btn top-btn" title="回到顶部">
         <i class="bi bi-chevron-up"></i>
       </button>
@@ -126,12 +135,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
+import { ref, onMounted, computed, nextTick, onUnmounted, provide, watch } from 'vue'
 import { isAuthenticated, getCurrentUser, logout, setupAxiosInterceptors } from './utils/auth'
 import { useRoute, useRouter } from 'vue-router'
 import LocalSearch from './components/LocalSearch.vue'
 import axios from 'axios'
 import { getSiteSettings } from './utils/api'
+import TmdbStatusService from './services/TmdbStatusService'
 
 const route = useRoute()
 const router = useRouter()
@@ -223,10 +233,10 @@ const loadSiteInfo = async () => {
 // 加载TMDB配置
 const loadTMDBConfig = async () => {
   try {
-    // 修改为使用专门的端点，只获取TMDB功能是否启用状态，不暴露API密钥
-    const response = await axios.get('/api/settings/tmdb_status');
-    if (response.data && response.data.enabled !== undefined) {
-      tmdbEnabled.value = response.data.enabled === true;
+    // 使用TmdbStatusService服务获取TMDB状态
+    const data = await TmdbStatusService.getTmdbStatus();
+    if (data && data.enabled !== undefined) {
+      tmdbEnabled.value = data.enabled === true;
     }
   } catch (error) {
     console.error('加载TMDB状态失败:', error);
@@ -356,6 +366,117 @@ const updateMetaInfo = (to) => {
   }
 }
 
+// 控制返回推荐主页按钮的显示
+const showRecommendButton = computed(() => {
+  // 只在StreamsPage页面显示
+  if (!route.path.startsWith('/streams')) {
+    return false;
+  }
+  
+  // 检查路由参数，如果有id或direct_url，说明正在播放视频
+  if (route.query.id || route.query.direct_url || route.query.search) {
+    return true;
+  }
+  
+  // 获取当前页面的组件实例
+  const currentInstance = router.currentRoute.value.matched[0]?.instances?.default;
+  if (!currentInstance) {
+    return false;
+  }
+  
+  // 如果显示的是推荐主页，则不显示按钮
+  // 检查是否满足推荐主页显示条件：没有搜索中、没有搜索错误、没有搜索结果、搜索查询为空
+  if (!currentInstance.isSearching && 
+      !currentInstance.searchError && 
+      (!currentInstance.searchResults || currentInstance.searchResults.length === 0) && 
+      (!currentInstance.searchQuery || currentInstance.searchQuery.trim() === '')) {
+    // 额外检查是否正在播放视频
+    if (!currentInstance.isPlaying) {
+      return false;
+    }
+  }
+  
+  // 检查是否有搜索结果或正在播放视频或有搜索查询
+  return Boolean(
+    currentInstance.isPlaying || 
+    (currentInstance.searchResults && currentInstance.searchResults.length > 0) ||
+    (currentInstance.filteredStreams && currentInstance.filteredStreams.length > 0) ||
+    (currentInstance.searchQuery && currentInstance.searchQuery.trim() !== '') ||
+    // 检查是否在播放页面但没有显示推荐
+    (currentInstance.showingSearchResults === false && 
+     !currentInstance.isSearching && 
+     !currentInstance.searchError)
+  );
+});
+
+// 返回推荐主页的方法
+const returnToRecommendHome = () => {
+  // 获取当前页面的组件实例
+  const currentInstance = router.currentRoute.value.matched[0]?.instances?.default;
+  if (currentInstance && typeof currentInstance.returnToHome === 'function') {
+    currentInstance.returnToHome();
+    
+    // 清除URL参数，确保状态一致
+    router.replace({
+      path: '/streams',
+      query: {}
+    }).catch(() => {});
+    
+    // 延迟一段时间后强制刷新按钮状态，确保组件状态已更新
+    setTimeout(() => {
+      // 重新检查组件状态
+      const updatedInstance = router.currentRoute.value.matched[0]?.instances?.default;
+      if (updatedInstance) {
+        // 直接设置一些关键状态，确保按钮隐藏
+        if (updatedInstance.isPlaying) {
+          updatedInstance.isPlaying = false;
+        }
+        if (updatedInstance.searchResults && updatedInstance.searchResults.length > 0) {
+          updatedInstance.searchResults = [];
+        }
+        if (updatedInstance.searchQuery && updatedInstance.searchQuery.trim() !== '') {
+          updatedInstance.searchQuery = '';
+        }
+        if (updatedInstance.filteredStreams && updatedInstance.filteredStreams.length > 0) {
+          // 不直接修改filteredStreams，因为它可能是计算属性
+          console.log("重置搜索状态");
+        }
+        
+        // 强制刷新按钮状态
+        refreshButtonState();
+      }
+    }, 100);
+  }
+};
+
+// 提供返回推荐主页的方法给子组件
+provide('returnToRecommendHome', returnToRecommendHome);
+
+// 强制刷新按钮状态的方法
+const refreshButtonState = () => {
+  nextTick(() => {
+    // 获取当前页面的组件实例
+    const currentInstance = router.currentRoute.value.matched[0]?.instances?.default;
+    if (currentInstance) {
+      // 通过访问一些属性来触发计算属性重新计算
+      console.log("刷新按钮状态，当前路径:", route.path);
+      console.log("当前查询参数:", Object.keys(route.query).length > 0 ? "有" : "无");
+      
+      // 如果在StreamsPage，检查一些关键状态
+      if (route.path.startsWith('/streams')) {
+        const hasResults = Boolean(
+          currentInstance.searchResults && currentInstance.searchResults.length > 0
+        );
+        const isPlaying = Boolean(currentInstance.isPlaying);
+        console.log(`播放状态: ${isPlaying}, 搜索结果: ${hasResults}`);
+      }
+    }
+  });
+};
+
+// 路由监听器引用
+let routeWatcher = null;
+
 // 使用afterEach钩子监听路由变化
 onMounted(() => {
   // 设置路由afterEach钩子
@@ -365,6 +486,13 @@ onMounted(() => {
     
     // 回到页面顶部（可选）
     // window.scrollTo(0, 0)
+  });
+  
+  // 添加路由变化监听，确保按钮状态更新
+  routeWatcher = router.beforeEach(() => {
+    // 强制重新计算showRecommendButton
+    refreshButtonState();
+    return true;
   });
   
   checkAuthState();
@@ -404,13 +532,44 @@ onMounted(() => {
 
   // 加载TMDB配置
   loadTMDBConfig();
+  
+  // 初始化时强制刷新一次按钮状态
+  setTimeout(refreshButtonState, 500);
 })
+
+// 设置定期检查组件状态的定时器
+const stateCheckInterval = setInterval(() => {
+  if (route.path.startsWith('/streams')) {
+    refreshButtonState();
+  }
+}, 1000); // 每秒检查一次
+
+// 监听route.query变化
+watch(() => route.query, () => {
+  // 强制重新计算showRecommendButton
+  refreshButtonState();
+}, { deep: true });
+
+// 监听route.path变化
+watch(() => route.path, () => {
+  // 强制重新计算showRecommendButton
+  refreshButtonState();
+});
 
 // 页面卸载时移除事件监听器
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('beforeunload', clearPaginationStorage);
+  
+  // 移除路由监听
+  if (routeWatcher && typeof routeWatcher === 'function') {
+    routeWatcher();
+  }
+  
+  // 清除定时器
+  clearInterval(stateCheckInterval);
 });
 </script>
 
 <style src="@/styles/App.css"></style>
+

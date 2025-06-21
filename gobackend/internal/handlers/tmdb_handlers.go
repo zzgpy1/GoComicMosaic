@@ -254,4 +254,36 @@ func UpdateResourceTmdbID(c *gin.Context) {
 	
 	// 返回更新后的资源
 	c.JSON(http.StatusOK, resource)
+}
+
+// SearchTmdbId 仅搜索TMDB ID
+// @Summary 仅搜索TMDB ID
+// @Description 根据查询字符串搜索TMDB API获取ID，适用于剧集探索等场景
+// @Tags TMDB
+// @Accept json
+// @Produce json
+// @Param query query string true "搜索关键词"
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /api/tmdb/search_id [get]
+func SearchTmdbId(c *gin.Context) {
+	// 从URL查询参数获取查询字符串
+	query := c.Query("query")
+
+	// 检查查询字符串是否为空
+	if strings.TrimSpace(query) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "查询字符串不能为空"})
+		return
+	}
+
+	// 使用TMDB工具仅搜索ID
+	id, err := utils.GetTmdbIdByQuery(query)
+	if err != nil {
+		log.Printf("TMDB ID搜索失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"id": id})
 } 

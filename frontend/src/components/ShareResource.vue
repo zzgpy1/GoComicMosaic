@@ -71,7 +71,8 @@ const getProxiedImageUrl = (url) => {
 const props = defineProps({
   resource: {
     type: Object,
-    required: true
+    required: true,
+    default: () => ({}) // 添加默认空对象，避免null值
   }
 })
 

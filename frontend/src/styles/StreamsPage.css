@@ -991,4 +991,25 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* 推荐部分样式 */
+.recommendation-section {
+  margin-top: 20px;
+  margin-bottom: 40px;
+}
+
+/* 确保推荐卡片在不同主题下都能正常显示 */
+.recommendation-card {
+  background-color: var(--card-bg-color, #fff);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+/* 适配暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .recommendation-card {
+    background-color: var(--card-bg-color-dark, #333);
+  }
 } 

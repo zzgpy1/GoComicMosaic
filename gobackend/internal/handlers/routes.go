@@ -55,6 +55,7 @@ func SetupRoutes(router *gin.Engine) {
 	tmdb := api.Group("/tmdb")
 	{
 		tmdb.GET("/search", SearchTMDB)
+		tmdb.GET("/search_id", SearchTmdbId)
 		tmdb.POST("/create", CreateResourceFromTMDB)
 		
 		// 添加新的季节和剧集API路由
@@ -63,6 +64,9 @@ func SetupRoutes(router *gin.Engine) {
 		tmdb.GET("/seasons/:series_id/:season_number/:episode_number/images", GetTMDBEpisodeImages)
 		tmdb.GET("/seasons/:series_id/:season_number/:episode_number/credits", GetTMDBEpisodeCredits)
 		tmdb.GET("/episode/:series_id/:season_number/:episode_number", GetEpisodeInfo)
+		
+		// 批量获取剧集信息的API
+		tmdb.POST("/episodes/batch", GetBatchEpisodeInfo)
 		
 		// 通过TMDB ID查找本地资源
 		tmdb.GET("/resource/:tmdb_id", GetResourceByTMDBID)

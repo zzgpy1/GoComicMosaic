@@ -501,9 +501,10 @@
     </div>
     
     <!-- 添加ShareResource组件，使用ref来引用 -->
-    <ShareResource 
-      ref="shareResourceRef" 
-      :resource="resource" 
+    <ShareResource
+      ref="shareResourceRef"
+      :resource="resource"
+      v-if="resource"
     />
   </div>
 </template>
@@ -517,6 +518,7 @@ import { getImageUrl } from '@/utils/imageUtils'
 import ShareResource from '@/components/ShareResource.vue'
 import draggable from 'vuedraggable'  // 导入 vuedraggable 组件
 import EpisodeOverview from '@/components/EpisodeOverview.vue' // 导入剧集探索组件
+import TmdbStatusService from '../services/TmdbStatusService'
 
 const route = useRoute()
 const router = useRouter()
@@ -547,9 +549,10 @@ const handleShare = () => {
 // 加载TMDB配置
 const loadTMDBConfig = async () => {
   try {
-    const response = await axios.get('/api/settings/tmdb_status');
-    if (response.data && response.data.enabled !== undefined) {
-      tmdbEnabled.value = response.data.enabled === true;
+    // 使用TmdbStatusService服务获取TMDB状态
+    const data = await TmdbStatusService.getTmdbStatus();
+    if (data && data.enabled !== undefined) {
+      tmdbEnabled.value = data.enabled === true;
     }
   } catch (error) {
     console.error('加载TMDB状态失败:', error);
@@ -874,7 +877,7 @@ const saveChanges = async () => {
       poster_image: editForm.poster_image,
       images: editForm.images, // 提交所有图片
       links: hasLinks ? linksToSubmit : undefined, // 提交链接数据
-      tmdb_id: editForm.tmdb_id // 提交TMDB ID
+      tmdb_id: editForm.tmdb_id === '' || editForm.tmdb_id === null ? 0 : editForm.tmdb_id // 确保清空时传递数字0
     })
     
     // 更新本地资源数据
