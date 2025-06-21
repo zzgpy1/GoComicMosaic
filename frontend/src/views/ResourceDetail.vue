@@ -166,8 +166,8 @@
                     <!-- 链接类型选项卡 -->
                     <div class="links-tabs">
                       <button 
-                        v-for="(category, categoryIndex) in Object.keys(editLinks)" 
-                        :key="categoryIndex"
+                        v-for="category in orderedEditCategories" 
+                        :key="category"
                         class="tab-btn"
                         :class="{ active: editActiveCategory === category }"
                         @click.prevent="editActiveCategory = category"
@@ -179,7 +179,7 @@
                     
                     <!-- 链接输入区域 -->
                     <div class="links-content">
-                      <div v-for="(category, categoryIndex) in Object.keys(editLinks)" :key="categoryIndex" 
+                      <div v-for="category in orderedEditCategories" :key="category" 
                            v-show="editActiveCategory === category"
                            class="link-category-content">
                         <div v-if="editLinks[category].length === 0" class="empty-links">
@@ -343,12 +343,30 @@
         <div v-if="!showingEpisodeExplorer" class="resource-content">
           <div class="media-section">
             <!-- 大图展示区 -->
-            <div class="main-image-container" @click="previewEditImage(currentImage)">
+            <div class="main-image-container" 
+                 @touchstart="handleTouchStart" 
+                 @touchmove="handleTouchMove" 
+                 @touchend="handleTouchEnd"
+                 @mousedown="handleMouseDown"
+                 @mousemove="handleMouseMove"
+                 @mouseup="handleMouseUp"
+                 @mouseleave="handleMouseUp">
               <img 
                 :src="getImageUrl(currentImage)" 
                 class="resource-poster" 
                 :alt="resource.title || resource.title_en"
+                @click="previewEditImage(currentImage)"
+                :style="imageTransformStyle"
+                style="transition: transform 0.3s ease;"
               >
+              <div class="image-navigation" v-if="resource.images && resource.images.filter(img => img !== resource.poster_image).length > 1">
+                <button @click.stop="prevImage" class="nav-button prev" :disabled="isFirstImage">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <button @click.stop="nextImage" class="nav-button next" :disabled="isLastImage">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
             </div>
             
             <!-- 缩略图滚动区 -->
@@ -399,23 +417,22 @@
               <div class="card-body">
                 <div class="links-tabs">
                   <button 
-                    v-for="(links, category) in resource.links" 
-                    :key="category" 
+                    v-for="category in orderedVisibleCategories" 
+                    :key="category"
                     class="tab-btn" 
                     :class="{ active: activeCategory === category }" 
                     @click.prevent="activeCategory = category"
-                    v-show="links.length > 0"
                   >
                     {{ getCategoryDisplayName(category) }}
-                    <span class="tab-badge">{{ links.length }}</span>
+                    <span class="tab-badge">{{ resource.links[category].length }}</span>
                   </button>
                 </div>
                 
                 <div class="links-content">
-                  <div v-for="(links, category) in resource.links" :key="`content-${category}`" 
+                  <div v-for="category in orderedVisibleCategories" :key="`content-${category}`" 
                        class="tab-pane" 
                        :class="{ active: activeCategory === category }"
-                       v-show="links.length > 0 && activeCategory === category">
+                       v-show="activeCategory === category">
                     
                     <div class="links-table">
                       <div class="table-header">
@@ -424,7 +441,7 @@
                         <div class="col-note">备注</div>
                       </div>
                       <div class="table-body">
-                        <div class="table-row" v-for="(link, index) in links" :key="index">
+                        <div class="table-row" v-for="(link, index) in resource.links[category]" :key="index">
                           <div class="col-link">
                             <a 
                               :href="link.url" 
@@ -610,9 +627,58 @@ const selectedImage = ref(null)
 // 计算属性检查是否为管理员
 const isUserAdmin = computed(() => isAdmin())
 
+// 添加图片导航相关的计算属性
+const nonPosterImages = computed(() => {
+  if (!resource.value || !resource.value.images) return []
+  return resource.value.images.filter(img => img !== resource.value.poster_image)
+})
+
+const currentImageIndex = computed(() => {
+  if (!currentImage.value || nonPosterImages.value.length === 0) return -1
+  return nonPosterImages.value.indexOf(currentImage.value)
+})
+
+const isFirstImage = computed(() => {
+  return currentImageIndex.value <= 0
+})
+
+const isLastImage = computed(() => {
+  return currentImageIndex.value >= nonPosterImages.value.length - 1
+})
+
+const imageTransformStyle = computed(() => {
+  // 实现图片拖动效果
+  if (isDragging.value) {
+    return { transform: `translateX(${dragOffset.value}px)` }
+  }
+  return {}
+})
+
 // 选择图片展示在大图区域
 const selectImage = (image) => {
   currentImage.value = image;
+}
+
+// 切换到上一张图片
+const prevImage = (event) => {
+  if (event) event.stopPropagation()
+  if (isFirstImage.value) return
+  
+  const index = currentImageIndex.value - 1
+  if (index >= 0 && index < nonPosterImages.value.length) {
+    currentImage.value = nonPosterImages.value[index]
+  }
+}
+
+// 切换到下一张图片
+const nextImage = (event) => {
+  if (event) event.stopPropagation()
+  if (isLastImage.value) return
+  
+  const index = currentImageIndex.value + 1
+  if (index >= 0 && index < nonPosterImages.value.length) {
+    currentImage.value = nonPosterImages.value[index]
+  }
 }
 
 // 检查本地存储中是否已喜欢该资源
@@ -681,7 +747,12 @@ const fetchResource = async () => {
       } else {
         currentImage.value = resource.value.images[0]; // 只有1张图片，显示第1张
       } 
-    } 
+    }
+    
+    // 初始化活动链接类别 - 选择第一个有内容的链接类型
+    if (orderedVisibleCategories.value.length > 0) {
+      activeCategory.value = orderedVisibleCategories.value[0];
+    }
   } catch (err) {
     console.error('获取资源详情失败:', err)
     error.value = '获取资源详情失败，请稍后重试'
@@ -696,6 +767,13 @@ const uploading = ref(false)
 const uploadProgress = ref(0)
 const currentUploadIndex = ref(0)
 const totalUploadCount = ref(0)
+// 添加滑动控制相关变量
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+const mouseStartX = ref(0)
+const mouseEndX = ref(0)
+const dragOffset = ref(0)
+const swipeThreshold = 50 // 触发滑动的阈值（像素）
 
 // 开始编辑
 const startEdit = () => {
@@ -739,12 +817,29 @@ const startEdit = () => {
     }
   }
   
-  // 设置第一个有链接的分类为激活状态
-  for (const category in editLinks) {
-    if (editLinks[category].length > 0) {
-      editActiveCategory.value = category
-      break
+  // 设置活动的链接类型 - 使用有序的链接类型
+  let foundActiveCategory = false;
+  
+  // 首先尝试使用当前活动的类别
+  if (activeCategory.value && editLinks[activeCategory.value] && editLinks[activeCategory.value].length > 0) {
+    editActiveCategory.value = activeCategory.value;
+    foundActiveCategory = true;
+  }
+  
+  // 如果当前活动类别没有内容，则查找第一个有内容的类别
+  if (!foundActiveCategory) {
+    for (const category of orderedEditCategories.value) {
+      if (editLinks[category] && editLinks[category].length > 0) {
+        editActiveCategory.value = category;
+        foundActiveCategory = true;
+        break;
+      }
     }
+  }
+  
+  // 如果没有找到有内容的类别，则使用第一个类别
+  if (!foundActiveCategory && orderedEditCategories.value.length > 0) {
+    editActiveCategory.value = orderedEditCategories.value[0];
   }
   
   isEditing.value = true
@@ -979,23 +1074,43 @@ const goToStreamPage = () => {
 // 资源链接相关变量
 const activeCategory = ref('magnet') // 默认显示的链接类型
 
-// 网盘类型显示名称映射
+// 网盘类型显示名称映射 - 按照期望的显示顺序排列
 const categoryDisplayNames = {
-  "magnet": "磁力链接",
-  "ed2k": "电驴(ed2k)",
-  "uc": "UC网盘",
-  "mobile": "移动云盘",
-  "tianyi": "天翼云盘",
-  "quark": "夸克网盘",
-  "115": "115网盘",
-  "aliyun": "阿里云盘",
-  "pikpak": "PikPak",
-  "baidu": "百度网盘",
-  "123": "123网盘",
-  "xunlei": "迅雷网盘",
   "online": "在线观看",
+  "quark": "夸克网盘",
+  "aliyun": "阿里云盘",
+  "mobile": "移动云盘",
+  "baidu": "百度网盘",
+  "115": "115网盘",
+  "xunlei": "迅雷网盘",
+  "magnet": "磁力链接",
+  "tianyi": "天翼云盘",
+  "pikpak": "PikPak",
+  "123": "123网盘",
+  "uc": "UC网盘",
+  "ed2k": "电驴(ed2k)",
   "others": "其他链接"
 }
+
+// 动态获取链接类型的显示顺序
+const linkCategoryOrder = Object.keys(categoryDisplayNames)
+
+// 计算属性：获取有序的链接类型（只包含有内容的类型）
+const orderedVisibleCategories = computed(() => {
+  if (!resource.value || !resource.value.links) return [];
+  
+  // 按照定义的顺序过滤出有内容的链接类型
+  return linkCategoryOrder.filter(category => 
+    resource.value.links[category] && 
+    resource.value.links[category].length > 0
+  );
+});
+
+// 计算属性：获取编辑模式下的有序链接类型（包含所有类型）
+const orderedEditCategories = computed(() => {
+  // 直接返回定义的顺序
+  return linkCategoryOrder;
+});
 
 // 获取类型显示名称
 const getCategoryDisplayName = (category) => {
@@ -1080,10 +1195,153 @@ const toggleResourceType = (type) => {
   editForm.resource_type = types.join(',');
 };
 
+// 处理触摸开始事件
+const handleTouchStart = (event) => {
+  if (nonPosterImages.value.length <= 1) return
+  touchStartX.value = event.touches[0].clientX
+  touchEndX.value = touchStartX.value
+  isDragging.value = true
+  dragOffset.value = 0
+}
+
+// 处理触摸移动事件
+const handleTouchMove = (event) => {
+  if (!isDragging.value || nonPosterImages.value.length <= 1) return
+  touchEndX.value = event.touches[0].clientX
+  dragOffset.value = touchEndX.value - touchStartX.value
+  
+  // 添加边界限制，第一张图片不能向右滑，最后一张图片不能向左滑
+  if ((isFirstImage.value && dragOffset.value > 0) || 
+      (isLastImage.value && dragOffset.value < 0)) {
+    dragOffset.value = dragOffset.value * 0.3 // 增加阻力效果
+  }
+  
+  // 防止事件冒泡和默认行为
+  event.preventDefault()
+}
+
+// 处理触摸结束事件
+const handleTouchEnd = () => {
+  if (!isDragging.value || nonPosterImages.value.length <= 1) return
+  
+  const swipeDistance = touchEndX.value - touchStartX.value
+  processSwipe(swipeDistance)
+  
+  isDragging.value = false
+  dragOffset.value = 0
+}
+
+// 处理鼠标按下事件
+const handleMouseDown = (event) => {
+  if (nonPosterImages.value.length <= 1) return
+  mouseStartX.value = event.clientX
+  mouseEndX.value = mouseStartX.value
+  isDragging.value = true
+  dragOffset.value = 0
+  
+  // 防止鼠标拖动时选中文本
+  event.preventDefault()
+}
+
+// 处理鼠标移动事件
+const handleMouseMove = (event) => {
+  if (!isDragging.value || nonPosterImages.value.length <= 1) return
+  mouseEndX.value = event.clientX
+  dragOffset.value = mouseEndX.value - mouseStartX.value
+  
+  // 添加边界限制，第一张图片不能向右滑，最后一张图片不能向左滑
+  if ((isFirstImage.value && dragOffset.value > 0) || 
+      (isLastImage.value && dragOffset.value < 0)) {
+    dragOffset.value = dragOffset.value * 0.3 // 增加阻力效果
+  }
+  
+  // 防止事件冒泡和默认行为
+  event.preventDefault()
+}
+
+// 处理鼠标松开事件
+const handleMouseUp = () => {
+  if (!isDragging.value || nonPosterImages.value.length <= 1) return
+  
+  const swipeDistance = mouseEndX.value - mouseStartX.value
+  processSwipe(swipeDistance)
+  
+  isDragging.value = false
+  dragOffset.value = 0
+}
+
+// 处理滑动逻辑
+const processSwipe = (swipeDistance) => {
+  // 判断滑动方向和距离是否达到阈值
+  if (Math.abs(swipeDistance) > swipeThreshold) {
+    if (swipeDistance > 0) {
+      // 向右滑动，显示上一张
+      prevImage()
+    } else {
+      // 向左滑动，显示下一张
+      nextImage()
+    }
+  }
+}
+
 onMounted(() => {
   fetchResource()
   loadTMDBConfig()
 })
 </script>
 
-<style scoped src="@/styles/ResourceDetail.css"></style>
+<style scoped>
+@import '@/styles/ResourceDetail.css';
+
+/* 图片导航按钮样式 */
+.image-navigation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.nav-button {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  pointer-events: auto;
+  margin: 0 10px;
+}
+
+.nav-button:hover {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.nav-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.nav-button i {
+  font-size: 1.5rem;
+}
+
+.main-image-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.resource-poster {
+  width: 100%;
+  cursor: zoom-in;
+}
+</style>

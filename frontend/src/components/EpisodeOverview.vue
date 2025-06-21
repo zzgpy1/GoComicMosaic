@@ -33,12 +33,19 @@
               <p style="margin-top: 10px;">加载图片中...</p>
             </div>
             
-            <div v-else-if="currentEpisodeImages && currentEpisodeImages.length > 0" class="image-slider">
+            <div v-else-if="currentEpisodeImages && currentEpisodeImages.length > 0" class="image-slider"
+                 @touchstart="handleTouchStart" 
+                 @touchmove="handleTouchMove" 
+                 @touchend="handleTouchEnd"
+                 @mousedown="handleMouseDown"
+                 @mousemove="handleMouseMove"
+                 @mouseup="handleMouseUp"
+                 @mouseleave="handleMouseUp">
               <button @click="prevImage" class="image-nav-button left" :disabled="currentImageIndex === 0">
                 <i class="bi bi-chevron-left"></i>
               </button>
               
-              <div class="image-display-container">
+              <div class="image-display-container" ref="imageContainer">
               <img
                   :key="currentImageIndex"
                 :src="currentImage" 
@@ -47,7 +54,8 @@
                 @click="previewImage(currentImage)"
                   @load="onMainImageLoaded"
                   @error="onMainImageError"
-                style="cursor: zoom-in;"
+                  :style="imageTransformStyle"
+                style="cursor: zoom-in; transition: transform 0.3s ease;"
               />
               </div>
               
@@ -317,7 +325,15 @@ export default {
       // 最小加载显示时间（毫秒）
       minLoadingTime: 300,
       // 添加一个标志，表示我们正在初始化组件
-      isInitializing: false
+      isInitializing: false,
+      // 添加滑动控制相关变量
+      touchStartX: 0,
+      touchEndX: 0,
+      mouseStartX: 0,
+      mouseEndX: 0,
+      isDragging: false,
+      dragOffset: 0,
+      swipeThreshold: 50, // 触发滑动的阈值（像素）
     }
   },
   computed: {
@@ -333,6 +349,13 @@ export default {
     cleanedEpisodeName() {
       if (!this.currentEpisode || !this.currentEpisode.name) return '';
       return this.currentEpisode.name.replace(/^第\d+集\s?/, '');
+    },
+    imageTransformStyle() {
+      // 实现图片拖动效果
+      if (this.isDragging) {
+        return { transform: `translateX(${this.dragOffset}px)` };
+      }
+      return {};
     }
   },
   mounted() {
@@ -843,21 +866,18 @@ export default {
     prevImage() {
       if (this.currentImageIndex > 0) {
         this.currentImageIndex--;
-        // 移除不必要的加载状态设置
       }
     },
     
     nextImage() {
       if (this.currentImageIndex < this.currentEpisodeImages.length - 1) {
         this.currentImageIndex++;
-        // 移除不必要的加载状态设置
       }
     },
     
     setCurrentImage(index) {
       if (this.currentImageIndex !== index) {
-      this.currentImageIndex = index;
-        // 移除不必要的加载状态设置
+        this.currentImageIndex = index;
       }
     },
 
@@ -1318,6 +1338,95 @@ export default {
         setTimeout(() => {
           this.fetchBatchEpisodes(episodesToPreload);
         }, 2000);
+      }
+    },
+
+    // 新增：处理触摸开始事件
+    handleTouchStart(event) {
+      if (this.currentEpisodeImages.length <= 1) return;
+      this.touchStartX = event.touches[0].clientX;
+      this.touchEndX = this.touchStartX;
+      this.isDragging = true;
+      this.dragOffset = 0;
+    },
+    
+    // 新增：处理触摸移动事件
+    handleTouchMove(event) {
+      if (!this.isDragging || this.currentEpisodeImages.length <= 1) return;
+      this.touchEndX = event.touches[0].clientX;
+      this.dragOffset = this.touchEndX - this.touchStartX;
+      
+      // 添加边界限制，第一张图片不能向右滑，最后一张图片不能向左滑
+      if ((this.currentImageIndex === 0 && this.dragOffset > 0) || 
+          (this.currentImageIndex === this.currentEpisodeImages.length - 1 && this.dragOffset < 0)) {
+        this.dragOffset = this.dragOffset * 0.3; // 增加阻力效果
+      }
+      
+      // 防止事件冒泡和默认行为
+      event.preventDefault();
+    },
+    
+    // 新增：处理触摸结束事件
+    handleTouchEnd() {
+      if (!this.isDragging || this.currentEpisodeImages.length <= 1) return;
+      
+      const swipeDistance = this.touchEndX - this.touchStartX;
+      this.processSwipe(swipeDistance);
+      
+      this.isDragging = false;
+      this.dragOffset = 0;
+    },
+    
+    // 新增：处理鼠标按下事件
+    handleMouseDown(event) {
+      if (this.currentEpisodeImages.length <= 1) return;
+      this.mouseStartX = event.clientX;
+      this.mouseEndX = this.mouseStartX;
+      this.isDragging = true;
+      this.dragOffset = 0;
+      
+      // 防止鼠标拖动时选中文本
+      event.preventDefault();
+    },
+    
+    // 新增：处理鼠标移动事件
+    handleMouseMove(event) {
+      if (!this.isDragging || this.currentEpisodeImages.length <= 1) return;
+      this.mouseEndX = event.clientX;
+      this.dragOffset = this.mouseEndX - this.mouseStartX;
+      
+      // 添加边界限制，第一张图片不能向右滑，最后一张图片不能向左滑
+      if ((this.currentImageIndex === 0 && this.dragOffset > 0) || 
+          (this.currentImageIndex === this.currentEpisodeImages.length - 1 && this.dragOffset < 0)) {
+        this.dragOffset = this.dragOffset * 0.3; // 增加阻力效果
+      }
+      
+      // 防止事件冒泡和默认行为
+      event.preventDefault();
+    },
+    
+    // 新增：处理鼠标松开事件
+    handleMouseUp() {
+      if (!this.isDragging || this.currentEpisodeImages.length <= 1) return;
+      
+      const swipeDistance = this.mouseEndX - this.mouseStartX;
+      this.processSwipe(swipeDistance);
+      
+      this.isDragging = false;
+      this.dragOffset = 0;
+    },
+    
+    // 新增：处理滑动逻辑
+    processSwipe(swipeDistance) {
+      // 判断滑动方向和距离是否达到阈值
+      if (Math.abs(swipeDistance) > this.swipeThreshold) {
+        if (swipeDistance > 0) {
+          // 向右滑动，显示上一张
+          this.prevImage();
+        } else {
+          // 向左滑动，显示下一张
+          this.nextImage();
+        }
       }
     },
   },
