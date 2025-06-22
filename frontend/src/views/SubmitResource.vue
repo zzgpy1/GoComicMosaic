@@ -302,35 +302,94 @@
           {{ isSupplementMode ? '补充资源图片' : '图片上传' }}
           <span class="image-count-badge">最多10张</span>
         </label>
-        <div 
-          class="dropzone-container" 
-          :class="{'active-dropzone': isDragging}"
-          @dragenter.prevent="isDragging = true"
-          @dragover.prevent="isDragging = true"
-          @dragleave.prevent="isDragging = false"
-          @drop.prevent="handleFileDrop"
-        >
-          <div class="dropzone-content">
-            <div v-if="uploadedImages.length < 10">
-              <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
-              <p>拖拽图片文件到此处，或</p>
-              <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
-                <i class="bi bi-image"></i> <span class="file-btn-text">选择文件</span>
-              </label>
-              <input 
-                type="file" 
-                id="file-upload" 
-                @change="handleFilesSelection" 
-                multiple 
-                accept="image/*" 
-                class="d-none"
-              >
-              <p class="upload-hint">支持同时上传多个文件</p>
+        
+        <!-- 上传方式切换 -->
+        <div class="upload-method-tabs">
+          <button 
+            type="button" 
+            class="method-tab" 
+            :class="{'active': imageUploadMode === 'local'}"
+            @click="imageUploadMode = 'local'"
+          >
+            <i class="bi bi-upload"></i> 本地上传
+          </button>
+          <button 
+            type="button" 
+            class="method-tab" 
+            :class="{'active': imageUploadMode === 'url'}"
+            @click="imageUploadMode = 'url'"
+          >
+            <i class="bi bi-link-45deg"></i> 图片链接
+          </button>
+        </div>
+        
+        <!-- 本地上传区域 -->
+        <div v-if="imageUploadMode === 'local'">
+          <div 
+            class="dropzone-container" 
+            :class="{'active-dropzone': isDragging}"
+            @dragenter.prevent="isDragging = true"
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="handleFileDrop"
+          >
+            <div class="dropzone-content">
+              <div v-if="uploadedImages.length < 10">
+                <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
+                <p>拖拽图片文件到此处，或</p>
+                <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
+                  <i class="bi bi-image"></i> <span class="file-btn-text">选择文件</span>
+                </label>
+                <input 
+                  type="file" 
+                  id="file-upload" 
+                  @change="handleFilesSelection" 
+                  multiple 
+                  accept="image/*" 
+                  class="d-none"
+                >
+                <p class="upload-hint">支持同时上传多个文件</p>
+              </div>
+              <div v-else class="upload-limit-reached">
+                <i class="bi bi-exclamation-circle"></i>
+                <p>已达到最大上传数量（10张）</p>
+              </div>
             </div>
-            <div v-else class="upload-limit-reached">
+          </div>
+        </div>
+        
+        <!-- 图片链接输入区域 -->
+        <div v-else-if="imageUploadMode === 'url'" class="url-upload-container">
+          <div class="url-input-group">
+            <input 
+              type="text" 
+              class="custom-input" 
+              v-model="imageUrlInput" 
+              placeholder="输入图片URL地址 (http://或https://开头)"
+              :disabled="uploadedImages.length >= 10"
+            >
+            <button 
+              type="button" 
+              class="btn-custom btn-primary add-url-btn" 
+              @click="addImageByUrl"
+              :disabled="!isValidImageUrl || uploadedImages.length >= 10"
+            >
+              <i class="bi bi-plus-circle"></i> 添加图片
+            </button>
+          </div>
+          <div class="url-hints">
+            <p v-if="imageUrlInput && !isValidImageUrl" class="url-error">
+              <i class="bi bi-exclamation-triangle"></i> 
+              请输入有效的图片URL地址 (以http://或https://开头)
+            </p>
+            <p v-else-if="uploadedImages.length >= 10" class="url-error">
               <i class="bi bi-exclamation-circle"></i>
-              <p>已达到最大上传数量（10张）</p>
-            </div>
+              已达到最大上传数量（10张）
+            </p>
+            <p v-else class="url-tip">
+              <i class="bi bi-info-circle"></i>
+              支持JPG、JPEG、PNG、GIF、WebP格式的图片链接
+            </p>
           </div>
         </div>
         
@@ -418,6 +477,14 @@ const uploadProgress = ref(0)
 const currentUploadIndex = ref(0)
 const totalUploadCount = ref(0)
 const showTypeDropdown = ref(false)
+
+// 图片上传相关
+const imageUploadMode = ref('local') // 'local' 或 'url'
+const imageUrlInput = ref('')
+const isValidImageUrl = computed(() => {
+  const url = imageUrlInput.value.trim()
+  return url.startsWith('http://') || url.startsWith('https://')
+})
 
 // 资源搜索相关
 const searchQuery = ref('')
@@ -728,6 +795,30 @@ const removeLink = (category, index) => {
   resourceLinks[category].splice(index, 1)
 }
 
+// 通过URL添加图片
+const addImageByUrl = () => {
+  if (!isValidImageUrl.value || uploadedImages.value.length >= 10) {
+    return
+  }
+  
+  const imageUrl = imageUrlInput.value.trim()
+  
+  // 检查URL是否已经添加过
+  if (uploadedImages.value.includes(imageUrl)) {
+    error.value = '该图片链接已经添加过'
+    setTimeout(() => {
+      error.value = null
+    }, 3000)
+    return
+  }
+  
+  // 添加URL到图片列表
+  uploadedImages.value.push(imageUrl)
+  
+  // 清空输入框
+  imageUrlInput.value = ''
+}
+
 // 提交资源
 const submitResource = async () => {
   // 非补充模式下验证必填字段
@@ -810,6 +901,8 @@ const resetForm = () => {
   selectedResource.value = null
   isSupplementMode.value = false
   isFromDetailPage.value = false
+  imageUrlInput.value = ''
+  imageUploadMode.value = 'local'
   
   // 清空资源链接
   for (const category in resourceLinks) {

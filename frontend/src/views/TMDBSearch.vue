@@ -135,28 +135,82 @@
                 <!-- 添加新图片 -->
                 <div class="upload-section">
                   <h6 class="section-subtitle">添加新图片</h6>
-                  <div 
-                    class="dropzone-container" 
-                    :class="{'active-dropzone': isDragging}"
-                    @dragenter.prevent="isDragging = true"
-                    @dragover.prevent="isDragging = true"
-                    @dragleave.prevent="isDragging = false"
-                    @drop.prevent="handleFileDrop"
-                  >
-                    <div class="dropzone-content">
-                      <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
-                      <p>拖拽图片文件到此处，或</p>
-                      <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
-                        <i class="bi bi-image me-2"></i><span class="file-btn-text">选择文件</span>
-                      </label>
+                  
+                  <!-- 上传方式切换 -->
+                  <div class="upload-method-tabs">
+                    <button 
+                      type="button" 
+                      class="method-tab" 
+                      :class="{'active': imageUploadMode === 'local'}"
+                      @click="imageUploadMode = 'local'"
+                    >
+                      <i class="bi bi-upload"></i> 本地上传
+                    </button>
+                    <button 
+                      type="button" 
+                      class="method-tab" 
+                      :class="{'active': imageUploadMode === 'url'}"
+                      @click="imageUploadMode = 'url'"
+                    >
+                      <i class="bi bi-link-45deg"></i> 图片链接
+                    </button>
+                  </div>
+                  
+                  <!-- 本地上传区域 -->
+                  <div v-if="imageUploadMode === 'local'">
+                    <div 
+                      class="dropzone-container" 
+                      :class="{'active-dropzone': isDragging}"
+                      @dragenter.prevent="isDragging = true"
+                      @dragover.prevent="isDragging = true"
+                      @dragleave.prevent="isDragging = false"
+                      @drop.prevent="handleFileDrop"
+                    >
+                      <div class="dropzone-content">
+                        <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
+                        <p>拖拽图片文件到此处，或</p>
+                        <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
+                          <i class="bi bi-image me-2"></i><span class="file-btn-text">选择文件</span>
+                        </label>
+                        <input 
+                          type="file" 
+                          id="file-upload" 
+                          @change="handleFilesSelection" 
+                          multiple 
+                          accept="image/*" 
+                          class="d-none"
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 图片链接输入区域 -->
+                  <div v-else-if="imageUploadMode === 'url'" class="url-upload-container">
+                    <div class="url-input-group">
                       <input 
-                        type="file" 
-                        id="file-upload" 
-                        @change="handleFilesSelection" 
-                        multiple 
-                        accept="image/*" 
-                        class="d-none"
+                        type="text" 
+                        class="form-control custom-input" 
+                        v-model="imageUrlInput" 
+                        placeholder="输入图片URL地址 (http://或https://开头)"
                       >
+                      <button 
+                        type="button" 
+                        class="btn-custom btn-primary add-url-btn" 
+                        @click="addImageByUrl"
+                        :disabled="!isValidImageUrl"
+                      >
+                        <i class="bi bi-plus-circle me-2"></i> 添加图片
+                      </button>
+                    </div>
+                    <div class="url-hints">
+                      <p v-if="imageUrlInput && !isValidImageUrl" class="url-error">
+                        <i class="bi bi-exclamation-triangle"></i> 
+                        请输入有效的图片URL地址 (以http://或https://开头)
+                      </p>
+                      <p v-else class="url-tip">
+                        <i class="bi bi-info-circle"></i>
+                        支持JPG、JPEG、PNG、GIF、WebP格式的图片链接
+                      </p>
                     </div>
                   </div>
                   
@@ -548,7 +602,11 @@ export default {
       
       // 资源类型选项
       resourceTypes: ['动画', '电影', '纪录片', '综艺', '其他'],
-      activeCategory: null
+      activeCategory: null,
+      
+      // 图片上传相关
+      imageUploadMode: 'local',
+      imageUrlInput: ''
     };
   },
   computed: {
@@ -572,6 +630,11 @@ export default {
     },
     hasResourceLinks() {
       return this.tmdbResource && this.tmdbResource.links && Object.keys(this.tmdbResource.links).length > 0;
+    },
+    // 验证图片URL是否有效
+    isValidImageUrl() {
+      const url = this.imageUrlInput.trim();
+      return url.startsWith('http://') || url.startsWith('https://');
     }
   },
   methods: {
@@ -960,6 +1023,33 @@ export default {
         // 移除临时元素
         document.body.removeChild(textarea);
       }
+    },
+    addImageByUrl() {
+      if (!this.imageUrlInput || !this.isValidImageUrl) {
+        return;
+      }
+      
+      const imageUrl = this.imageUrlInput.trim();
+      
+      // 检查URL是否已经添加过
+      if (this.editForm.images.includes(imageUrl)) {
+        this.saveError = '该图片链接已经添加过';
+        setTimeout(() => {
+          this.saveError = null;
+        }, 3000);
+        return;
+      }
+      
+      // 添加URL到图片列表
+      this.editForm.images.push(imageUrl);
+      
+      // 如果是第一张图片，自动设为海报
+      if (this.editForm.images.length === 1 && !this.editForm.poster_image) {
+        this.editForm.poster_image = imageUrl;
+      }
+      
+      // 清空输入框
+      this.imageUrlInput = '';
     }
   },
   beforeDestroy() {

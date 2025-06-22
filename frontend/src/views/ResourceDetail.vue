@@ -113,28 +113,82 @@
                   <!-- 添加新图片 -->
                   <div class="upload-section">
                     <h6 class="section-subtitle">添加新图片</h6>
-                    <div 
-                      class="dropzone-container" 
-                      :class="{'active-dropzone': isDragging}"
-                      @dragenter.prevent="isDragging = true"
-                      @dragover.prevent="isDragging = true"
-                      @dragleave.prevent="isDragging = false"
-                      @drop.prevent="handleFileDrop"
-                    >
-                      <div class="dropzone-content">
-                        <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
-                        <p>拖拽图片文件到此处，或</p>
-                        <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
-                          <i class="bi bi-image me-2"></i><span class="file-btn-text">选择文件</span>
-                        </label>
+                    
+                    <!-- 上传方式切换 -->
+                    <div class="upload-method-tabs">
+                      <button 
+                        type="button" 
+                        class="method-tab" 
+                        :class="{'active': imageUploadMode === 'local'}"
+                        @click="imageUploadMode = 'local'"
+                      >
+                        <i class="bi bi-upload"></i> 本地上传
+                      </button>
+                      <button 
+                        type="button" 
+                        class="method-tab" 
+                        :class="{'active': imageUploadMode === 'url'}"
+                        @click="imageUploadMode = 'url'"
+                      >
+                        <i class="bi bi-link-45deg"></i> 图片链接
+                      </button>
+                    </div>
+                    
+                    <!-- 本地上传区域 -->
+                    <div v-if="imageUploadMode === 'local'">
+                      <div 
+                        class="dropzone-container" 
+                        :class="{'active-dropzone': isDragging}"
+                        @dragenter.prevent="isDragging = true"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="handleFileDrop"
+                      >
+                        <div class="dropzone-content">
+                          <i class="bi bi-cloud-arrow-up-fill dropzone-icon"></i>
+                          <p>拖拽图片文件到此处，或</p>
+                          <label for="file-upload" class="btn-custom btn-outline file-upload-btn">
+                            <i class="bi bi-image me-2"></i><span class="file-btn-text">选择文件</span>
+                          </label>
+                          <input 
+                            type="file" 
+                            id="file-upload" 
+                            @change="handleFilesSelection" 
+                            multiple 
+                            accept="image/*" 
+                            class="d-none"
+                          >
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 图片链接输入区域 -->
+                    <div v-else-if="imageUploadMode === 'url'" class="url-upload-container">
+                      <div class="url-input-group">
                         <input 
-                          type="file" 
-                          id="file-upload" 
-                          @change="handleFilesSelection" 
-                          multiple 
-                          accept="image/*" 
-                          class="d-none"
+                          type="text" 
+                          class="form-control custom-input" 
+                          v-model="imageUrlInput" 
+                          placeholder="输入图片URL地址 (http://或https://开头)"
                         >
+                        <button 
+                          type="button" 
+                          class="btn-custom btn-primary add-url-btn" 
+                          @click="addImageByUrl"
+                          :disabled="!isValidImageUrl"
+                        >
+                          <i class="bi bi-plus-circle me-2"></i> 添加图片
+                        </button>
+                      </div>
+                      <div class="url-hints">
+                        <p v-if="imageUrlInput && !isValidImageUrl" class="url-error">
+                          <i class="bi bi-exclamation-triangle"></i> 
+                          请输入有效的图片URL地址 (以http://或https://开头)
+                        </p>
+                        <p v-else class="url-tip">
+                          <i class="bi bi-info-circle"></i>
+                          支持JPG、JPEG、PNG、GIF、WebP格式的图片链接
+                        </p>
                       </div>
                     </div>
                     
@@ -938,6 +992,35 @@ const uploadFiles = async (files) => {
   }
 }
 
+// 通过URL添加图片
+const addImageByUrl = () => {
+  if (!isValidImageUrl.value) {
+    return
+  }
+  
+  const imageUrl = imageUrlInput.value.trim()
+  
+  // 检查URL是否已经添加过
+  if (editForm.images.includes(imageUrl)) {
+    saveError.value = '该图片链接已经添加过'
+    setTimeout(() => {
+      saveError.value = null
+    }, 3000)
+    return
+  }
+  
+  // 添加URL到图片列表
+  editForm.images.push(imageUrl)
+  
+  // 如果是第一张图片，自动设为海报
+  if (editForm.images.length === 1 && !editForm.poster_image) {
+    editForm.poster_image = imageUrl
+  }
+  
+  // 清空输入框
+  imageUrlInput.value = ''
+}
+
 // 保存变更
 const saveChanges = async () => {
   if (!resource.value) return
@@ -1284,64 +1367,19 @@ const processSwipe = (swipeDistance) => {
   }
 }
 
+// 图片链接功能
+const imageUploadMode = ref('local') // 'local' 或 'url'
+const imageUrlInput = ref('')
+const isValidImageUrl = computed(() => {
+  const url = imageUrlInput.value.trim()
+  return url.startsWith('http://') || url.startsWith('https://')
+})
+
 onMounted(() => {
   fetchResource()
   loadTMDBConfig()
 })
 </script>
 
-<style scoped>
-@import '@/styles/ResourceDetail.css';
+<style scoped src="@/styles/ResourceDetail.css"></style>
 
-/* 图片导航按钮样式 */
-.image-navigation {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  pointer-events: none;
-}
-
-.nav-button {
-  background-color: rgba(0, 0, 0, 0.3);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  pointer-events: auto;
-  margin: 0 10px;
-}
-
-.nav-button:hover {
-  background-color: rgba(0, 0, 0, 0.6);
-}
-
-.nav-button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.nav-button i {
-  font-size: 1.5rem;
-}
-
-.main-image-container {
-  position: relative;
-  overflow: hidden;
-}
-
-.resource-poster {
-  width: 100%;
-  cursor: zoom-in;
-}
-</style>

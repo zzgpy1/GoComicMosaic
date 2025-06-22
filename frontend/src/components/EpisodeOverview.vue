@@ -348,7 +348,7 @@ export default {
     },
     cleanedEpisodeName() {
       if (!this.currentEpisode || !this.currentEpisode.name) return '';
-      return this.currentEpisode.name.replace(/^第\d+集\s?/, '');
+      return this.currentEpisode.name.replace(/^第\s*[\d一二三四五六七八九十百千]+(\s*集)?\s*/, '');
     },
     imageTransformStyle() {
       // 实现图片拖动效果
