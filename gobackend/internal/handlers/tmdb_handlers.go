@@ -54,7 +54,7 @@ func SearchTMDB(c *gin.Context) {
 	resource, err := utils.SearchTMDB(query)
 	if err != nil {
 		log.Printf("TMDB搜索失败: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "TMDB搜索失败"})
 		return
 	}
 
@@ -286,4 +286,67 @@ func SearchTmdbId(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"id": id})
+}
+
+// CheckResourceExists 检查资源是否已存在
+// @Summary 检查资源是否已存在
+// @Description 根据TMDB ID或标题检查资源是否已存在
+// @Tags TMDB
+// @Accept json
+// @Produce json
+// @Param tmdb_id query int false "TMDB ID"
+// @Param title query string false "资源标题"
+// @Success 200 {object} gin.H
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /api/tmdb/check-exists [get]
+func CheckResourceExists(c *gin.Context) {
+	tmdbIDStr := c.Query("tmdb_id")
+	title := c.Query("title")
+	
+	// 至少需要提供一个参数
+	if tmdbIDStr == "" && title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "必须提供TMDB ID或标题"})
+		return
+	}
+	
+	var exists bool
+	var existingResource models.Resource
+	
+	// 首先按TMDB ID查询
+	if tmdbIDStr != "" {
+		tmdbID, err := strconv.Atoi(tmdbIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的TMDB ID"})
+			return
+		}
+		
+		// 查询数据库
+		err = models.DB.Get(&existingResource, `SELECT * FROM resources WHERE tmdb_id = ?`, tmdbID)
+		if err == nil {
+			// 找到资源
+			exists = true
+		}
+	}
+	
+	// 如果按TMDB ID没找到，再按标题查询
+	if !exists && title != "" {
+		// 查询数据库
+		err := models.DB.Get(&existingResource, `SELECT * FROM resources WHERE title = ? OR title_en = ?`, title, title)
+		if err == nil {
+			// 找到资源
+			exists = true
+		}
+	}
+	
+	if exists {
+		c.JSON(http.StatusOK, gin.H{
+			"exists": true,
+			"resource": existingResource,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"exists": false,
+		})
+	}
 } 

@@ -399,7 +399,7 @@
                   <button 
                     @click="importResource"
                     class="btn-custom btn-primary import-button"
-                    :disabled="importing"
+                    :disabled="importing || resourceExists"
                   >
                     <i class="bi bi-cloud-download me-1"></i>
                     <span class="import-text">{{ importing ? '导入中...' : '一键导入' }}</span>
@@ -407,6 +407,15 @@
                 </div>
               </div>
             </div>
+          </div>
+          
+          <!-- 资源已存在提示 -->
+          <div v-if="resourceExists" class="resource-exists-alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span>该资源已存在，无法重复导入。</span>
+            <a v-if="existingResource && existingResource.id" :href="`/resource/${existingResource.id}`" class="view-resource-link">
+              查看已有资源
+            </a>
           </div>
           
           <!-- 内容区域容器 -->
@@ -601,12 +610,19 @@ export default {
       saveError: null,
       
       // 资源类型选项
-      resourceTypes: ['动画', '电影', '纪录片', '综艺', '其他'],
+      resourceTypes: [
+        '幽默', '讽刺', '冒险', '科幻', '动作', '奇幻', 
+        '恐怖', '犯罪', '悬疑', '浪漫', '历史', '战争'
+      ],
       activeCategory: null,
       
       // 图片上传相关
       imageUploadMode: 'local',
-      imageUrlInput: ''
+      imageUrlInput: '',
+      
+      // 检查资源是否已存在相关
+      resourceExists: false,
+      existingResource: null
     };
   },
   computed: {
@@ -669,6 +685,29 @@ export default {
           }
         }
         
+        // 检查资源是否已存在
+        if (this.tmdbResource && this.tmdbResource.id) {
+          try {
+            const checkResponse = await axios.get(`/api/tmdb/check-exists`, {
+              params: { 
+                tmdb_id: this.tmdbResource.id,
+                title: this.tmdbResource.title 
+              }
+            });
+            
+            if (checkResponse.data.exists) {
+              this.resourceExists = true;
+              this.existingResource = checkResponse.data.resource;
+            } else {
+              this.resourceExists = false;
+              this.existingResource = null;
+            }
+          } catch (checkError) {
+            console.error('检查资源是否存在失败:', checkError);
+            // 检查失败不影响主流程，继续显示搜索结果
+          }
+        }
+        
         this.hasSearched = true;
       } catch (error) {
         console.error('TMDB搜索失败:', error);
@@ -701,6 +740,12 @@ export default {
     },
     
     async importResource() {
+      // 如果资源已存在，阻止导入
+      if (this.resourceExists) {
+        this.error = `该资源已存在，标题：${this.existingResource.title}，请勿重复导入`;
+        return;
+      }
+      
       this.importing = true;
       
       try {
@@ -743,6 +788,8 @@ export default {
       this.importedResourceId = null;
       this.isEditing = false;
       this.activeCategory = null;
+      this.resourceExists = false;
+      this.existingResource = null;
     },
     
     resetSearch() {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	"dongman/internal/config"
 )
 
 // SetupRoutes 设置API路由
@@ -57,6 +58,7 @@ func SetupRoutes(router *gin.Engine) {
 		tmdb.GET("/search", SearchTMDB)
 		tmdb.GET("/search_id", SearchTmdbId)
 		tmdb.POST("/create", CreateResourceFromTMDB)
+		tmdb.GET("/check-exists", CheckResourceExists)
 		
 		// 添加新的季节和剧集API路由
 		tmdb.GET("/seasons/:series_id", GetTMDBSeasons)
@@ -119,4 +121,27 @@ func SetupRoutes(router *gin.Engine) {
 			adminResources.GET("/:id/approval-records", GetResourceApprovalRecords)
 		}
 	}
+	
+	// 文章管理路由
+	posts := api.Group("/posts")
+	{
+		// 公开API - 无需认证
+		posts.GET("/", GetAllPosts)
+		posts.GET("/search", SearchPosts)
+		posts.GET("/id/:id", GetPostByID)
+		posts.GET("/slug/:slug", GetPostBySlug)
+		
+		// 仅管理员可访问的API
+		adminPosts := posts.Group("/admin", JWTAuthMiddleware(), AdminAuthMiddleware())
+		{
+			adminPosts.POST("/", CreatePost)
+			adminPosts.PUT("/:id", UpdatePost)
+			adminPosts.DELETE("/:id", DeletePost)
+			adminPosts.POST("/upload/image", UploadPostImage)
+			adminPosts.POST("/upload/file", UploadPostFile)
+		}
+	}
+	
+	// 静态资源路由 - 用于访问上传的文件
+	api.Static("/assets", config.AssetPath)
 } 

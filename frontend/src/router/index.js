@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
 import { isAuthenticated } from '../utils/auth'
 import infoManager from '../utils/InfoManager'
+import Home from '../views/Home.vue'
+import Posts from '../views/Posts.vue'
 
 // 基础路由配置
 const baseRoutes = [
@@ -100,6 +101,17 @@ const baseRoutes = [
       description: 'streams_description',
       keywords: 'streams_keywords'
     }
+  },
+  // 文章相关路由
+  {
+    path: '/posts',
+    name: 'Posts',
+    component: Posts,
+    meta: {
+      title: 'posts_title',
+      description: 'posts_description',
+      keywords: 'posts_keywords'
+    }
   }
 ]
 
@@ -153,7 +165,22 @@ const defaultMetaInfo = {
   // 流媒体内容页
   streams_title: '流媒体内容 - 美漫资源共建平台',
   streams_description: '浏览和观看各种高质量的动漫流媒体内容，包括动画、电影和连续剧。',
-  streams_keywords: '流媒体内容, 动漫视频, 在线观看, 美漫共建'
+  streams_keywords: '流媒体内容, 动漫视频, 在线观看, 美漫共建',
+  
+  // 文章列表页
+  posts_title: '文章列表 - 美漫资源共建平台',
+  posts_description: '浏览所有文章，包括动漫评测、资源推荐、行业动态等内容。',
+  posts_keywords: '文章, 博客, 动漫评测, 资源推荐, 美漫共建',
+  
+  // 文章详情页
+  post_detail_title: '文章详情 - 美漫资源共建平台',
+  post_detail_description: '阅读文章详细内容，包括动漫评测、资源推荐、行业动态等。',
+  post_detail_keywords: '文章详情, 博客, 动漫评测, 资源推荐',
+  
+  // 文章管理页
+  post_admin_title: '文章管理 - 美漫资源共建平台',
+  post_admin_description: '管理网站文章，包括创建、编辑和删除文章。',
+  post_admin_keywords: '文章管理, 编辑, 发布, 管理后台'
 }
 
 // 异步函数，创建路由并应用动态配置

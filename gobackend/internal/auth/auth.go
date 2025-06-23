@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
@@ -97,4 +99,29 @@ func AuthenticateUser(username, password string) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+// IsAdmin 检查当前用户是否为管理员
+func IsAdmin(c *gin.Context) bool {
+	// 从请求头中获取令牌
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return false
+	}
+
+	// 提取令牌
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		// 没有找到Bearer前缀
+		return false
+	}
+
+	// 验证令牌
+	claims, err := VerifyToken(tokenString)
+	if err != nil {
+		return false
+	}
+
+	// 检查是否为管理员
+	return claims.IsAdmin
 } 

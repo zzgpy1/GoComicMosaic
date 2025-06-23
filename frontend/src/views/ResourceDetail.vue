@@ -75,39 +75,58 @@
                   <div class="image-management-section">
                     <h6 class="section-subtitle">已有图片 ({{ editForm.images.length }})</h6>
                     <div class="image-grid">
-                      <div v-for="(image, index) in editForm.images" :key="index" class="image-item" :class="{'is-poster': image === editForm.poster_image}">
-                        <div class="image-preview-container">
-                          <img 
-                            :src="getImageUrl(image)" 
-                            class="image-preview" 
-                            alt="资源图片" 
-                            @click="previewEditImage(image)"
-                          >
-                          <div class="image-overlay">
-                            <button 
-                              type="button" 
-                              class="image-action-btn set-poster-btn" 
-                              @click.stop="setPosterImage(image)"
-                              :disabled="image === editForm.poster_image"
-                            >
-                              <i class="bi bi-star-fill me-1"></i>
-                              {{ image === editForm.poster_image ? '当前海报' : '设为海报' }}
-                            </button>
-                            <button 
-                              type="button" 
-                              class="image-action-btn remove-btn" 
-                              @click.stop="removeImage(index)"
-                              :disabled="editForm.images.length <= 1"
-                            >
-                              <i class="bi bi-trash me-1"></i>删除
-                            </button>
+                      <draggable 
+                        v-model="editForm.images" 
+                        item-key="index"
+                        ghost-class="image-ghost"
+                        animation="300"
+                        handle=".drag-handle"
+                        @start="dragStart"
+                        @end="dragEnd"
+                        :component-data="{
+                          class: 'draggable-grid'
+                        }"
+                      >
+                        <template #item="{ element: image, index }">
+                          <div class="image-item" :class="{'is-poster': image === editForm.poster_image}">
+                            <div class="image-preview-container">
+                              <div class="drag-handle">
+                                <i class="bi bi-grip-vertical"></i>
+                              </div>
+                              <img 
+                                :src="getImageUrl(image)" 
+                                class="image-preview" 
+                                alt="资源图片" 
+                                @click="previewEditImage(image)"
+                              >
+                              <div class="image-overlay">
+                                <button 
+                                  type="button" 
+                                  class="image-action-btn set-poster-btn" 
+                                  @click.stop="setPosterImage(image)"
+                                  :disabled="image === editForm.poster_image"
+                                >
+                                  <i class="bi bi-star-fill me-1"></i>
+                                  {{ image === editForm.poster_image ? '当前海报' : '设为海报' }}
+                                </button>
+                                <button 
+                                  type="button" 
+                                  class="image-action-btn remove-btn" 
+                                  @click.stop="removeImage(index)"
+                                  :disabled="editForm.images.length <= 1"
+                                >
+                                  <i class="bi bi-trash me-1"></i>删除
+                                </button>
+                              </div>
+                            </div>
+                            <div class="poster-badge" v-if="image === editForm.poster_image">
+                              <i class="bi bi-star-fill"></i> 海报图片
+                            </div>
                           </div>
-                        </div>
-                        <div class="poster-badge" v-if="image === editForm.poster_image">
-                          <i class="bi bi-star-fill"></i> 海报图片
-                        </div>
-                      </div>
+                        </template>
+                      </draggable>
                     </div>
+                    <p class="drag-hint"><i class="bi bi-arrows-move"></i> 提示：可拖拽图片进行排序</p>
                   </div>
                   
                   <!-- 添加新图片 -->
@@ -581,7 +600,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { isAdmin } from '../utils/auth'
@@ -1374,6 +1393,19 @@ const isValidImageUrl = computed(() => {
   const url = imageUrlInput.value.trim()
   return url.startsWith('http://') || url.startsWith('https://')
 })
+
+// 添加拖拽相关的状态
+const isDraggingImage = ref(false)
+
+// 拖拽开始事件处理
+const dragStart = () => {
+  isDraggingImage.value = true
+}
+
+// 拖拽结束事件处理
+const dragEnd = () => {
+  isDraggingImage.value = false
+}
 
 onMounted(() => {
   fetchResource()

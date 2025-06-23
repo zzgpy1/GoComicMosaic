@@ -10,6 +10,8 @@
 - **外部数据源系统**：在线点播功能支持采集接口和自定义爬虫
 - **CORS代理服务**：内置代理功能，解决跨域问题
 - **网站配置**：支持自定义网站信息、图标等
+- **推荐功能**：欧美动漫推荐首页
+- **文章功能**：支持markdown格式文章
 
 ## 项目结构
 
@@ -26,14 +28,20 @@ frontend/
 ├── scripts/                            # 脚本目录
 │   └── generate-sitemap.js             # 生成网站地图脚本
 ├── src/                                # 源代码目录
+│   ├── assets/                         # 资源文件目录
 │   ├── components/                     # 组件目录
 │   │   ├── EpisodeOverview.vue         # 剧集概览组件
 │   │   ├── EpisodeSelector.vue         # 剧集选择器组件
+│   │   ├── LazyImage.vue               # 懒加载图片组件
 │   │   ├── LocalSearch.vue             # 本地搜索组件
+│   │   ├── RecommendationContainer.vue # 推荐容器组件
+│   │   ├── RecommendationHome.vue      # 推荐主页组件
 │   │   ├── ShareResource.vue           # 资源分享组件
 │   │   └── VideoPlayer.vue             # 视频播放器组件
 │   ├── router/                         # 路由目录
 │   │   └── index.js                    # 路由定义文件
+│   ├── services/                       # 服务目录
+│   │   └── TmdbStatusService.js        # TMDB状态服务
 │   ├── styles/                         # 样式目录
 │   │   ├── About.css                   # 关于页面样式
 │   │   ├── Admin.css                   # 管理页面样式
@@ -73,10 +81,10 @@ frontend/
 │   │   ├── Login.vue                   # 登录页面
 │   │   ├── ResourceDetail.vue          # 资源详情页面
 │   │   ├── ResourceReview.vue          # 资源审核页面
-│   │   ├── StreamsPage.vue             # 流媒体页面
+│   │   ├── StreamsPage.vue             # 流媒体页面（更新：添加返回推荐功能）
 │   │   ├── SubmitResource.vue          # 提交资源页面
 │   │   └── TMDBSearch.vue              # TMDB搜索页面
-│   ├── App.vue                         # 应用根组件
+│   ├── App.vue                         # 应用根组件（更新：添加返回推荐按钮及状态管理）
 │   └── main.js                         # 应用入口文件
 ├── index.html                          # 项目HTML入口
 ├── package.json                        # 项目依赖配置
