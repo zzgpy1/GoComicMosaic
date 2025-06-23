@@ -111,7 +111,8 @@ func replaceInvalidFileNameChars(str string) string {
 // SavePost 保存文章（创建或更新）
 func SavePost(post *Post, basePath string) error {
 	postsDir := filepath.Join(basePath, "posts")
-	
+	fmt.Printf("保存文章: ID=%s, 标题=%s, Slug=%s, Path=%s\n", post.ID, post.Title, post.Slug, post.Path)
+
 	// 确保目录存在
 	if err := os.MkdirAll(postsDir, 0755); err != nil {
 		return err
@@ -120,25 +121,30 @@ func SavePost(post *Post, basePath string) error {
 	// 确保有标题和slug
 	if post.Title == "" {
 		post.Title = fmt.Sprintf("新文章 - %s", time.Now().Format("2006-01-02"))
+		fmt.Println("标题为空，使用默认标题:", post.Title)
 	}
 	
 	// 如果slug为空，从标题生成
 	if post.Slug == "" {
 		post.Slug = GenerateSlug(post.Title)
+		fmt.Println("Slug为空，从标题生成:", post.Slug)
 	}
 	
 	// 构建保存路径
 	var targetDir string
 	var fileName string
+	var oldPath string
 	
 	// 如果指定了路径，则使用该路径
 	if post.Path != "" {
 		// 提取目录部分（去掉文件名）
 		targetDir = filepath.Dir(filepath.Join(postsDir, post.Path))
 		fileName = filepath.Base(post.Path)
+		fmt.Printf("指定了路径: %s, 目标目录: %s, 文件名: %s\n", post.Path, targetDir, fileName)
 	} else {
 		targetDir = postsDir
 		fileName = fmt.Sprintf("%s.md", post.Slug)
+		fmt.Printf("未指定路径，使用Slug作为文件名: %s\n", fileName)
 	}
 	
 	// 确保目标目录存在
@@ -147,66 +153,88 @@ func SavePost(post *Post, basePath string) error {
 	}
 	
 	// 文件已存在的情况（更新现有文章）
-	if !post.CreatedAt.IsZero() {
+	if !post.CreatedAt.IsZero() && post.ID != "" {
+		fmt.Printf("更新现有文章: ID=%s\n", post.ID)
 		post.UpdatedAt = time.Now()
 		
-		// 如果路径变更，需要找到旧文件并删除
-		if post.Path != "" {
-			oldFilePath := filepath.Join(postsDir, post.Path)
-			if _, err := os.Stat(oldFilePath); err == nil {
-				// 文件存在，路径没变，直接使用现有路径
-				fileName = filepath.Base(post.Path)
-			} else {
-				// 文件不存在或路径变更，需要查找并删除旧文件
-				var oldPath string
-				err := filepath.Walk(postsDir, func(path string, info os.FileInfo, err error) error {
-					if err != nil {
-						return nil // 继续处理其他文件
-					}
-					
-					// 只处理markdown文件
-					if info.IsDir() || (!strings.HasSuffix(info.Name(), ".md") && !strings.HasSuffix(info.Name(), ".markdown")) {
-						return nil
-					}
-					
-					// 计算ID
-					hasher := md5.New()
-					hasher.Write([]byte(path))
-					fileID := hex.EncodeToString(hasher.Sum(nil))
-					
-					// 如果ID匹配，找到了旧文件
-					if fileID == post.ID {
-						oldPath = path
-						return filepath.SkipAll
-					}
-					
-					return nil
-				})
-				
-				if err == nil && oldPath != "" && oldPath != filepath.Join(targetDir, fileName) {
-					// 删除旧文件
-					os.Remove(oldPath)
+		// 查找旧文件并记录路径
+		err := filepath.Walk(postsDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil // 继续处理其他文件
+			}
+			
+			// 只处理文件
+			if info.IsDir() {
+				return nil
+			}
+			
+			// 只处理markdown文件
+			if !strings.HasSuffix(info.Name(), ".md") && !strings.HasSuffix(info.Name(), ".markdown") {
+				return nil
+			}
+			
+			// 计算ID
+			hasher := md5.New()
+			hasher.Write([]byte(path))
+			fileID := hex.EncodeToString(hasher.Sum(nil))
+			
+			// 如果ID匹配，找到了旧文件
+			if fileID == post.ID {
+				oldPath = path
+				fmt.Printf("找到匹配ID的旧文件: %s\n", path)
+				return filepath.SkipAll
+			}
+			
+			return nil
+		})
+		
+		// 如果找到了旧文件，并且新路径与旧路径不同，则删除旧文件
+		if err == nil && oldPath != "" {
+			newPath := filepath.Join(targetDir, fileName)
+			if oldPath != newPath {
+				fmt.Printf("文件名已更改: 从 %s 到 %s\n", oldPath, newPath)
+				// 删除旧文件（仅当新旧路径不同时）
+				err := os.Remove(oldPath)
+				if err != nil {
+					fmt.Printf("删除旧文件失败: %s, 错误: %v\n", oldPath, err)
+				} else {
+					fmt.Printf("旧文件已删除: %s\n", oldPath)
 				}
+			} else {
+				fmt.Printf("文件路径未改变，保持原路径: %s\n", oldPath)
+			}
+		} else {
+			if oldPath == "" {
+				fmt.Println("未找到匹配ID的旧文件")
+			}
+			if err != nil {
+				fmt.Printf("查找旧文件时出错: %v\n", err)
 			}
 		}
 	} else {
 		// 新文章
+		fmt.Println("创建新文章")
 		post.CreatedAt = time.Now()
 		post.UpdatedAt = time.Now()
 	}
 	
 	// 构建完整的文件路径
 	filePath := filepath.Join(targetDir, fileName)
+	fmt.Printf("保存文件的最终路径: %s\n", filePath)
 	
 	// 生成稳定的ID，基于文件路径
 	hasher := md5.New()
 	hasher.Write([]byte(filePath))
 	post.ID = hex.EncodeToString(hasher.Sum(nil))
+	fmt.Printf("生成的文章ID: %s\n", post.ID)
 	
 	// 从文件路径提取相对路径作为Path属性
 	relPath, err := filepath.Rel(postsDir, filePath)
 	if err == nil {
 		post.Path = filepath.ToSlash(relPath)
+		fmt.Printf("更新文章Path属性为: %s\n", post.Path)
+	} else {
+		fmt.Printf("计算相对路径失败: %v\n", err)
 	}
 	
 	// 构建Markdown内容，包括元数据
@@ -249,7 +277,14 @@ func SavePost(post *Post, basePath string) error {
 	contentBuilder.WriteString(content)
 	
 	// 写入文件
-	return ioutil.WriteFile(filePath, []byte(contentBuilder.String()), 0644)
+	err = ioutil.WriteFile(filePath, []byte(contentBuilder.String()), 0644)
+	if err != nil {
+		fmt.Printf("写入文件失败: %v\n", err)
+		return err
+	}
+	fmt.Printf("文件已成功保存: %s\n", filePath)
+	
+	return nil
 }
 
 // GetAllPosts 获取所有文章的摘要信息

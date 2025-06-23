@@ -197,20 +197,25 @@ export default {
       this.post = { ...this.postToEdit };
       this.tagsInput = this.post.tags.join(', ');
       
-      // 如果是编辑现有文章，提取文件名作为自定义文件名
-      if (this.post.slug) {
-        // 检查是否是日期格式开头
-        const datePattern = /^\d{4}-\d{2}-\d{2}-/;
-        if (datePattern.test(this.post.slug)) {
-          // 如果是日期格式，提取标题部分
-          const titlePart = this.post.slug.replace(datePattern, '');
-          this.useCustomFileName = false;
-          this.customFileName = titlePart;
-        } else {
-          // 不是日期格式，可能是自定义文件名
+      // 如果是编辑现有文章，检查路径是否为自定义
+      if (this.post.path) {
+        console.log('编辑文章, 文件路径:', this.post.path);
+        // 使用路径作为自定义文件名
+        this.customFileName = this.post.path;
+        
+        // 检查是否使用自定义文件名
+        if (this.post.path !== `${this.post.slug}.md`) {
+          console.log('检测到自定义文件名');
           this.useCustomFileName = true;
-          this.customFileName = this.post.slug;
+        } else {
+          console.log('使用默认文件名');
+          this.useCustomFileName = false;
         }
+      } else if (this.post.slug) {
+        // 没有path但有slug时的处理
+        console.log('文章没有path属性，使用slug:', this.post.slug);
+        this.customFileName = `${this.post.slug}.md`;
+        this.useCustomFileName = false;
       }
     } else {
       // 创建新文章时设置默认标题
@@ -283,21 +288,26 @@ export default {
         this.post.slug = this.generateSlug(this.post.title);
       }
       
-      // 如果使用自定义文件名，则设置slug为自定义文件名
+      // 设置文件路径
       if (this.useCustomFileName && this.customFileName && this.customFileName.trim() !== '') {
-        this.post.slug = this.customFileName;
+        // 使用自定义文件名，确保添加扩展名
+        let fileName = this.customFileName.trim();
+        if (!fileName.endsWith('.md') && !fileName.endsWith('.markdown')) {
+          fileName = `${fileName}.md`;
+        }
+        // 设置为自定义文件路径
+        this.post.path = fileName;
+        console.log('使用自定义文件名:', fileName);
       } else {
-        // 默认使用标题作为slug（不包含日期）
-        this.post.slug = this.generateSlug(this.post.title);
-      }
-      
-      // 最后确保slug不为空，如果依然为空，则使用随机字符串
-      if (!this.post.slug || this.post.slug.trim() === '') {
-        this.post.slug = `post-${Date.now().toString(36)}`;
+        // 默认使用slug作为文件名
+        const fileName = `${this.post.slug}.md`;
+        this.post.path = fileName;
+        console.log('使用默认文件名:', fileName);
       }
       
       this.saving = true;
       try {
+        console.log('准备保存文章:', this.post);
         if (this.post.id) {
           // 更新现有文章
           await PostService.updatePost(this.post.id, this.post);
