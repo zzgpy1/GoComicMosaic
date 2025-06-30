@@ -112,6 +112,17 @@ const baseRoutes = [
       description: 'posts_description',
       keywords: 'posts_keywords'
     }
+  },
+  {
+    path: '/posts/:slug',
+    name: 'PostDetail',
+    component: Posts,
+    props: true,
+    meta: {
+      title: 'post_detail_title',
+      description: 'post_detail_description',
+      keywords: 'post_detail_keywords'
+    }
   }
 ]
 

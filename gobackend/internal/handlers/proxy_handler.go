@@ -24,6 +24,9 @@ func ProxyHandler(c *gin.Context) {
 		return
 	}
 	
+	// 检查是否需要返回cookies
+	returnCookies := c.Query("returnCookies") == "true"
+	
 	// 解析可能的headers参数
 	customHeaders := make(map[string]string)
 	headersParam := c.Query("headers")
@@ -144,10 +147,27 @@ func ProxyHandler(c *gin.Context) {
 		}
 	}
 
-	// 设置CORS头，允许跨域访问
-	c.Header("Access-Control-Allow-Origin", "*")
-	c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	// 如果需要返回cookies
+	log.Printf("1111111111111 需要返回cookies: %v", returnCookies)
+	log.Printf("2222222222222 返回cookies: %+v", resp.Cookies())
+	if returnCookies && len(resp.Cookies()) > 0 {
+		// 提取所有cookies
+		cookies := make(map[string]string)
+		for _, cookie := range resp.Cookies() {
+			cookies[cookie.Name] = cookie.Value
+			log.Printf("获取到Cookie: %s = %s", cookie.Name, cookie.Value)
+		}
+
+		// 将cookies转换为JSON字符串，用于响应头
+		cookiesJSON, err := json.Marshal(cookies)
+		if err != nil {
+			log.Printf("序列化cookies失败: %v", err)
+		} else {
+			// 在响应头中添加cookies
+			c.Header("X-Proxy-Cookies", string(cookiesJSON))
+			log.Printf("已在响应头中添加cookies: %s", string(cookiesJSON))
+		}
+	}
 
 	// 设置响应状态码
 	c.Status(resp.StatusCode)

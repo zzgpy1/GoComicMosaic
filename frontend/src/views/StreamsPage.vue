@@ -1,5 +1,9 @@
 <template>
   <div class="streams-page">
+    <!-- <div style="position: relative; padding: 30% 45%;">
+      <iframe style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;" src="//www.bilibili.com/blackboard/html5mobileplayer.html?aid=10335022&bvid=BV1nx411m7bV&cid=17072810&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+    </div> -->
+
     <!-- 播放链接输入区域 - 始终显示 -->
     <div class="url-input-section">
       <div class="url-input-box">
@@ -52,7 +56,13 @@
           class="history-item" 
           @click="playHistoryItem(item)"
         >
-          <div class="history-thumbnail" :style="{ backgroundImage: `url(${item.poster || 'https://via.placeholder.com/120x80.png?text=视频'})` }">
+          <div class="history-thumbnail">
+            <img 
+              :src="item.poster || 'https://via.placeholder.com/120x80.png?text=视频'" 
+              :alt="item.title"
+              referrerPolicy="no-referrer"
+              class="history-image"
+            />
             <div class="history-play-icon">▶</div>
             <div v-if="item.episodeIndex !== undefined" class="episode-badge">
               第{{ item.episodeIndex + 1 }}集
@@ -80,11 +90,13 @@
           :poster="currentPoster"
           :autoplay="true"
           :key="playerKey"
+          :videoId="currentVideoId"
           @ready="onPlayerReady"
           @play="onPlayerPlay"
           @pause="onPlayerPause"
           @ended="onPlayerEnded"
           @error="onPlayerError"
+          @timeupdate="onPlayerTimeUpdate"
         />
 
         <div class="stream-info" v-if="streamInfo">
@@ -175,7 +187,13 @@
       <div class="streams-grid" v-if="filteredStreams.length">
 
         <div v-for="stream in filteredStreams" :key="stream.id" class="stream-card">
-          <div class="stream-thumbnail" :style="{ backgroundImage: `url(${stream.poster})` }">
+          <div class="stream-thumbnail">
+            <img 
+              :src="stream.poster" 
+              :alt="stream.title"
+              referrerPolicy="no-referrer"
+              class="stream-image"
+            />
             <div class="play-overlay" @click="playStream(stream)">
               <i class="play-icon">▶</i>
             </div>
@@ -280,6 +298,7 @@ export default {
     const searchError = ref(null);
     const playerKey = ref(0); // 添加一个key来强制重新创建播放器组件
     const isDescriptionCollapsed = ref(true); // 新增：用于简介折叠功能
+    const currentVideoId = ref(''); // 视频ID，用于保存播放进度
 
     // 模拟数据
     const mockStreams = [
@@ -552,18 +571,26 @@ export default {
     };
     
     // 播放历史记录中的项目
-    const playHistoryItem = (item) => {
+    const playHistoryItem = async (item) => {
       // 先检查并切换到记录对应的数据源
       if (item.dataSourceId && item.dataSourceId !== selectedDataSource.value) {
         try {
+          isLoading.value = true; // 显示加载状态
+          
           const dataSourceManager = getDataSourceManager();
-          if (dataSourceManager.getAllDataSources()[item.dataSourceId]) {
+          // 获取数据源列表（不加载所有外部数据源）
+          const sources = await dataSourceManager.getAllDataSources(false);
+          
+          if (sources[item.dataSourceId]) {
             console.log(`切换到历史记录对应的数据源: ${item.dataSourceId}`);
             selectedDataSource.value = item.dataSourceId;
-            dataSourceManager.setCurrentDataSource(item.dataSourceId);
+            await dataSourceManager.setCurrentDataSource(item.dataSourceId);
           }
+          
+          isLoading.value = false; // 隐藏加载状态
         } catch (error) {
           console.error('切换数据源失败:', error);
+          isLoading.value = false; // 确保错误时也隐藏加载状态
         }
       }
 
@@ -595,8 +622,12 @@ export default {
         // API请求完成后，切换为视频加载模式
         isLoading.value = false;
         if (movieDetail) {
+          // 检查是否需要二次请求获取播放URL
+          const requireCid = movieDetail.vod_play_require_cid === true;
+          console.log('是否需要二次请求播放URL:', requireCid);
+          
           // 解析剧集列表
-          const episodesList = parseEpisodes(movieDetail.vod_play_url);
+          const episodesList = parseEpisodes(movieDetail.vod_play_url, requireCid);
           if (episodesList.length === 0) {
             throw new Error('没有可用的播放链接');
           }
@@ -645,23 +676,80 @@ export default {
             }
           }
           
-          // 设置媒体信息和播放源
+          // 设置媒体信息
           streamInfo.value = mediaInfo;
           
-          // 准备视频源
-          const videoSource = {
-            src: targetEpisode.url, // 使用目标集数的URL
-            type: getMediaTypeFromUrl(targetEpisode.url) // 根据URL判断媒体类型
-          };
+          // 准备视频源 - 处理需要二次请求的情况
+          let playUrl = targetEpisode.url;
           
-          // 如果有自定义header，添加到视频源
-          if (customHeaders) {
-            videoSource.headers = customHeaders;
+          // 如果需要二次请求获取真实URL
+          if (targetEpisode.requireCid && targetEpisode.cid) {
+            try {
+              console.log('初始播放检测到需要二次请求获取真实URL，cid:', targetEpisode.cid);
+              
+              // 获取数据源管理器
+              const dataSourceManager = getDataSourceManager();
+              const currentDataSourceId = selectedDataSource.value || null;
+              
+              // 先检查数据源是否支持getPlayUrl
+              if (!dataSourceManager.supportsGetPlayUrl(currentDataSourceId)) {
+                throw new Error(`当前数据源不支持二次请求获取播放URL`);
+              }
+              
+              // 调用数据源的getPlayUrl方法
+              const playUrlResult = await dataSourceManager.getPlayUrl(
+                targetEpisode.cid, 
+                currentDataSourceId,
+                { movieDetail: movieDetail }
+              );
+              
+              // 检查返回结果是否为DASH格式
+              if (typeof playUrlResult === 'object' && playUrlResult.type === 'dash') {
+                console.log('检测到DASH格式视频:', playUrlResult);
+                playUrl = playUrlResult;
+              } else {
+                // 普通URL格式
+                playUrl = playUrlResult;
+                console.log('获取到普通播放URL:', playUrl);
+              }
+              
+              if (!playUrl) {
+                throw new Error('无法获取真实播放链接');
+              }
+            } catch (error) {
+              console.error('获取真实播放URL失败:', error);
+              playerError.value = `获取播放链接失败: ${error.message}`;
+              isVideoLoading.value = false;
+              isChangingVideo.value = false;
+              return;
+            }
+          }
+          
+          // 准备视频源
+          let videoSource;
+          
+          // 处理DASH格式
+          if (typeof playUrl === 'object' && playUrl.type === 'dash') {
+            videoSource = playUrl;
+          } else {
+            // 普通URL格式
+            videoSource = {
+              src: playUrl, // 使用目标集数的URL（可能是经过二次请求的）
+              type: getMediaTypeFromUrl(playUrl) // 根据URL判断媒体类型
+            };
+            
+            // 如果有自定义header，添加到视频源
+            if (customHeaders) {
+              videoSource.headers = customHeaders;
+            }
           }
           
           // 设置视频源
           currentStreamSources.value = [videoSource];
           currentPoster.value = posterUrl;
+          
+          // 设置视频ID，用于保存播放进度
+          currentVideoId.value = `${streamId}_${episodeIndex}`;
           
           // 确保播放器始终显示
           isPlaying.value = true;
@@ -695,8 +783,8 @@ export default {
     };
     
     // 播放特定剧集
-    const playEpisode = (episode, index) => {
-      if (!episode || !episode.url) return;
+    const playEpisode = async (episode, index) => {
+      if (!episode) return;
       
       console.log('切换剧集开始:', index, episode.title);
       isVideoLoading.value = true; // 使用视频加载状态而非全局加载状态
@@ -706,48 +794,97 @@ export default {
         // 增加playerKey以强制重新创建播放器组件
         playerKey.value += 1;
         
-        // 临时存储当前视频源和剧集信息
-        const newSource = {
-          src: episode.url,
-          type: getMediaTypeFromUrl(episode.url)
-        };
+        let playUrl = episode.url;
         
-        // 如果有自定义header，添加到视频源
-        if (streamInfo.value && streamInfo.value.apiData && streamInfo.value.apiData.vod_play_header) {
+        // 如果需要二次请求获取真实URL
+        if (episode.requireCid && episode.cid) {
           try {
-            const customHeaders = JSON.parse(streamInfo.value.apiData.vod_play_header);
-            if (customHeaders) {
-              console.log('为剧集应用自定义header:', customHeaders);
-              newSource.headers = customHeaders;
+            console.log('检测到需要二次请求获取真实URL，cid:', episode.cid);
+            
+            // 获取数据源管理器
+            const dataSourceManager = getDataSourceManager();
+            const currentDataSourceId = selectedDataSource.value || null;
+            
+            // 先检查数据源是否支持getPlayUrl
+            if (!dataSourceManager.supportsGetPlayUrl(currentDataSourceId)) {
+              throw new Error(`当前数据源不支持二次请求获取播放URL`);
             }
-          } catch(e) {
-            console.error('解析vod_play_header失败:', e);
+            
+            // 调用数据源的getPlayUrl方法
+            const playUrlResult = await dataSourceManager.getPlayUrl(
+              episode.cid, 
+              currentDataSourceId,
+              { movieDetail: streamInfo.value?.apiData }
+            );
+            
+            // 检查返回结果是否为DASH格式
+            if (typeof playUrlResult === 'object' && playUrlResult.type === 'dash') {
+              console.log('检测到DASH格式视频:', playUrlResult);
+              playUrl = playUrlResult;
+            } else {
+              // 普通URL格式
+              playUrl = playUrlResult;
+              console.log('获取到普通播放URL:', playUrl);
+            }
+            
+            if (!playUrl) {
+              throw new Error('无法获取真实播放链接');
+            }
+          } catch (error) {
+            console.error('获取真实播放URL失败:', error);
+            playerError.value = `获取播放链接失败: ${error.message}`;
+            isVideoLoading.value = false;
+            isChangingVideo.value = false;
+            return;
           }
         }
         
-        // 3. 更新剧集信息
+        // 准备视频源
+        let videoSource;
+        
+        // 处理DASH格式
+        if (typeof playUrl === 'object' && playUrl.type === 'dash') {
+          videoSource = playUrl;
+        } else {
+          // 普通URL格式
+          videoSource = {
+            src: playUrl,
+            type: getMediaTypeFromUrl(playUrl)
+          };
+          
+          // 检查是否有自定义header
+          if (streamInfo.value?.apiData?.vod_play_header) {
+            try {
+              const customHeaders = JSON.parse(streamInfo.value.apiData.vod_play_header);
+              videoSource.headers = customHeaders;
+            } catch(e) {
+              console.error('解析vod_play_header失败:', e);
+            }
+          }
+        }
+        
+        // 设置视频源
+        currentStreamSources.value = [videoSource];
+        
+        // 更新当前播放集数
         if (streamInfo.value) {
           streamInfo.value.currentEpisode = index;
         }
         
-        // 4. 设置新的视频源
-        currentStreamSources.value = [newSource];
+        // 设置视频ID，用于保存播放进度
+        const streamId = streamInfo.value?.apiData?.vod_id || 'unknown';
+        currentVideoId.value = `${streamId}_${index}`;
         
-        // 5. 确保播放器始终显示
+        // 确保播放器始终显示
         isPlaying.value = true;
         
-        // 6. 更新播放历史中的集数信息
-        // 确保有有效的当前播放信息
-        if (streamInfo.value && streamInfo.value.apiData) {
-          addToPlayHistory({
-            id: streamInfo.value.apiData.vod_id,
-            title: streamInfo.value.title,
-            poster: currentPoster.value,
-            episodeIndex: index
-          });
-        }
+        // 添加播放进度更新处理函数
+        const onPlayerTimeUpdate = (currentTime) => {
+          // 可以在这里添加额外的播放进度处理逻辑
+          // console.log('播放进度更新:', currentTime);
+        };
         
-        // 7. 充分延迟后结束加载状态
+        // 6. 充分延迟后结束加载状态
         setTimeout(() => {
           console.log('剧集切换完成');
           isVideoLoading.value = false; // 使用视频加载状态而非全局加载状态
@@ -859,30 +996,58 @@ export default {
     };
     
     // 加载数据源列表
-    const loadDataSources = () => {
+    const loadDataSources = async () => {
       try {
+        console.log('开始加载数据源列表...');
         const dataSourceManager = getDataSourceManager();
-        dataSources.value = dataSourceManager.getAllDataSources();
+        console.log('获取到数据源管理器实例:', dataSourceManager);
         
-        // 设置当前选择的数据源
-        selectedDataSource.value = dataSourceManager.getCurrentDataSourceId() || '';
+        // 初始化数据源管理器，但不加载所有外部数据源（恢复懒加载模式）
+        await dataSourceManager.initialize(false);
         
-        console.log('已加载数据源列表:', Object.keys(dataSources.value).length, '个数据源');
-        Object.entries(dataSources.value).forEach(([id, name]) => {
-          console.log(`- 数据源: ${name} (${id})`);
-        });
+        // 获取数据源列表（不加载所有外部数据源，只显示其信息）
+        const sourcesPromise = dataSourceManager.getAllDataSources(false);
+        const sources = await sourcesPromise; // 确保Promise已解析
         
-        // 订阅数据源更新事件
-        const unsubscribe = dataSourceManager.onDataSourcesUpdated((updatedSources) => {
-          console.log('数据源列表已更新，重新加载...');
-          dataSources.value = updatedSources;
-          console.log('更新后的数据源列表:', Object.keys(dataSources.value).length, '个数据源');
-        });
+        console.log('数据源列表原始数据类型:', typeof sources, sources instanceof Promise ? 'Promise' : 'Object');
+        console.log('数据源列表原始数据:', sources);
         
-        // 在组件卸载时取消订阅
-        onUnmounted(() => {
-          if (unsubscribe) unsubscribe();
-        });
+        // 确保sources是一个有效的对象
+        if (sources && typeof sources === 'object') {
+          // 使用解构创建新对象，确保响应式更新
+          dataSources.value = { ...sources };
+          
+          // 设置当前选择的数据源
+          const currentId = dataSourceManager.getCurrentDataSourceId() || '';
+          if (currentId && sources[currentId]) {
+            selectedDataSource.value = currentId;
+            console.log('当前选择的数据源ID:', selectedDataSource.value);
+            
+            // 如果当前选择的是外部数据源，但未加载，则加载它
+            if (sources[currentId].toString().includes('未加载')) {
+              console.log('当前选择的是未加载的外部数据源，尝试加载:', currentId);
+              try {
+                await dataSourceManager.setCurrentDataSource(currentId);
+                // 重新获取数据源列表以更新状态
+                const updatedSources = await dataSourceManager.getAllDataSources(false);
+                dataSources.value = { ...updatedSources };
+              } catch (err) {
+                console.error('加载当前外部数据源失败:', err);
+              }
+            }
+          } else if (Object.keys(sources).length > 0) {
+            // 如果当前ID无效但有可用数据源，选择第一个
+            selectedDataSource.value = Object.keys(sources)[0];
+            console.log('设置默认数据源ID:', selectedDataSource.value);
+          }
+          
+          console.log('已加载数据源列表:', Object.keys(dataSources.value).length, '个数据源');
+          Object.entries(dataSources.value).forEach(([id, name]) => {
+            console.log(`- 数据源: ${name} (${id})`);
+          });
+        } else {
+          console.error('获取到的数据源列表格式无效:', sources);
+        }
       } catch (error) {
         console.error('加载数据源列表失败:', error);
       }
@@ -896,26 +1061,72 @@ export default {
     
     // 在组件挂载后设置
     onMounted(() => {
-      loadStreams();
-      loadPlayHistory();
-      loadDataSources(); // 初始加载数据源列表
+      // 先定义生命周期钩子，然后再执行异步操作
+      let unsubscribe = null;
       
-      // 处理路由参数
-      if (props.id) {
-        loadStreamById(props.id);
-      } else if (props.direct_url) {
-        customStreamUrl.value = props.direct_url;
-        playCustomStream();
-      } else if (route.query.search) {
-        // 如果URL中包含search参数，自动执行搜索
-        searchQuery.value = route.query.search;
-        console.log("自动搜索:", searchQuery.value);
-        performApiSearch();
-        showingSearchResults.value = true;
-      } else {
-        // 默认显示搜索结果
-        showingSearchResults.value = true;
-      }
+      // 在组件卸载时取消订阅
+      onUnmounted(() => {
+        if (unsubscribe) unsubscribe();
+      });
+      
+      // 订阅数据源更新事件
+      const dataSourceManager = getDataSourceManager();
+      const debouncedUpdateSources = debounce(async (updatedSources) => {
+        console.log('数据源列表已更新，重新加载...', updatedSources);
+        
+        // 处理Promise或直接对象
+        try {
+          // 如果是Promise，等待它解析
+          const sources = updatedSources instanceof Promise ? await updatedSources : updatedSources;
+          
+          if (sources && typeof sources === 'object') {
+            dataSources.value = { ...sources };
+            console.log('更新后的数据源列表:', Object.keys(dataSources.value).length, '个数据源');
+            console.log('数据源列表详情:', dataSources.value);
+          } else {
+            console.error('更新的数据源列表格式无效:', sources);
+          }
+        } catch (error) {
+          console.error('处理数据源更新时出错:', error);
+        }
+      }, 300); // 300ms 的防抖延迟
+      
+      // 订阅数据源更新事件
+      unsubscribe = dataSourceManager.onDataSourcesUpdated(debouncedUpdateSources);
+      
+      // 异步加载数据
+      const initializeApp = async () => {
+        try {
+          // 加载数据源是最优先的
+          await loadDataSources();
+          
+          // 加载其他数据
+          loadStreams();
+          loadPlayHistory();
+          
+          // 处理路由参数
+          if (props.id) {
+            loadStreamById(props.id);
+          } else if (props.direct_url) {
+            customStreamUrl.value = props.direct_url;
+            playCustomStream();
+          } else if (route.query.search) {
+            // 如果URL中包含search参数，自动执行搜索
+            searchQuery.value = route.query.search;
+            console.log("自动搜索:", searchQuery.value);
+            performApiSearch();
+            showingSearchResults.value = true;
+          } else {
+            // 默认显示搜索结果
+            showingSearchResults.value = true;
+          }
+        } catch (error) {
+          console.error('初始化应用时出错:', error);
+        }
+      };
+      
+      // 启动初始化过程
+      initializeApp();
     });
     
     // 监听路由变化，确保刷新页面或从其他页面返回时正确加载内容
@@ -937,16 +1148,27 @@ export default {
     }, { deep: true });
     
     // 切换数据源
-    const changeDataSource = () => {
+    const changeDataSource = async () => {
+      console.log('切换数据源开始:', selectedDataSource.value);
+      
       try {
         if (selectedDataSource.value) {
+          isLoading.value = true; // 显示加载状态
+          
           const dataSourceManager = getDataSourceManager();
-          dataSourceManager.setCurrentDataSource(selectedDataSource.value);
+          await dataSourceManager.setCurrentDataSource(selectedDataSource.value);
+          console.log('数据源切换成功:', selectedDataSource.value);
+          
+          // 更新数据源列表，移除"未加载"标记
+          const updatedSources = await dataSourceManager.getAllDataSources(false);
+          dataSources.value = { ...updatedSources };
           
           // 仅在搜索结果界面且有搜索关键词时，才使用新数据源重新搜索
           if (searchQuery.value.trim() && (!isPlaying.value || showingSearchResults.value)) {
-            performApiSearch();
+            await performApiSearch();
           }
+          
+          isLoading.value = false; // 隐藏加载状态
         }
         
         // 仅在非播放状态时清除URL参数
@@ -964,9 +1186,9 @@ export default {
         // 恢复原来的数据源
         const dataSourceManager = getDataSourceManager();
         selectedDataSource.value = dataSourceManager.getCurrentDataSourceId() || '';
+        
+        isLoading.value = false; // 隐藏加载状态
       }
-      
-      console.log('数据源更新为:', selectedDataSource.value);
     };
     
     const formatDuration = (seconds) => {
@@ -1187,6 +1409,21 @@ export default {
       });
     };
     
+    // 处理播放进度更新
+    const onPlayerTimeUpdate = (currentTime) => {
+      // 可以在这里添加播放进度处理逻辑
+      // console.log('播放进度更新:', currentTime);
+      
+      // 如果需要，可以在这里保存播放进度
+      if (currentVideoId.value && currentTime) {
+        try {
+          localStorage.setItem(`progress_${currentVideoId.value}`, currentTime.toString());
+        } catch (e) {
+          console.error('保存播放进度失败', e);
+        }
+      }
+    };
+    
     return {
       streams,
       filteredStreams,
@@ -1224,6 +1461,8 @@ export default {
       onPlayerPause,
       onPlayerEnded,
       onPlayerError,
+      onPlayerTimeUpdate,
+      currentVideoId,
       testWithMockData,
       handleSearch,
       clearPlayHistory,

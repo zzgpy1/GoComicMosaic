@@ -10,17 +10,17 @@
             <div class="search-box">
               <input 
                 type="text" 
-            class="custom-input"
-            v-model="searchQuery"
-            placeholder="输入文章标题..."
+                class="custom-input"
+                v-model="searchQuery"
+                placeholder="输入文章标题..."
                 @keyup.enter="searchPosts"
               />
-          <button @click="searchPosts" class="search-button">
+          <button @click="searchPosts" class="btn btn-primary">
             <i class="bi bi-search"></i> <span class="search-text">搜索</span>
-              </button>
-          <button v-if="isAdmin" class="create-button" @click="createNewPost">
+          </button>
+          <button v-if="isAdmin" class="btn btn-success" @click="createNewPost">
             <i class="bi bi-plus-lg"></i> <span class="create-text">新建文章</span>
-            </button>
+          </button>
         </div>
       </div>
     </div>
@@ -99,6 +99,9 @@
           
           <div v-else class="post-detail">
             <div class="post-header">
+              <h2 class="post-title">
+                {{ selectedPost.title }}
+              </h2>
               
               <div class="post-meta">
                 <div class="post-info">
@@ -114,12 +117,20 @@
                     </span>
                   </div>
                 </div>
-                <div v-if="isAdmin" class="post-actions">
+                <div v-if="isAdmin" class="post-actions admin-actions">
                   <button class="btn btn-sm btn-primary" @click="editPost(selectedPost)">
-                    ✏️ 编辑
+                    <i class="bi bi-pencil"></i> 编辑
                   </button>
                   <button class="btn btn-sm btn-danger" @click="confirmDeletePost(selectedPost)">
-                    🗑️ 删除
+                    <i class="bi bi-trash"></i> 删除
+                  </button>
+                  <button class="btn btn-sm btn-info" @click="sharePost" title="分享文章">
+                    <i class="bi bi-share"></i> 分享
+                  </button>
+                </div>
+                <div v-else class="post-actions single-action">
+                  <button class="btn btn-sm btn-info" @click="sharePost" title="分享文章">
+                    <i class="bi bi-share"></i> 分享
                   </button>
                 </div>
               </div>
@@ -192,6 +203,36 @@
         />
       </div>
     </div>
+
+    <!-- 分享对话框 -->
+    <div class="modal" v-if="showShareDialog">
+      <div class="modal-overlay" @click="closeShareDialog"></div>
+      <div class="modal-container share-dialog">
+        <div class="share-header">
+          <h2><i class="bi bi-share" style="opacity: 0.9; margin-right: 6px;"></i> 分享文章</h2>
+          <button class="close-btn" @click="closeShareDialog">
+            ×
+          </button>
+        </div>
+        <div class="share-body">
+          <div class="share-content">
+            <p>您可以通过以下链接分享这篇文章：</p>
+            <input 
+              type="text" 
+              v-model="shareLink"
+              readonly
+              @click="$event.target.select()"
+            >
+            <button class="copy-btn" @click="copyShareLink">
+              <i class="bi bi-clipboard"></i> 复制链接
+            </button>
+          </div>
+          <div v-if="shareSuccess" class="share-success">
+            <p>链接已成功复制到剪贴板！</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -208,6 +249,13 @@ export default {
   name: 'Posts',
   components: {
     PostEditor,
+  },
+  props: {
+    // 添加 slug 属性，用于从 URL 参数接收文章 slug
+    slug: {
+      type: String,
+      default: null
+    }
   },
   data() {
     return {
@@ -228,6 +276,9 @@ export default {
       },
       sidebarExpanded: true, // 默认展开侧边栏
       isMobileView: false, // 是否是移动端视图
+      showShareDialog: false, // 分享对话框显示状态
+      shareLink: '', // 分享链接
+      shareSuccess: false, // 分享成功状态
     };
   },
   computed: {
@@ -382,8 +433,11 @@ export default {
         // 默认展开所有分类
         this.expandedCategories = Object.keys(this.categorizedPosts);
         
-        // 如果有文章，默认选择第一篇
-        if (this.posts.length > 0) {
+        // 如果有 URL 参数指定的 slug，则加载对应文章
+        if (this.slug) {
+          await this.loadPostBySlug(this.slug);
+        } else if (this.posts.length > 0) {
+          // 否则如果有文章，默认选择第一篇
           this.selectPost(this.posts[0]);
         }
       } catch (error) {
@@ -496,7 +550,88 @@ export default {
       // 使用公共方法重置和应用正确的样式
       this.resetSidebarStyles();
     },
-  }
+    // 通过 slug 加载文章
+    async loadPostBySlug(slug) {
+      try {
+        const post = await PostService.getPostBySlug(slug);
+        this.selectedPost = post;
+        this.selectedPostContent = post.content;
+        
+        // 更新浏览器标题
+        document.title = `${post.title} - 文章详情`;
+        
+        // 如果在移动设备上，折叠侧边栏
+        if (this.isMobileView) {
+          this.sidebarExpanded = false;
+          this.resetSidebarStyles();
+        }
+      } catch (error) {
+        console.error('通过 slug 加载文章失败:', error);
+        // 如果加载失败，重定向到文章列表页面
+        if (this.$route.name === 'PostDetail') {
+          this.$router.replace('/posts');
+        }
+      }
+    },
+    // 分享当前文章
+    sharePost() {
+      if (!this.selectedPost) return;
+      
+      const shareUrl = `${window.location.origin}/posts/${this.selectedPost.slug}`;
+      this.shareLink = shareUrl;
+      this.showShareDialog = true;
+      this.shareSuccess = false;
+    },
+    
+    // 复制分享链接到剪贴板
+    copyShareLink() {
+      navigator.clipboard.writeText(this.shareLink)
+        .then(() => {
+          this.shareSuccess = true;
+          setTimeout(() => {
+            this.showShareDialog = false;
+            this.shareSuccess = false;
+          }, 2000);
+        })
+        .catch(err => {
+          console.error('复制链接失败:', err);
+          alert('复制链接失败，请手动复制');
+        });
+    },
+    
+    // 关闭分享对话框
+    closeShareDialog() {
+      this.showShareDialog = false;
+    },
+  },
+  watch: {
+    // 监听 slug 变化，加载对应文章
+    slug(newSlug) {
+      if (newSlug) {
+        this.loadPostBySlug(newSlug);
+      }
+    },
+    // 监听路由变化，更新 URL
+    '$route'(to) {
+      // 如果是从文章详情页面切换到文章列表页面，且有选中文章，则更新 URL
+      if (to.name === 'Posts' && this.selectedPost) {
+        document.title = '文章列表';
+      }
+    },
+    // 监听选中文章变化，更新 URL
+    selectedPost(newPost) {
+      if (newPost && this.$route.name === 'Posts') {
+        // 如果在文章列表页面选择了文章，更新 URL 但不触发路由变化
+        window.history.replaceState(
+          null, 
+          null, 
+          `/posts/${newPost.slug}`
+        );
+        // 更新浏览器标题
+        document.title = `${newPost.title} - 文章详情`;
+      }
+    }
+  },
 };
 </script>
 

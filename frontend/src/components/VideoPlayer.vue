@@ -10,6 +10,11 @@
         <button class="retry-button" @click="retryPlayback">重试</button>
       </div>
     </div>
+    <div v-if="isPaused && showTimeProgress" class="time-progress-overlay">
+      <div class="time-progress-content">
+        <div class="time-display">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -47,14 +52,45 @@ export default {
     height: {
       type: [Number, String],
       default: 'auto'
+    },
+    // 视频ID，用于保存播放进度
+    videoId: {
+      type: String,
+      default: ''
     }
   },
-  emits: ['ready', 'play', 'pause', 'ended', 'error'],
+  emits: ['ready', 'play', 'pause', 'ended', 'error', 'timeupdate'],
   setup(props, { emit }) {
     const videoElement = ref(null);
     const player = ref(null);
     const error = ref('');
     const isFullscreen = ref(false);
+    const currentPlaybackPosition = ref(0);
+    const retryCount = ref(0);
+    const MAX_RETRIES = 5;
+    let savePositionInterval = null;
+    
+    // 添加新的响应式变量用于显示时间进度
+    const isPaused = ref(false);
+    const showTimeProgress = ref(false);
+    const currentTime = ref(0);
+    const duration = ref(0);
+    let timeProgressTimeout = null;
+    
+    // 格式化时间为 HH:MM:SS 格式
+    const formatTime = (seconds) => {
+      if (isNaN(seconds) || seconds < 0) return '00:00';
+      
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      
+      if (h > 0) {
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      } else {
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+    };
     
     // 初始化播放器
     const initializePlayer = () => {
@@ -68,12 +104,20 @@ export default {
           liveui: true,
           playbackRates: [0.5, 1, 1.5, 2],
           html5: {
-            hls: { // 使用 http-streaming 插件的配置
+            vhs: { // 更新为vhs配置（video.js 7+中的名称）
               overrideNative: true,
               withCredentials: false,
-              // HLS 特定配置
-              enableLowInitialPlaylist: true,
-              smoothQualityChange: true
+              // DASH和HLS特定配置
+              enableLowInitialPlaylist: false,
+              smoothQualityChange: true,
+              handleManifestRedirects: true,
+              handlePartialData: true,
+              // 缓冲配置
+              bufferSize: 30,  // 增加缓冲区大小
+              // 重试配置
+              retryOnError: true,
+              maxRetries: 5,
+              retryDelay: 1000
             },
             nativeAudioTracks: false,
             nativeVideoTracks: false
@@ -97,6 +141,7 @@ export default {
         
         // 清除之前的错误状态
         error.value = '';
+        retryCount.value = 0;
         
         // 创建播放器实例
         player.value = videojs(videoElement.value, options, function() {
@@ -107,15 +152,63 @@ export default {
           this.on('error', function() {
             const err = this.error();
             const errorMessage = err && err.message ? err.message : '未知错误';
-            console.error('视频播放错误:', errorMessage);
-            error.value = `播放失败: ${errorMessage}`;
-            emit('error', errorMessage);
+            console.error('视频播放错误:', errorMessage, '错误代码:', err && err.code);
+            
+            // 记录当前播放位置
+            currentPlaybackPosition.value = this.currentTime();
+            
+            // 特定处理网络错误
+            if (err && err.code === MediaError.MEDIA_ERR_NETWORK) {
+              error.value = `网络错误导致视频下载失败，正在尝试恢复...`;
+              handleNetworkError();
+            } else {
+              error.value = `播放失败: ${errorMessage}`;
+              emit('error', errorMessage);
+            }
           });
           
           // 添加事件监听
-          this.on('play', () => emit('play'));
-          this.on('pause', () => emit('pause'));
+          this.on('play', () => {
+            isPaused.value = false;
+            showTimeProgress.value = false;
+            emit('play');
+          });
+          
+          this.on('pause', () => {
+            isPaused.value = true;
+            showTimeProgress.value = true;
+            
+            // 清除之前的定时器
+            if (timeProgressTimeout) {
+              clearTimeout(timeProgressTimeout);
+            }
+            
+            // 设置定时器，5秒后隐藏时间进度显示
+            timeProgressTimeout = setTimeout(() => {
+              showTimeProgress.value = false;
+            }, 5000);
+            
+            emit('pause');
+          });
+          
           this.on('ended', () => emit('ended'));
+          
+          this.on('timeupdate', () => {
+            const time = this.currentTime();
+            currentTime.value = time;
+            currentPlaybackPosition.value = time;
+            emit('timeupdate', time);
+            // 保存播放进度
+            savePlaybackPosition();
+          });
+          
+          this.on('loadedmetadata', () => {
+            duration.value = this.duration();
+          });
+          
+          this.on('durationchange', () => {
+            duration.value = this.duration();
+          });
           
           // 监听全屏变化
           this.on('fullscreenchange', () => {
@@ -180,8 +273,75 @@ export default {
             }
           }, 100);
           
+          // 恢复播放进度
+          restorePlaybackPosition();
+          
           emit('ready', this);
         });
+      }
+    };
+
+    // 处理网络错误
+    const handleNetworkError = () => {
+      if (retryCount.value >= MAX_RETRIES) {
+        error.value = `多次尝试恢复播放失败，请刷新页面重试`;
+        console.error(`[播放器] 重试次数已达上限(${MAX_RETRIES}次)`);
+        return;
+      }
+      
+      retryCount.value++;
+      console.log(`[播放器] 尝试恢复播放，第${retryCount.value}次重试`);
+      
+      // 延迟重试，时间随重试次数增加
+      const delay = Math.min(2000 * retryCount.value, 10000);
+      
+      setTimeout(() => {
+        if (!player.value) return;
+        
+        try {
+          // 保存当前播放源和位置
+          const currentSrc = player.value.currentSrc();
+          const currentTime = currentPlaybackPosition.value;
+          
+          // 重新加载视频
+          player.value.src({ src: currentSrc, type: 'video/mp4' });
+          player.value.load();
+          
+          // 加载完成后恢复播放位置
+          player.value.one('loadedmetadata', () => {
+            console.log(`[播放器] 视频已重新加载，恢复到位置: ${currentTime}秒`);
+            player.value.currentTime(currentTime);
+            player.value.play().catch(e => {
+              console.error('[播放器] 恢复播放失败:', e);
+              error.value = '自动恢复播放失败，请点击重试按钮';
+            });
+          });
+        } catch (e) {
+          console.error('[播放器] 恢复播放出错:', e);
+          error.value = '恢复播放失败，请点击重试按钮';
+        }
+      }, delay);
+    };
+    
+    // 保存播放进度
+    const savePlaybackPosition = () => {
+      if (!player.value || !props.videoId) return;
+      
+      const currentTime = player.value.currentTime();
+      if (currentTime > 0) {
+        localStorage.setItem(`video-position-${props.videoId}`, currentTime.toString());
+      }
+    };
+    
+    // 恢复播放进度
+    const restorePlaybackPosition = () => {
+      if (!player.value || !props.videoId) return;
+      
+      const savedPosition = localStorage.getItem(`video-position-${props.videoId}`);
+      if (savedPosition) {
+        const position = parseFloat(savedPosition);
+        console.log(`[播放器] 恢复到上次播放位置: ${position}秒`);
+        player.value.currentTime(position);
       }
     };
 
@@ -242,21 +402,36 @@ export default {
     const retryPlayback = () => {
       if (player.value) {
         try {
+          // 保存当前播放位置
+          const currentTime = currentPlaybackPosition.value;
+          
+          // 重置播放器
           player.value.dispose();
           player.value = null;
+          
+          error.value = '';
+          
+          nextTick(() => {
+            initializePlayer();
+            
+            // 初始化后恢复播放位置
+            if (player.value && currentTime > 0) {
+              player.value.one('loadedmetadata', () => {
+                player.value.currentTime(currentTime);
+                if (props.sources && props.sources.length > 0) {
+                  player.value.play().catch(e => console.error('重试播放失败:', e));
+                }
+              });
+            } else if (props.sources && props.sources.length > 0) {
+              setTimeout(() => {
+                if (player.value) player.value.play().catch(e => console.error('重试播放失败:', e));
+              }, 500);
+            }
+          });
         } catch(err) {
           console.error('重置播放器失败:', err);
         }
       }
-      error.value = '';
-      nextTick(() => {
-        initializePlayer();
-        if (props.sources && props.sources.length > 0) {
-          setTimeout(() => {
-            if (player.value) player.value.play().catch(e => console.error('重试播放失败:', e));
-          }, 500);
-        }
-      });
     };
 
     // 更新播放源
@@ -264,26 +439,69 @@ export default {
       if (player.value && sources && sources.length > 0) {
         try {
           error.value = ''; // 清除之前的错误
-          player.value.src(sources);
           
-          // 对于HLS内容，确保正确加载
-          if (sources[0].type === 'application/x-mpegURL' || 
-              sources[0].src.toLowerCase().endsWith('.m3u8')) {
-            // 短暂延迟后尝试播放，确保HLS内容加载完成
-            setTimeout(() => {
-              if (props.autoplay && player.value) {
-                player.value.play().catch((error) => {
-                  console.error('播放失败:', error);
-                  // 自动播放失败时，显示友好提示
-                  if (error.name === 'NotAllowedError') {
-                    error.value = '浏览器阻止了自动播放，请点击播放按钮开始播放';
-                  } else {
-                    error.value = `播放失败: ${error.message}`;
-                  }
-                });
-              }
-            }, 500);
+          // 检查是否为DASH格式
+          const source = sources[0];
+          if (source.type === 'dash' && source.manifest) {
+            console.log('[播放器] 处理DASH格式视频');
+            
+            // 获取最高质量的视频和音频流
+            const videoStream = source.manifest.video[0];
+            const audioStream = source.manifest.audio && source.manifest.audio.length > 0 
+              ? source.manifest.audio[0] 
+              : null;
+            
+            // 构建DASH播放源
+            const dashSource = {
+              src: videoStream.baseUrl,
+              type: videoStream.mimeType || 'video/mp4',
+              // 添加自定义属性用于DASH处理
+              dashManifest: source.manifest,
+              // 添加请求头
+              headers: source.headers || {}
+            };
+            
+            // 设置播放源
+            player.value.src(dashSource);
+            
+            // 添加请求拦截器，确保每个请求都带有正确的头信息
+            if (source.headers) {
+              const originalXhrOpen = XMLHttpRequest.prototype.open;
+              XMLHttpRequest.prototype.open = function() {
+                const result = originalXhrOpen.apply(this, arguments);
+                const url = arguments[1];
+                
+                // 检查是否为视频或音频请求
+                if (url && (url.includes(videoStream.baseUrl) || 
+                    (audioStream && url.includes(audioStream.baseUrl)))) {
+                  // 设置请求头
+                  Object.entries(source.headers).forEach(([key, value]) => {
+                    this.setRequestHeader(key, value);
+                  });
+                }
+                
+                return result;
+              };
+            }
+          } else {
+            // 处理普通视频源
+            player.value.src(sources);
           }
+          
+          // 对于所有类型的内容，确保正确加载
+          setTimeout(() => {
+            if (props.autoplay && player.value) {
+              player.value.play().catch((error) => {
+                console.error('播放失败:', error);
+                // 自动播放失败时，显示友好提示
+                if (error.name === 'NotAllowedError') {
+                  error.value = '浏览器阻止了自动播放，请点击播放按钮开始播放';
+                } else {
+                  error.value = `播放失败: ${error.message}`;
+                }
+              });
+            }
+          }, 500);
         } catch (error) {
           console.error('设置视频源失败:', error);
           error.value = `无法加载视频: ${error.message}`;
@@ -561,6 +779,13 @@ export default {
         
         // 添加全局键盘事件监听
         document.addEventListener('keydown', handleKeyboardEvents);
+        
+        // 设置定期保存播放位置的定时器
+        savePositionInterval = setInterval(() => {
+          if (player.value && !player.value.paused()) {
+            savePlaybackPosition();
+          }
+        }, 10000); // 每10秒保存一次
       });
     });
     
@@ -573,6 +798,14 @@ export default {
       
       // 移除键盘事件监听
       document.removeEventListener('keydown', handleKeyboardEvents);
+      
+      // 清除保存播放位置的定时器
+      if (savePositionInterval) {
+        clearInterval(savePositionInterval);
+      }
+      
+      // 最后一次保存播放位置
+      savePlaybackPosition();
       
       if (player.value) {
         try {
@@ -591,7 +824,13 @@ export default {
       player,
       error,
       isFullscreen,
-      retryPlayback
+      retryPlayback,
+      currentPlaybackPosition,
+      isPaused,
+      showTimeProgress,
+      currentTime,
+      duration,
+      formatTime
     };
   }
 }

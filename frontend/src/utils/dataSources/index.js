@@ -17,6 +17,9 @@ import { createDataSource } from '../dataSourceFactory';
 // 移除直接导入InfoManager，避免循环依赖
 // import infoManager from '../InfoManager';
 
+// 移除特殊数据源示例的导入
+// import specialSource from './specialSource';
+
 // 使用Vite的动态导入功能自动加载所有数据源文件（传统模式）
 const dataSourceModules = import.meta.glob('./*.js', { eager: true });
 
@@ -25,6 +28,8 @@ const dataSources = {};
 
 // 添加日志
 console.log('开始加载数据源');
+// 移除特殊数据源信息日志
+// console.log('特殊数据源信息:', specialSource.id, specialSource.name);
 
 // 从localStorage获取网站设置
 const getSavedSiteInfo = () => {
@@ -44,6 +49,18 @@ const getSavedSiteInfo = () => {
 // 创建加载数据源的异步函数
 const initDataSources = async () => {
   try {
+    console.log('开始初始化数据源...');
+    
+    // 移除手动注册特殊数据源示例的代码
+    /*
+    try {
+      dataSources[specialSource.id] = specialSource;
+      console.log(`手动注册特殊数据源: ${specialSource.id} (${specialSource.name})`);
+    } catch (error) {
+      console.error('注册特殊数据源失败:', error);
+    }
+    */
+    
     // 尝试从localStorage获取数据源配置，避免循环依赖
     const siteInfo = getSavedSiteInfo();
     let configDataSources = [];
@@ -56,10 +73,20 @@ const initDataSources = async () => {
       configDataSources = dataSourcesConfig;
     }
     
+    console.log('默认数据源配置:', dataSourcesConfig);
+    
     // 加载配置的数据源
     console.log(`从配置加载 ${configDataSources.length} 个数据源`);
     configDataSources.forEach(config => {
       try {
+        // 移除特殊数据源冲突检查
+        /*
+        if (config.id === specialSource.id) {
+          console.log(`跳过配置数据源 ${config.id}，与特殊数据源冲突`);
+          return;
+        }
+        */
+        
         // 创建数据源实例
         const dataSource = createDataSource(config);
         const id = config.id || config.name.toLowerCase().replace(/\s+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '');
@@ -75,15 +102,27 @@ const initDataSources = async () => {
     // 兼容模式处理
     loadLegacyDataSources();
     
-    console.log(`成功加载 ${Object.keys(dataSources).length} 个数据源`);
+    console.log(`成功加载 ${Object.keys(dataSources).length} 个数据源:`, Object.keys(dataSources));
   } catch (error) {
     console.error('加载数据源配置失败，使用默认配置:', error);
+    
+    // 移除手动注册特殊数据源示例的代码
+    /*
+    try {
+      dataSources[specialSource.id] = specialSource;
+      console.log(`手动注册特殊数据源: ${specialSource.id} (${specialSource.name})`);
+    } catch (error) {
+      console.error('注册特殊数据源失败:', error);
+    }
+    */
     
     // 从默认配置加载
     loadDefaultDataSources();
     
     // 兼容模式处理
     loadLegacyDataSources();
+    
+    console.log(`最终加载了 ${Object.keys(dataSources).length} 个数据源:`, Object.keys(dataSources));
   }
 };
 

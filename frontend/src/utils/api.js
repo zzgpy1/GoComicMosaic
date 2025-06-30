@@ -120,7 +120,7 @@ export const getMovieDetail = async (vodId, dataSourceId = null) => {
 };
 
 // 解析剧集列表 - 适配通用格式
-export const parseEpisodes = (playUrl) => {
+export const parseEpisodes = (playUrl, requireCid = false) => {
   if (!playUrl) return [];
   
   const episodesArray = [];
@@ -138,10 +138,18 @@ export const parseEpisodes = (playUrl) => {
         const title = parts[0];
         const url = parts[1];
         
-        episodesArray.push({
+        const episodeData = {
           title, // 剧集标题
           url,   // 剧集URL
-        });
+        };
+        
+        // 如果需要二次请求，添加相关标记和cid
+        if (requireCid) {
+          episodeData.requireCid = true;
+          episodeData.cid = url; // 使用URL作为cid
+        }
+        
+        episodesArray.push(episodeData);
       }
     });
     

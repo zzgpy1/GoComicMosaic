@@ -3,6 +3,7 @@ import App from './App.vue'
 import router, { getDynamicRouter } from './router'
 import axios from 'axios'
 import { setupAxiosInterceptors } from './utils/auth'
+import { initStorageBridge } from './utils/storageBridge'
 
 // 配置axios基础URL
 axios.defaults.baseURL = '/api'
@@ -12,6 +13,9 @@ setupAxiosInterceptors()
 
 // 创建Vue应用但暂不挂载
 const app = createApp(App)
+
+// 初始化存储桥接器
+initStorageBridge()
 
 // 异步初始化应用
 async function initApp() {

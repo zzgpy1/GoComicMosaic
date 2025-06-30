@@ -3,6 +3,9 @@
  * 提供全局统一的外部JavaScript库加载功能
  */
 
+// 导入存储桥接客户端模块
+import { StorageBridgeClient, createStorageBridgeClient } from './storageBridge';
+
 // 库配置信息
 const LIBRARY_CONFIG = {
   // 加密相关
@@ -48,6 +51,19 @@ const LIBRARY_CONFIG = {
     cdnUrl: 'https://cdn.jsdelivr.net/npm/dayjs@1.11.7/dayjs.min.js',
     npmPackage: 'dayjs',
     validator: (lib) => lib && typeof lib().format === 'function'
+  },
+  
+  // 存储桥接客户端
+  'storage-bridge-client': {
+    name: 'StorageBridgeClient',
+    localModule: true, // 标记为本地模块
+    module: {
+      // 直接提供模块接口
+      StorageBridgeClient,
+      createStorageBridge: createStorageBridgeClient,
+      createStorageBridgeClient
+    },
+    validator: (lib) => lib && typeof lib.createStorageBridge === 'function'
   }
 };
 
@@ -90,6 +106,25 @@ class LibLoader {
   async load(libKey, options = {}) {
     // 检查是否是预配置的库
     const isKnownLib = LIBRARY_CONFIG[libKey];
+    
+    // 如果是本地模块直接返回
+    if (isKnownLib && LIBRARY_CONFIG[libKey].localModule) {
+      const config = {
+        ...LIBRARY_CONFIG[libKey],
+        ...options
+      };
+      
+      // 如果已经加载过，直接返回
+      if (this._loadedLibs[config.name]) {
+        console.log(`[LibLoader] 使用缓存的${config.name}库`);
+        return this._loadedLibs[config.name];
+      }
+      
+      // 返回本地模块
+      console.log(`[LibLoader] 加载本地模块: ${config.name}`);
+      this._loadedLibs[config.name] = config.module;
+      return config.module;
+    }
     
     // 如果是URL且不是已知库
     if (!isKnownLib && libKey.match(/^https?:\/\//)) {

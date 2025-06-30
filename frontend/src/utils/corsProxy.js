@@ -41,6 +41,11 @@ export function addCorsProxy(url, headers) {
       cleanHeaders["User-Agent"] = headers["User-Agent"];
     }
     
+    // 保留Cookie头信息
+    if (headers.Cookie || headers.cookie) {
+      cleanHeaders.Cookie = headers.Cookie || headers.cookie;
+    }
+    
     // 如果有必要的头信息，添加到代理URL
     if (Object.keys(cleanHeaders).length > 0) {
       // 转换为JSON字符串并编码

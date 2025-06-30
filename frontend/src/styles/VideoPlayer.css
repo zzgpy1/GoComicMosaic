@@ -233,3 +233,42 @@
 :deep(.video-js .vjs-control-bar .vjs-control) {
   margin: 0 0.1em;
 }
+
+/* 时间进度显示样式 */
+.time-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* 允许点击穿透到视频播放器 */
+  z-index: 5;
+}
+
+.time-progress-content {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  padding: 10px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.time-display {
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .time-display {
+    font-size: 16px;
+  }
+  
+  .time-progress-content {
+    padding: 8px 16px;
+  }
+}

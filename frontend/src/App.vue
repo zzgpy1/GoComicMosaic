@@ -465,16 +465,12 @@ const refreshButtonState = () => {
     const currentInstance = router.currentRoute.value.matched[0]?.instances?.default;
     if (currentInstance) {
       // 通过访问一些属性来触发计算属性重新计算
-      console.log("刷新按钮状态，当前路径:", route.path);
-      console.log("当前查询参数:", Object.keys(route.query).length > 0 ? "有" : "无");
-      
       // 如果在StreamsPage，检查一些关键状态
       if (route.path.startsWith('/streams')) {
         const hasResults = Boolean(
           currentInstance.searchResults && currentInstance.searchResults.length > 0
         );
         const isPlaying = Boolean(currentInstance.isPlaying);
-        console.log(`播放状态: ${isPlaying}, 搜索结果: ${hasResults}`);
       }
     }
   });
@@ -548,7 +544,7 @@ const stateCheckInterval = setInterval(() => {
   if (route.path.startsWith('/streams')) {
     refreshButtonState();
   }
-}, 1000); // 每秒检查一次
+}, 10000); // 每10秒检查一次
 
 // 监听route.query变化
 watch(() => route.query, () => {

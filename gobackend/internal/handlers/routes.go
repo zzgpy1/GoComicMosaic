@@ -19,6 +19,12 @@ func SetupRoutes(router *gin.Engine) {
 	// 直接添加一个不带/api前缀的代理路由，适用于Vite代理重写后的路径
 	router.Any("/proxy", ProxyHandler)
 	
+	// B站API辅助路由
+	bilibili := api.Group("/bilibili")
+	{
+		bilibili.GET("/cookies", BilibiliCookiesHandler)
+	}
+	
 	// 认证路由
 	auth := api.Group("/auth")
 	{
