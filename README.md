@@ -142,6 +142,14 @@ docker run -d --name dongman \
 ---
 
 # 更新日志
+-202507061001   
+✅ 外接数据源开发支持跨域代理返回Cookies功能   
+✅ 外接数据源开发支持桥接存储 (localStorage)  
+✅ 外接数据源开发支持二次请求播放地址支持 (getPlayUrl)  
+✅ 优化数据源加载机制，只有在流媒体播放页面切换数据源时才开始加载  
+✅ 新增bilibili外接数据源  
+✅ 内置一键图片清晰AI工具  
+✅ 调整vite.config.js配置proxy为`/app`（原`/api`），避免歧义  
 -202506230806   
 ✅ 新增文章功能，支持markdown    
 ✅ 图片支持拖拽排序     

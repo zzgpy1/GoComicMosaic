@@ -29,7 +29,7 @@ export default {
     // 缓存不存在或已过期，从服务器获取
     console.log('从服务器获取 TMDB 状态');
     try {
-      const response = await fetch('/api/api/settings/tmdb_status');
+      const response = await fetch('/app/api/settings/tmdb_status');
       if (!response.ok) {
         throw new Error(`获取 TMDB 状态失败: ${response.status}`);
       }

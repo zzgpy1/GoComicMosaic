@@ -65,7 +65,7 @@ const getProxiedImageUrl = (url) => {
   }
   
   // 所有外部域名图片使用通用代理格式
-  return `/api/proxy?url=${encodeURIComponent(url)}`
+  return `/app/proxy?url=${encodeURIComponent(url)}`
 }
 
 const props = defineProps({

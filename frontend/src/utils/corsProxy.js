@@ -50,7 +50,7 @@ export function addCorsProxy(url, headers) {
     if (Object.keys(cleanHeaders).length > 0) {
       // 转换为JSON字符串并编码
       const encodedHeaders = encodeURIComponent(JSON.stringify(cleanHeaders));
-      PROXY_BASE_URL = `/api/proxy?headers=${encodedHeaders}&url=`;
+      PROXY_BASE_URL = `/app/proxy?headers=${encodedHeaders}&url=`;
       console.log('[CORS代理] 添加自定义headers到代理URL');
     }
   }

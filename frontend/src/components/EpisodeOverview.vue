@@ -434,7 +434,7 @@ export default {
         console.log(`正在通过英文标题搜索: ${this.title_en}`);
         
         // 调用搜索接口
-        const response = await fetch(`/api/api/tmdb/search_id?query=${encodeURIComponent(this.title_en)}`);
+        const response = await fetch(`/app/api/tmdb/search_id?query=${encodeURIComponent(this.title_en)}`);
         if (!response.ok) {
           throw new Error(`搜索API调用失败: ${response.status}`);
         }
@@ -451,7 +451,7 @@ export default {
           if (resourceId) {
             try {
               console.log(`正在更新资源ID ${resourceId} 的TMDB ID为 ${this.actualTmdbId}`);
-              fetch(`/api/api/tmdb/update-resource-id/${resourceId}/${this.actualTmdbId}`, {
+              fetch(`/app/api/tmdb/update-resource-id/${resourceId}/${this.actualTmdbId}`, {
                 method: 'PUT'
               }).then(updateResponse => {
                 if (updateResponse.ok) {
@@ -522,7 +522,7 @@ export default {
     async fetchSeasons() {
       try {
         this.loadingStates.seasons = true; // 设置季节加载状态
-        const response = await fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}`);
+        const response = await fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -542,7 +542,7 @@ export default {
             // 获取第一季的剧集列表
             console.log(`初始化阶段：获取第${validSeasonNumber}季剧集列表`);
             this.loadingStates.episodes = true; // 确保设置剧集加载状态
-            const episodesResponse = await fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${validSeasonNumber}`);
+            const episodesResponse = await fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${validSeasonNumber}`);
             if (episodesResponse.ok) {
               const episodesData = await episodesResponse.json();
               this.episodes = episodesData.episodes || [];
@@ -583,7 +583,7 @@ export default {
     async fetchEpisodes() {
       try {
         this.loadingStates.episodes = true; // 设置剧集加载状态
-        const response = await fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}`);
+        const response = await fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -670,7 +670,7 @@ export default {
         const episodeDetailsPromise = this.getEpisodeFromSeasonDetails();
         
         // 获取剧照
-        const imagesPromise = fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${this.currentEpisodeNumber}/images`)
+        const imagesPromise = fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${this.currentEpisodeNumber}/images`)
           .then(response => {
             if (!response.ok) throw new Error(`获取剧照失败: ${response.status}`);
             return response.json();
@@ -682,7 +682,7 @@ export default {
           });
         
         // 获取演员信息
-        const creditsPromise = fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${this.currentEpisodeNumber}/credits`)
+        const creditsPromise = fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${this.currentEpisodeNumber}/credits`)
           .then(response => {
             if (!response.ok) throw new Error(`获取演员信息失败: ${response.status}`);
             return response.json();
@@ -965,7 +965,7 @@ export default {
           const episodeDetails = nextEpisode;
           
           // 获取剧照
-          const imagesPromise = fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${nextEpisode.episode_number}/images`)
+          const imagesPromise = fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${nextEpisode.episode_number}/images`)
             .then(response => {
               if (!response.ok) throw new Error(`获取剧照失败: ${response.status}`);
               return response.json();
@@ -977,7 +977,7 @@ export default {
             });
           
           // 获取演员信息
-          const creditsPromise = fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${nextEpisode.episode_number}/credits`)
+          const creditsPromise = fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${this.currentSeasonNumber}/${nextEpisode.episode_number}/credits`)
             .then(response => {
               if (!response.ok) throw new Error(`获取演员信息失败: ${response.status}`);
               return response.json();
@@ -1033,7 +1033,7 @@ export default {
         // 延迟预加载，避免与当前请求竞争资源
         setTimeout(() => {
           // 获取第2季剧集列表
-          fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${secondSeason.season_number}`)
+          fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${secondSeason.season_number}`)
             .then(response => {
               if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
               return response.json();
@@ -1089,7 +1089,7 @@ export default {
           }
           
           // 并发请求图片和演员信息
-          const imagesPromise = fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${seasonNumber}/1/images`)
+          const imagesPromise = fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${seasonNumber}/1/images`)
             .then(response => {
               if (!response.ok) throw new Error(`获取剧照失败: ${response.status}`);
               return response.json();
@@ -1100,7 +1100,7 @@ export default {
               return [];
             });
           
-          const creditsPromise = fetch(`/api/api/tmdb/seasons/${this.actualTmdbId}/${seasonNumber}/1/credits`)
+          const creditsPromise = fetch(`/app/api/tmdb/seasons/${this.actualTmdbId}/${seasonNumber}/1/credits`)
             .then(response => {
               if (!response.ok) throw new Error(`获取演员信息失败: ${response.status}`);
               return response.json();

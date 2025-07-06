@@ -20,6 +20,7 @@
     "axios": "^1.6.5",
     "dompurify": "^3.2.6",
     "dotenv": "^16.5.0",
+    "element-plus": "^2.10.2",
     "express": "^5.1.0",
     "marked": "^15.0.12",
     "qrcode": "^1.5.4",

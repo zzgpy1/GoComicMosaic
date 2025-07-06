@@ -4,9 +4,11 @@ import router, { getDynamicRouter } from './router'
 import axios from 'axios'
 import { setupAxiosInterceptors } from './utils/auth'
 import { initStorageBridge } from './utils/storageBridge'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
 
 // 配置axios基础URL
-axios.defaults.baseURL = '/api'
+axios.defaults.baseURL = '/app'
 
 // 设置请求拦截器
 setupAxiosInterceptors()
@@ -28,11 +30,13 @@ async function initApp() {
     console.log('已应用动态路由配置');
     
     // 挂载应用
+    app.use(ElementPlus)
     app.mount('#app');
   } catch (error) {
     console.error('初始化动态路由失败，使用默认路由:', error);
     // 出错时使用默认路由
     app.use(router);
+    app.use(ElementPlus)
     app.mount('#app');
   }
 }

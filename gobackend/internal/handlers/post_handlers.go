@@ -145,21 +145,11 @@ func UploadPostImage(c *gin.Context) {
 		return
 	}
 
-	// 获取标题参数（用于子目录）
-	title := c.PostForm("title")
-	// 如果没有提供标题，使用default作为子目录
-	if title == "" {
-		title = "default"
-	}
-	
-	// 生成安全的目录名
-	dirName := sanitizeDirectoryName(title)
-	
 	// 生成唯一文件名
 	filename := uuid.New().String() + filepath.Ext(header.Filename)
 	
 	// 确保目录存在
-	imgsDir := filepath.Join(config.AssetPath, "posts", "imgs", dirName)
+	imgsDir := filepath.Join(config.AssetPath, "posts", "imgs")
 	if err := os.MkdirAll(imgsDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法创建目录"})
 		return
@@ -180,7 +170,7 @@ func UploadPostImage(c *gin.Context) {
 	}
 
 	// 返回图片URL路径
-	imageURL := "/api/assets/posts/imgs/" + dirName + "/" + filename
+	imageURL := "/api/assets/posts/imgs/" + filename
 	c.JSON(http.StatusOK, gin.H{"url": imageURL})
 }
 
@@ -194,21 +184,11 @@ func UploadPostFile(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// 获取标题参数（用于子目录）
-	title := c.PostForm("title")
-	// 如果没有提供标题，使用default作为子目录
-	if title == "" {
-		title = "default"
-	}
-	
-	// 生成安全的目录名
-	dirName := sanitizeDirectoryName(title)
-	
 	// 生成唯一文件名
 	filename := uuid.New().String() + filepath.Ext(header.Filename)
 	
 	// 确保目录存在
-	filesDir := filepath.Join(config.AssetPath, "posts", "files", dirName)
+	filesDir := filepath.Join(config.AssetPath, "posts", "files")
 	if err := os.MkdirAll(filesDir, 0755); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法创建目录"})
 		return
@@ -229,27 +209,10 @@ func UploadPostFile(c *gin.Context) {
 	}
 
 	// 返回文件URL路径
-	fileURL := "/api/assets/posts/files/" + dirName + "/" + filename
+	fileURL := "/api/assets/posts/files/" + filename
 	originalName := header.Filename
 	c.JSON(http.StatusOK, gin.H{
 		"url": fileURL,
 		"name": originalName,
 	})
-}
-
-// sanitizeDirectoryName 清理目录名，确保安全有效
-func sanitizeDirectoryName(name string) string {
-	// 替换无效字符为下划线
-	invalid := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", " "}
-	result := name
-	for _, char := range invalid {
-		result = strings.ReplaceAll(result, char, "_")
-	}
-	
-	// 截取长目录名
-	if len(result) > 50 {
-		result = result[:50]
-	}
-	
-	return result
 } 

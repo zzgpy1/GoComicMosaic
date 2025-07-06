@@ -123,6 +123,17 @@ const baseRoutes = [
       description: 'post_detail_description',
       keywords: 'post_detail_keywords'
     }
+  },
+  // 图像处理测试页面
+  {
+    path: '/image_tools',
+    name: 'ImageTools',
+    component: () => import('../views/ImageTools.vue'),
+    meta: {
+      title: 'image_processing_test_title',
+      description: 'image_processing_test_description',
+      keywords: 'image_processing_test_keywords'
+    }
   }
 ]
 
@@ -191,7 +202,12 @@ const defaultMetaInfo = {
   // 文章管理页
   post_admin_title: '文章管理 - 美漫资源共建平台',
   post_admin_description: '管理网站文章，包括创建、编辑和删除文章。',
-  post_admin_keywords: '文章管理, 编辑, 发布, 管理后台'
+  post_admin_keywords: '文章管理, 编辑, 发布, 管理后台',
+  
+  // 图片工具页
+  image_processing_test_title: '图片工具 - 美漫资源共建平台',
+  image_processing_test_description: 'AI图片工具。',
+  image_processing_test_keywords: '图片工具'
 }
 
 // 异步函数，创建路由并应用动态配置

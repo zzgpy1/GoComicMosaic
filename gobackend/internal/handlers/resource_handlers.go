@@ -242,8 +242,8 @@ func GetPublicResources(c *gin.Context) {
 	// 添加搜索条件
 	if params.Search != "" {
 		searchTerm := "%" + params.Search + "%"
-		countQuery += " AND (title LIKE ? OR title_en LIKE ? OR description LIKE ?)"
-		queryParams = append(queryParams, searchTerm, searchTerm, searchTerm)
+		countQuery += " AND (title LIKE ? OR title_en LIKE ?)"
+		queryParams = append(queryParams, searchTerm, searchTerm)
 	}
 
 	// 获取总数
@@ -273,7 +273,7 @@ func GetPublicResources(c *gin.Context) {
 	
 	// 添加搜索条件
 	if params.Search != "" {
-		query += " AND (title LIKE ? OR title_en LIKE ? OR description LIKE ?)"
+		query += " AND (title LIKE ? OR title_en LIKE ?)"
 	}
 	
 	// 添加排序

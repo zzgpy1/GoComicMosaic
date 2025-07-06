@@ -35,11 +35,11 @@ export default defineConfig(({ command, mode }) => {
     server: {
       port: 3000,
       proxy: {
-        '/api': {
+        '/app': {
           target: 'http://localhost:8000',
           changeOrigin: true,
           // 恢复原始重写，去掉/api前缀
-          rewrite: (path) => path.replace(/^\/api/, ''),
+          rewrite: (path) => path.replace(/^\/app/, ''),
           configure: (proxy, options) => {
             proxy.on('error', (err, req, res) => {
               console.log('API proxy error:', err);
