@@ -641,6 +641,12 @@ func UpdateResource(c *gin.Context) {
 			
 			resource.Images = finalImages
 			updated = true
+
+			// 异步调用WebP转换工具处理所有图片，确保转换完成
+			go func(paths []string) {
+				log.Printf("[INFO] 开始异步转换资源编辑时上传的图片为WebP格式，图片数量: %d", len(paths))
+				convertImagesToWebP(paths)
+			}(finalImages)
 		} else {
 			// 如果没有需要移动的图片，直接尝试转换为WebP
 			webpImages, err := convertResourceImagesToWebP(resourceUpdate.Images, resourceID)
@@ -652,6 +658,12 @@ func UpdateResource(c *gin.Context) {
 				resource.Images = webpImages
 			}
 			updated = true
+
+			// 异步调用WebP转换工具处理所有图片，确保转换完成
+			go func(paths []string) {
+				log.Printf("[INFO] 开始异步转换资源编辑时的图片为WebP格式，图片数量: %d", len(paths))
+				convertImagesToWebP(paths)
+			}(resource.Images)
 		}
 	}
 
