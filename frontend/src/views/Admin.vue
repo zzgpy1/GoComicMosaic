@@ -16,18 +16,225 @@
     </div>
     
     <div v-else class="admin-content">
+      <!-- 用户管理卡片 -->
+      <div class="admin-card" v-if="isSuperAdmin">
+        <div class="card-header">
+          <h4><i class="bi bi-people-fill"></i> 用户管理</h4>
+          <div class="header-actions">
+            <button 
+              type="button" 
+              class="btn-custom btn-primary btn-sm" 
+              @click="showAddUserDialog"
+              v-if="showUserManagement"
+            >
+              <i class="bi bi-person-plus"></i> 
+              <span class="btn-text">添加用户</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn-custom btn-outline toggle-btn" 
+              @click="showUserManagement = !showUserManagement"
+            >
+              <i :class="showUserManagement ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+              <span class="btn-text">{{ showUserManagement ? '收起' : '展开' }}</span>
+            </button>
+          </div>
+        </div>
+        <div class="card-body" v-if="showUserManagement">
+          <div v-if="loadingUsers" class="loading-inline">
+            <div class="spinner small-spinner"></div>
+            <span>加载用户列表...</span>
+          </div>
+          <div v-else-if="users.length === 0" class="empty-state">
+            <i class="bi bi-people"></i>
+            <p>暂无用户数据</p>
+          </div>
+          <div v-else class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>用户名</th>
+                  <th>管理员</th>
+                  <th>创建时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in users" :key="user.id">
+                  <td><span class="id-badge">#{{ user.id }}</span></td>
+                  <td>{{ user.username }}</td>
+                  <td>
+                    <span 
+                      class="status-badge" 
+                      :class="{ 'status-approved': user.is_admin, 'status-rejected': !user.is_admin }"
+                    >
+                      {{ user.is_admin ? '是' : '否' }}
+                    </span>
+                  </td>
+                  <td>{{ formatDate(user.created_at) }}</td>
+                  <td class="actions-cell">
+                    <button class="btn-custom btn-outline btn-sm" @click="showEditUserDialog(user)">
+                      <i class="bi bi-pencil"></i> 
+                      <span class="btn-text">编辑</span>
+                    </button>
+                    <button 
+                      class="btn-custom btn-accent btn-sm" 
+                      @click="confirmDeleteUser(user)"
+                      :disabled="user.id === currentUser?.id"
+                    >
+                      <i class="bi bi-trash"></i> 
+                      <span class="btn-text">删除</span>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 添加/编辑用户对话框 -->
+      <div v-if="userDialogVisible" class="custom-modal" @click.self="userDialogVisible = false">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="bi bi-person"></i> {{ isEditing ? '编辑用户' : '添加用户' }}
+              </h5>
+              <button type="button" class="close-btn" @click="userDialogVisible = false">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <form @submit.prevent="submitUserForm">
+                <div class="form-group">
+                  <label class="form-label">用户名</label>
+                  <div class="input-group">
+                    <div class="input-prefix">
+                      <i class="bi bi-person-fill"></i>
+                    </div>
+                    <input 
+                      type="text" 
+                      class="custom-input" 
+                      v-model="userForm.username" 
+                      placeholder=""
+                      required
+                      minlength="3"
+                      maxlength="20"
+                    >
+                  </div>
+                  <div class="form-text">用户名长度应为3-20个字符</div>
+                </div>
+                
+                <div class="form-group" v-if="!isEditing || changePassword">
+                  <label class="form-label">密码</label>
+                  <div class="input-group">
+                    <div class="input-prefix">
+                      <i class="bi bi-lock-fill"></i>
+                    </div>
+                    <input 
+                      type="password" 
+                      class="custom-input" 
+                      v-model="userForm.password" 
+                      placeholder=""
+                      required
+                      minlength="6"
+                    >
+                  </div>
+                  <div class="form-text">密码长度不能少于6个字符</div>
+                </div>
+                
+                <div class="form-group" v-if="isEditing">
+                  <label class="form-label">修改密码</label>
+                  <div class="switch-toggle-wrapper">
+                    <div class="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        id="change-password" 
+                        v-model="userChangePassword"
+                      >
+                      <label for="change-password" class="switch-label"></label>
+                    </div>
+                    <span class="switch-text">{{ userChangePassword ? '是' : '否' }}</span>
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label class="form-label">管理员权限</label>
+                  <div class="checkbox-wrapper horizontal-display">
+                    <input 
+                      type="checkbox" 
+                      id="is-admin" 
+                      class="custom-checkbox"
+                      v-model="userForm.is_admin"
+                    >
+                    <label for="is-admin"></label>
+                    <span class="checkbox-text">{{ userForm.is_admin ? '是' : '否' }}</span>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn-custom btn-outline" @click="userDialogVisible = false">取消</button>
+              <button 
+                type="button" 
+                class="btn-custom btn-primary" 
+                @click="submitUserForm" 
+                :disabled="submitting"
+              >
+                <div v-if="submitting" class="spinner small-spinner"></div>
+                <span>{{ submitting ? '提交中...' : '确认' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 删除用户确认对话框 -->
+      <div v-if="deleteUserDialogVisible" class="custom-modal" @click.self="cancelDeleteUser">
+        <div class="modal-dialog small-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title"><i class="bi bi-trash"></i> 确认删除用户</h5>
+              <button type="button" class="close-btn" @click="cancelDeleteUser">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="confirm-message">确定要删除用户 <strong>{{ userToDelete?.username }}</strong> 吗？此操作不可撤销。</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn-custom btn-outline" @click="cancelDeleteUser">取消</button>
+              <button 
+                type="button" 
+                class="btn-custom btn-accent" 
+                @click="deleteUser" 
+                :disabled="deleting"
+              >
+                <div v-if="deleting" class="spinner small-spinner"></div>
+                <span>{{ deleting ? '删除中...' : '确认删除' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- 修改密码卡片 -->
       <div class="admin-card">
         <div class="card-header">
           <h4><i class="bi bi-shield-lock"></i> 修改密码</h4>
-          <button 
-            type="button" 
-            class="btn-custom btn-outline toggle-btn" 
-            @click="showChangePassword = !showChangePassword"
-          >
-            <i :class="showChangePassword ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
-            <span class="btn-text">{{ showChangePassword ? '收起' : '展开' }}</span>
-          </button>
+          <div class="header-actions">
+            <button 
+              type="button" 
+              class="btn-custom btn-outline toggle-btn" 
+              @click="showChangePassword = !showChangePassword"
+            >
+              <i :class="showChangePassword ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+              <span class="btn-text">{{ showChangePassword ? '收起' : '展开' }}</span>
+            </button>
+          </div>
         </div>
         <div class="card-body" v-if="showChangePassword">
           <div v-if="passwordSuccess" class="success-message">
@@ -107,17 +314,19 @@
       </div>
       
       <!-- 网站设置卡片 -->
-      <div class="admin-card">
+      <div class="admin-card" v-if="isSuperAdmin">
         <div class="card-header">
           <h4><i class="bi bi-gear-fill"></i> 网站设置</h4>
-          <button 
-            type="button" 
-            class="btn-custom btn-outline toggle-btn" 
-            @click="showSiteSettings = !showSiteSettings"
-          >
-            <i :class="showSiteSettings ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
-            <span class="btn-text">{{ showSiteSettings ? '收起' : '展开' }}</span>
-          </button>
+          <div class="header-actions">
+            <button 
+              type="button" 
+              class="btn-custom btn-outline toggle-btn" 
+              @click="showSiteSettings = !showSiteSettings"
+            >
+              <i :class="showSiteSettings ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+              <span class="btn-text">{{ showSiteSettings ? '收起' : '展开' }}</span>
+            </button>
+          </div>
         </div>
         <div class="card-body" v-if="showSiteSettings">
           <div v-if="settingsSuccess" class="success-message">
@@ -1227,14 +1436,6 @@
           <div class="header-actions">
             <button 
               type="button" 
-              class="btn-custom btn-outline toggle-btn" 
-              @click="showApprovalRecords = !showApprovalRecords"
-            >
-              <i :class="showApprovalRecords ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
-              <span class="btn-text">{{ showApprovalRecords ? '收起' : '展开' }}</span>
-            </button>
-            <button 
-              type="button" 
               class="btn-custom btn-accent btn-sm" 
               @click="confirmBatchDelete"
               :disabled="selectedResources.length === 0"
@@ -1243,6 +1444,15 @@
               <i class="bi bi-trash"></i> 
               <span class="btn-text">批量删除</span> 
               <span v-if="selectedResources.length > 0" class="badge-count">{{ selectedResources.length }}</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn-custom btn-outline toggle-btn" 
+              @click="showApprovalRecords = !showApprovalRecords"
+            >
+              <i :class="showApprovalRecords ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+              <span class="btn-text">{{ showApprovalRecords ? '收起' : '展开' }}</span>
             </button>
           </div>
         </div>
@@ -1566,20 +1776,22 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted,  watch } from 'vue'
+import { ref, reactive, onMounted,  watch, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { isAuthenticated, isAdmin, debugAuth } from '../utils/auth'
 import draggable from 'vuedraggable'
 import infoManager from '../utils/InfoManager'
 import { getDataSourceManager } from '../utils/dataSourceManager'
-import iconList from '../utils/icons.js';
+import iconList from '../utils/icons.js'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const resources = ref([])
 const pendingResources = ref([])
 const loading = ref(true)
 const loadingPending = ref(true)
+const loadingUsers = ref(true)
 const error = ref(null)
 const showDeleteModal = ref(false)
 const resourceToDelete = ref(null)
@@ -1639,8 +1851,15 @@ const batchDeleteLoading = ref(false)
 
 // 格式化日期
 const formatDate = (dateString) => {
+  if (!dateString) return '未知'
   const date = new Date(dateString)
-  return date.toLocaleString()
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
 }
 
 // 获取所有已审批资源
@@ -2314,6 +2533,7 @@ onMounted(async () => {
   // 并行加载资源列表和页脚设置
   loading.value = true
   loadingPending.value = true
+  loadingUsers.value = true
   error.value = null
   
   try {
@@ -2321,8 +2541,9 @@ onMounted(async () => {
     const resourcesPromise = fetchResources()
     const pendingResourcesPromise = fetchPendingResources()
     const footerSettingsPromise = loadFooterSettings()
+    const usersPromise = loadUsers()
     
-    const results = await Promise.allSettled([resourcesPromise, pendingResourcesPromise, footerSettingsPromise])
+    const results = await Promise.allSettled([resourcesPromise, pendingResourcesPromise, footerSettingsPromise, usersPromise])
     
     console.log('Fetch results:', results.map(r => r.status))
     
@@ -2362,6 +2583,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
     loadingPending.value = false
+    loadingUsers.value = false
   }
   
   // 加载各种设置
@@ -2939,6 +3161,153 @@ const loadDisclaimerTemplate = () => {
     alert('已加载默认免责声明模板');
   }
 };
+
+// 用户管理相关状态
+const showUserManagement = ref(false)
+const users = ref([])
+// loadingUsers 已在文件开头声明
+const userDialogVisible = ref(false)
+const isEditing = ref(false)
+const userChangePassword = ref(false)
+const submitting = ref(false)
+const deleteUserDialogVisible = ref(false)
+const userToDelete = ref(null)
+const deleting = ref(false)
+const currentUser = ref(null)
+
+// 用户表单
+const userForm = ref({
+  id: null,
+  username: '',
+  password: '',
+  is_admin: ''
+})
+
+// 加载用户列表
+async function loadUsers() {
+  loadingUsers.value = true
+  try {
+    // 获取用户列表
+    const response = await axios.get('/api/admin/users')
+    users.value = response.data
+    console.log(`加载了 ${users.value.length} 个用户`)
+    
+    // 获取当前用户信息
+    const userResponse = await axios.get('/api/auth/me')
+    currentUser.value = userResponse.data
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+    ElMessage.error('获取用户列表失败')
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+// 显示添加用户对话框
+function showAddUserDialog() {
+  isEditing.value = false
+  userChangePassword.value = true
+  userForm.value = {
+    id: null,
+    username: '',
+    password: '',
+    is_admin: ''
+  }
+  userDialogVisible.value = true
+}
+
+// 显示编辑用户对话框
+function showEditUserDialog(user) {
+  isEditing.value = true
+  userChangePassword.value = false
+  userForm.value = {
+    id: user.id,
+    username: user.username,
+    password: '',
+    is_admin: user.is_admin
+  }
+  userDialogVisible.value = true
+}
+
+// 确认删除用户
+function confirmDeleteUser(user) {
+  userToDelete.value = user
+  deleteUserDialogVisible.value = true
+}
+
+// 取消删除用户
+function cancelDeleteUser() {
+  deleteUserDialogVisible.value = false
+  userToDelete.value = null
+}
+
+// 提交用户表单
+async function submitUserForm() {
+  // 表单验证
+  if (!userForm.value.username || ((!isEditing.value || userChangePassword.value) && !userForm.value.password)) {
+    ElMessage.error('请填写必填字段')
+    return
+  }
+  
+  if (userForm.value.username.length < 3 || userForm.value.username.length > 20) {
+    ElMessage.error('用户名长度应为3-20个字符')
+    return
+  }
+  
+  if ((!isEditing.value || userChangePassword.value) && userForm.value.password.length < 6) {
+    ElMessage.error('密码长度不能少于6个字符')
+    return
+  }
+
+  // 如果是编辑模式且未选择修改密码，移除密码字段
+  const userData = { ...userForm.value }
+  if (isEditing.value && !userChangePassword.value) {
+    delete userData.password
+  }
+
+  submitting.value = true
+  try {
+    if (isEditing.value) {
+      // 编辑用户
+      await axios.put(`/api/admin/users/${userData.id}`, userData)
+      ElMessage.success('用户更新成功')
+    } else {
+      // 添加用户
+      await axios.post('/api/admin/users', userData)
+      ElMessage.success('用户添加成功')
+    }
+    userDialogVisible.value = false
+    await loadUsers()
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error(`${isEditing.value ? '更新' : '添加'}用户失败: ${error.response?.data?.error || error.message}`)
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 删除用户
+async function deleteUser() {
+  if (!userToDelete.value) return
+
+  deleting.value = true
+  try {
+    await axios.delete(`/api/admin/users/${userToDelete.value.id}`)
+    ElMessage.success('用户删除成功')
+    deleteUserDialogVisible.value = false
+    await loadUsers()
+  } catch (error) {
+    console.error('删除失败:', error)
+    ElMessage.error(`删除用户失败: ${error.response?.data?.error || error.message}`)
+  } finally {
+    deleting.value = false
+  }
+}
+
+// 计算属性：判断当前用户是否为超级管理员
+const isSuperAdmin = computed(() => {
+  return currentUser.value && currentUser.value.id === 1;
+});
 
 </script>
 

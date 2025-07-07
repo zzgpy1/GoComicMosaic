@@ -207,7 +207,12 @@ const defaultMetaInfo = {
   // 图片工具页
   image_processing_test_title: '图片工具 - 美漫资源共建平台',
   image_processing_test_description: 'AI图片工具。',
-  image_processing_test_keywords: '图片工具'
+  image_processing_test_keywords: '图片工具',
+  
+  // 用户管理页
+  user_management_title: '用户管理 - 美漫资源共建平台',
+  user_management_description: '管理平台用户账号，包括创建、编辑和删除用户。',
+  user_management_keywords: '用户管理, 账号管理, 管理后台, 美漫共建'
 }
 
 // 异步函数，创建路由并应用动态配置
@@ -264,6 +269,9 @@ async function createDynamicRouter() {
             break;
           case 'streams': 
             pageTitle = `流媒体内容 - ${siteName}`;
+            break;
+          case 'user_management':
+            pageTitle = `用户管理 - ${siteName}`;
             break;
           default:
             pageTitle = siteName;

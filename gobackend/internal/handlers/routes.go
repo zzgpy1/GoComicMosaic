@@ -50,6 +50,13 @@ func SetupRoutes(router *gin.Engine) {
 		// TMDB配置
 		admin.GET("/tmdb/config", GetTMDBConfig)
 		admin.PUT("/tmdb/config", UpdateTMDBConfig)
+
+		// 用户管理API
+		admin.GET("/users", GetUsers)
+		admin.GET("/users/roles", GetUserRoles)
+		admin.POST("/users", CreateUser)
+		admin.PUT("/users/:id", UpdateUser)
+		admin.DELETE("/users/:id", DeleteUser)
 	}
 	
 	// TMDB API路由
@@ -58,6 +65,7 @@ func SetupRoutes(router *gin.Engine) {
 		tmdb.GET("/search", SearchTMDB)
 		tmdb.GET("/search_id", SearchTmdbId)
 		tmdb.POST("/create", CreateResourceFromTMDB)
+		tmdb.GET("/check-exists", CheckResourceExists)
 		
 		// 添加新的季节和剧集API路由
 		tmdb.GET("/seasons/:series_id", GetTMDBSeasons)

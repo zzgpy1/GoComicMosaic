@@ -67,7 +67,11 @@ export const setupAxiosInterceptors = () => {
     const isPostsAdminUrl = normalizedUrl.includes('/api/posts/admin') ||
                             normalizedUrl.includes('/posts/admin');
     
-    const isProtected = isSettingsUrl || isAuthUrl || isResourcesUrl || isPostsAdminUrl;
+    // 添加对管理员API的支持
+    const isAdminUrl = normalizedUrl.includes('/api/admin') ||
+                       normalizedUrl.includes('/admin/');
+    
+    const isProtected = isSettingsUrl || isAuthUrl || isResourcesUrl || isPostsAdminUrl || isAdminUrl;
     
     console.log(`URL ${normalizedUrl} 需要保护: ${isProtected}`);
     

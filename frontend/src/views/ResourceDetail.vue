@@ -405,7 +405,7 @@
               <button @click="startEdit" class="btn-custom btn-primary" v-if="isUserAdmin">
                 <i class="bi bi-pencil-square"></i><span class="btn-text">编辑</span>
               </button>
-              <button @click="confirmDelete" class="btn-custom btn-danger" v-if="isUserAdmin">
+              <button @click="confirmDelete" class="btn-custom btn-danger" v-if="isSuperAdmin">
                 <i class="bi bi-trash"></i><span class="btn-text">删除</span>
               </button>
             </div>
@@ -603,7 +603,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { isAdmin } from '../utils/auth'
+import { isAdmin, getCurrentUser } from '../utils/auth'
 import { getImageUrl } from '@/utils/imageUtils'
 import ShareResource from '@/components/ShareResource.vue'
 import draggable from 'vuedraggable'  // 导入 vuedraggable 组件
@@ -699,6 +699,12 @@ const selectedImage = ref(null)
 
 // 计算属性检查是否为管理员
 const isUserAdmin = computed(() => isAdmin())
+
+// 判断是否为超级管理员（ID为1）
+const isSuperAdmin = computed(() => {
+  const user = getCurrentUser()
+  return user && user.is_admin && user.id === 1
+})
 
 // 添加图片导航相关的计算属性
 const nonPosterImages = computed(() => {
