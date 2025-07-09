@@ -99,7 +99,8 @@ const baseRoutes = [
     meta: {
       title: 'streams_title',
       description: 'streams_description',
-      keywords: 'streams_keywords'
+      keywords: 'streams_keywords',
+      referrer: 'no-referrer'
     }
   },
   // 文章相关路由

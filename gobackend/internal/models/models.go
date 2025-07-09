@@ -194,6 +194,7 @@ type Resource struct {
 	IsSupplementApproval bool         `db:"is_supplement_approval" json:"is_supplement_approval"`
 	LikesCount         int            `db:"likes_count" json:"likes_count"`
 	TmdbID             *int           `db:"tmdb_id" json:"tmdb_id"`
+	Stickers           JsonMap        `db:"stickers" json:"stickers"`
 	CreatedAt          time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time      `db:"updated_at" json:"updated_at"`
 	TotalCount         *int           `db:"-" json:"total_count,omitempty"` // 不存储在数据库中，用于分页
@@ -230,6 +231,7 @@ type ResourceUpdate struct {
 	PosterImage  *string   `json:"poster_image"`
 	Links        JsonMap   `json:"links"`
 	TmdbID       *int      `json:"tmdb_id"`
+	Stickers     JsonMap   `json:"stickers"`
 }
 
 // ResourceApproval 资源审批请求

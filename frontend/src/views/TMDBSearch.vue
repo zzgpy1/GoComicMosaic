@@ -79,7 +79,7 @@
                 </div>
                 <div class="selected-types-preview">
                   <span>已选类型：</span>
-                  <span v-if="editForm.resource_type" class="selected-type-text">{{ editForm.resource_type }}</span>
+                  <span v-if="editForm.resource_type.length > 0" class="selected-type-text">{{ editForm.resource_type.join(', ') }}</span>
                   <span v-else class="text-muted">未选择</span>
                 </div>
               </div>
@@ -575,7 +575,7 @@ export default {
         title: '',
         title_en: '',
         description: '',
-        resource_type: '',
+        resource_type: [],
         poster_image: '',
         images: []
       },
@@ -805,7 +805,21 @@ export default {
       this.editForm.title = this.tmdbResource.title || '';
       this.editForm.title_en = this.tmdbResource.title_en || '';
       this.editForm.description = this.tmdbResource.description || '';
-      this.editForm.resource_type = this.tmdbResource.resource_type || '';
+      
+      // 处理resource_type为数组
+      if (this.tmdbResource.resource_type) {
+        // 如果原始数据包含逗号，按逗号分割
+        if (this.tmdbResource.resource_type.includes(',')) {
+          this.editForm.resource_type = this.tmdbResource.resource_type.split(',');
+        } else {
+          // 否则作为单个元素添加到数组
+          this.editForm.resource_type = [this.tmdbResource.resource_type];
+        }
+      } else {
+        // 默认选中第一个类型
+        this.editForm.resource_type = [this.resourceTypes[0]];
+      }
+      
       this.editForm.poster_image = this.tmdbResource.poster_image || '';
       this.editForm.images = [...(this.tmdbResource.images || [])];
       
@@ -848,11 +862,20 @@ export default {
     },
     
     isTypeSelected(type) {
-      return this.editForm.resource_type === type;
+      return this.editForm.resource_type.includes(type);
     },
     
     selectResourceType(type) {
-      this.editForm.resource_type = type;
+      const index = this.editForm.resource_type.indexOf(type);
+      if (index >= 0) {
+        // 如果已经选中且不是最后一个选中的类型，则移除
+        if (this.editForm.resource_type.length > 1) {
+          this.editForm.resource_type.splice(index, 1);
+        }
+      } else {
+        // 如果未选中，则添加
+        this.editForm.resource_type.push(type);
+      }
     },
     
     setPosterImage(image) {
@@ -980,7 +1003,7 @@ export default {
           title: this.editForm.title,
           title_en: this.editForm.title_en,
           description: this.editForm.description,
-          resource_type: this.editForm.resource_type,
+          resource_type: this.editForm.resource_type.join(','),
           poster_image: this.editForm.poster_image,
           images: [...this.editForm.images],
           links: linksToSubmit

@@ -34,7 +34,7 @@ const config = {
   // 输出目录
   outputDir: path.resolve(__dirname, '../public'),
   // API基础URL - 注意这里使用了环境变量或开发环境的默认值
-  apiBaseUrl: `${process.env.BASE_URL}/api` || 'http://localhost:8000/api',
+  apiBaseUrl: `${process.env.BASE_URL}/app/` || 'http://localhost:8000/app/api',
   // 是否为测试模式
   testMode: TEST_MODE,
   // 每次API请求的资源数量限制

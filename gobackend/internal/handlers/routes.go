@@ -93,6 +93,7 @@ func SetupRoutes(router *gin.Engine) {
 		resources.POST("/:id/like", LikeResource)
 		resources.POST("/:id/unlike", UnlikeResource)
 		resources.PUT("/:id/supplement", SupplementResource)
+		resources.PUT("/:id/stickers", UpdateResourceStickers)
 		
 		resources.POST("/", CreateResource)
 

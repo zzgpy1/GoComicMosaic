@@ -197,8 +197,8 @@ func InitDB() (*sqlx.DB, error) {
 	// 保存全局数据库连接
 	DB = db
 	
-	// 执行数据库迁移，确保tmdb_id列存在
-	if err := AddTmdbIDColumn(); err != nil {
+	// 执行所有数据库迁移
+	if err := MigrateDatabase(); err != nil {
 		return nil, fmt.Errorf("数据库迁移失败: %w", err)
 	}
 	
@@ -206,6 +206,34 @@ func InitDB() (*sqlx.DB, error) {
 	go PerformPeriodicCheckpoints()
 
 	return db, nil
+}
+
+// MigrateDatabase 执行所有数据库迁移
+func MigrateDatabase() error {
+	log.Println("开始运行数据库迁移...")
+
+	// 按顺序执行所有迁移
+	migrations := []struct {
+		name string
+		fn   func() error
+	}{
+		{"添加tmdb_id列", AddTmdbIDColumn},
+		{"添加stickers列", AddStickersColumn},
+		// 未来可以在这里添加更多迁移
+	}
+
+	// 执行所有迁移
+	for _, migration := range migrations {
+		log.Printf("执行迁移: %s", migration.name)
+		if err := migration.fn(); err != nil {
+			log.Printf("迁移失败 [%s]: %v", migration.name, err)
+			return err
+		}
+		log.Printf("迁移成功: %s", migration.name)
+	}
+
+	log.Println("所有迁移已成功完成")
+	return nil
 }
 
 // GetDB 获取数据库连接
@@ -577,4 +605,80 @@ func AddTmdbIDColumn() error {
 	}
 	
 	return nil
+}
+
+// AddStickersColumn 添加stickers字段到resources表
+func AddStickersColumn() error {
+	log.Printf("检查resources表是否需要添加stickers字段...")
+	
+	// 先检查resources表是否存在
+	var tableExists int
+	err := DB.Get(&tableExists, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources'`)
+	if err != nil {
+		return fmt.Errorf("检查resources表是否存在失败: %w", err)
+	}
+	
+	if tableExists == 0 {
+		log.Printf("resources表不存在，无需添加stickers字段")
+		return nil
+	}
+	
+	// 检查stickers字段是否已存在
+	var count int
+	err = DB.Get(&count, `SELECT COUNT(*) FROM pragma_table_info('resources') WHERE name = 'stickers'`)
+	if err != nil {
+		return fmt.Errorf("检查stickers字段是否存在失败: %w", err)
+	}
+	
+	// 如果字段不存在，则添加
+	if count == 0 {
+		log.Printf("stickers字段不存在，正在添加...")
+		_, err = DB.Exec(`ALTER TABLE resources ADD COLUMN stickers TEXT DEFAULT '{}' NOT NULL`)
+		if err != nil {
+			return fmt.Errorf("添加stickers字段失败: %w", err)
+		}
+		
+		log.Printf("stickers字段添加成功")
+	} else {
+		log.Printf("stickers字段已存在，无需添加")
+	}
+	
+	return nil
+}
+
+// UpdateResourceWithStickers 更新资源并支持贴纸数据
+func UpdateResourceWithStickers(resource *Resource) error {
+	// 更新时间戳
+	resource.UpdatedAt = time.Now()
+
+	// 更新记录，确保包含贴纸字段
+	_, err := DB.Exec(
+		`UPDATE resources SET 
+			title = ?, title_en = ?, description = ?, resource_type = ?,
+			images = ?, poster_image = ?, links = ?, updated_at = ?, 
+			tmdb_id = ?, stickers = ?
+		WHERE id = ?`,
+		resource.Title, resource.TitleEn, resource.Description, resource.ResourceType,
+		resource.Images, resource.PosterImage, resource.Links, resource.UpdatedAt, 
+		resource.TmdbID, resource.Stickers, resource.ID,
+	)
+
+	if err != nil {
+		log.Printf("更新资源 %d 失败: %v", resource.ID, err)
+		return err
+	}
+
+	log.Printf("资源更新成功: ID=%d", resource.ID)
+	return nil
+}
+
+// GetResourceByID 根据ID获取资源
+func GetResourceByID(resourceID int) (*Resource, error) {
+	var resource Resource
+	err := DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		return nil, fmt.Errorf("获取资源失败: %w", err)
+	}
+	
+	return &resource, nil
 } 

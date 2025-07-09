@@ -22,12 +22,9 @@
               <router-link v-if="!isAdminPage" to="/admin" class="btn-custom btn-info">
                 <i class="bi bi-gear-fill me-1"></i><span class="btn-text">管理后台</span>
               </router-link>
-              <button @click="handleLogout" class="btn-custom btn-outline">
+              <button @click="handleLogout" class="btn-custom btn-outline" v-if="isAdminPage">
                 <i class="bi bi-box-arrow-right me-1"></i><span class="btn-text">登出</span>
               </button>
-              <router-link to="/posts" class="btn-custom btn-secondary">
-                <i class="bi bi-file-text me-1"></i><span class="btn-text">文章</span>
-              </router-link>
               <router-link to="/tmdb-search" class="btn-custom btn-secondary" v-if="tmdbEnabled">
                 <i class="bi bi-collection-play me-1"></i><span class="btn-text">TMDB搜索</span>
               </router-link>
@@ -40,9 +37,6 @@
             <div class="button-group">
               <router-link to="/login" class="btn-custom btn-outline" aria-label="管理员登录">
                 <i class="bi bi-shield-lock me-1"></i><span class="btn-text">管理员登录</span>
-              </router-link>
-              <router-link to="/posts" class="btn-custom btn-secondary">
-                <i class="bi bi-file-text me-1"></i><span class="btn-text">文章</span>
               </router-link>
               <router-link to="/tmdb-search" class="btn-custom btn-secondary" v-if="tmdbEnabled">
                 <i class="bi bi bi-collection-play me-1"></i><span class="btn-text">TMDB搜索</span>
@@ -339,10 +333,17 @@ const updateMetaInfo = (to) => {
   const title = to.meta.title || defaultTitle;
   const description = to.meta.description || defaultDescription;
   const keywords = to.meta.keywords || defaultKeywords;
+  const referrer = to.meta.referrer || 'no-referrer';
   
   // 更新页面标题
   document.title = title;
-  
+
+  // 更新img referrer
+  let metaReferrer = document.querySelector('meta[name="referrer"]');
+  if (metaReferrer) {
+    metaReferrer.setAttribute('content', referrer);
+  }
+
   // 更新meta描述
   let metaDescription = document.querySelector('meta[name="description"]');
   if (metaDescription) {

@@ -699,6 +699,101 @@ func UpdateResource(c *gin.Context) {
 		log.Printf("更新TMDB ID: %v", resource.TmdbID)
 	}
 
+	if resourceUpdate.Stickers != nil {
+		// 检查贴纸中是否有需要移动的图片（从临时uploads目录到永久目录）
+		imagesToMove := make([]string, 0)
+		stickerKeysToUpdate := make(map[string]string) // 存储图片URL与贴纸键的映射
+		
+		// 收集所有需要移动的贴纸图片URL
+		for key, stickerValue := range resourceUpdate.Stickers {
+			if stickerMap, ok := stickerValue.(map[string]interface{}); ok {
+				if urlValue, exists := stickerMap["url"]; exists {
+					if url, isString := urlValue.(string); isString && strings.Contains(url, "/assets/uploads/") {
+						log.Printf("贴纸图片需要移动: %s", url)
+						imagesToMove = append(imagesToMove, url)
+						stickerKeysToUpdate[url] = key
+					}
+				}
+			}
+		}
+		
+		// 如果有贴纸图片需要移动
+		if len(imagesToMove) > 0 {
+			log.Printf("开始移动 %d 张贴纸图片到永久目录", len(imagesToMove))
+			newImagePaths, err := utils.MoveApprovedImages(resourceID, imagesToMove)
+			
+			if err != nil {
+				log.Printf("移动贴纸图片失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动贴纸图片失败: %v", err)})
+				return
+			}
+			
+			// 更新贴纸中的图片URL为新路径
+			for i, oldPath := range imagesToMove {
+				if i < len(newImagePaths) {
+					newPath := newImagePaths[i]
+					key := stickerKeysToUpdate[oldPath]
+					
+					if stickerMap, ok := resourceUpdate.Stickers[key].(map[string]interface{}); ok {
+						stickerMap["url"] = newPath
+						resourceUpdate.Stickers[key] = stickerMap
+						log.Printf("更新贴纸图片路径: %s -> %s", oldPath, newPath)
+					}
+				}
+			}
+		}
+
+		// 尝试将贴纸图片转换为WebP格式
+		// 收集所有贴纸图片URL以进行WebP转换
+		allStickerImages := make([]string, 0)
+		stickerPathMap := make(map[string]string) // 存储原始路径和对应的键
+		
+		for key, stickerValue := range resourceUpdate.Stickers {
+			if stickerMap, ok := stickerValue.(map[string]interface{}); ok {
+				if urlValue, exists := stickerMap["url"]; exists {
+					if url, isString := urlValue.(string); isString && strings.HasPrefix(url, "/assets/") {
+						allStickerImages = append(allStickerImages, url)
+						stickerPathMap[url] = key
+					}
+				}
+			}
+		}
+		
+		// 如果有贴纸图片，进行WebP转换
+		if len(allStickerImages) > 0 {
+			log.Printf("开始将 %d 张贴纸图片转换为WebP格式", len(allStickerImages))
+			webpImages, err := convertResourceImagesToWebP(allStickerImages, resourceID)
+			
+			if err != nil {
+				log.Printf("转换贴纸图片为WebP格式时出错: %v", err)
+				// 发生错误时继续使用原始图片
+			} else {
+				// 更新贴纸中的图片URL为WebP路径
+				for i, oldPath := range allStickerImages {
+					if i < len(webpImages) && oldPath != webpImages[i] {
+						key := stickerPathMap[oldPath]
+						
+						if stickerMap, ok := resourceUpdate.Stickers[key].(map[string]interface{}); ok {
+							stickerMap["url"] = webpImages[i]
+							resourceUpdate.Stickers[key] = stickerMap
+							log.Printf("更新贴纸图片WebP路径: %s -> %s", oldPath, webpImages[i])
+						}
+					}
+				}
+				
+				// 异步调用WebP转换工具处理所有贴纸图片，确保转换完成
+				go func(paths []string) {
+					log.Printf("[INFO] 开始异步转换贴纸图片为WebP格式，图片数量: %d", len(paths))
+					convertImagesToWebP(paths)
+				}(webpImages)
+			}
+		}
+
+		resource.Stickers = resourceUpdate.Stickers
+		updated = true
+		log.Printf("更新贴纸信息: %v", resource.Stickers)
+	}
+
 	if !updated {
 		log.Printf("无字段更新")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无任何字段需要更新"})
@@ -709,16 +804,8 @@ func UpdateResource(c *gin.Context) {
 	resource.UpdatedAt = time.Now()
 
 	// 更新记录
-	_, err = models.DB.Exec(
-		`UPDATE resources SET 
-			title = ?, title_en = ?, description = ?, resource_type = ?,
-			images = ?, poster_image = ?, links = ?, updated_at = ?, tmdb_id = ?
-		WHERE id = ?`,
-		resource.Title, resource.TitleEn, resource.Description, resource.ResourceType,
-		resource.Images, resource.PosterImage, resource.Links, resource.UpdatedAt, resource.TmdbID,
-		resource.ID,
-	)
-
+	// 使用模型中的专用函数更新资源（包含贴纸数据）
+	err = models.UpdateResourceWithStickers(&resource)
 	if err != nil {
 		log.Printf("更新资源失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源失败: %v", err)})
@@ -754,4 +841,148 @@ func DeleteResource(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// UpdateResourceStickers 更新资源贴纸 - 用户可访问
+func UpdateResourceStickers(c *gin.Context) {
+	// 获取路径参数
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+
+	log.Printf("开始更新资源贴纸，ID: %d", resourceID)
+
+	// 解析请求
+	var stickerUpdate struct {
+		Stickers models.JsonMap `json:"stickers"`
+	}
+
+	if err := c.ShouldBindJSON(&stickerUpdate); err != nil {
+		log.Printf("贴纸请求参数解析失败: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的贴纸数据"})
+		return
+	}
+
+	// 获取资源
+	resource, err := models.GetResourceByID(resourceID)
+	if err != nil {
+		log.Printf("无法找到资源: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+	
+	// 检查贴纸中是否有需要移动的图片（从临时uploads目录到永久目录）
+	stickerMapModified := false
+	
+	if stickerUpdate.Stickers != nil {
+		// 存储需要移动的贴纸图片
+		imagesToMove := make([]string, 0)
+		imageKeyMap := make(map[string]string) // 存储图片URL与键的映射
+		
+		// 收集所有需要移动的贴纸图片URL
+		for key, sticker := range stickerUpdate.Stickers {
+			if stickerMap, ok := sticker.(map[string]interface{}); ok {
+				if url, exists := stickerMap["url"].(string); exists && strings.Contains(url, "/assets/uploads/") {
+					log.Printf("贴纸图片需要移动: %s", url)
+					imagesToMove = append(imagesToMove, url)
+					imageKeyMap[url] = key
+				}
+			}
+		}
+		
+		// 如果有贴纸图片需要移动
+		if len(imagesToMove) > 0 {
+			log.Printf("开始移动 %d 张贴纸图片到永久目录", len(imagesToMove))
+			newImagePaths, err := utils.MoveApprovedImages(resourceID, imagesToMove)
+			
+			if err != nil {
+				log.Printf("移动贴纸图片失败: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动贴纸图片失败: %v", err)})
+				return
+			}
+			
+			// 更新贴纸中的图片URL为新路径
+			for i, oldPath := range imagesToMove {
+				if i < len(newImagePaths) {
+					newPath := newImagePaths[i]
+					key := imageKeyMap[oldPath]
+					
+					if stickerMap, ok := stickerUpdate.Stickers[key].(map[string]interface{}); ok {
+						stickerMap["url"] = newPath
+						stickerUpdate.Stickers[key] = stickerMap
+						log.Printf("更新贴纸图片路径: %s -> %s", oldPath, newPath)
+						stickerMapModified = true
+					}
+				}
+			}
+		}
+		
+		// 尝试将贴纸图片转换为WebP格式
+		// 收集所有贴纸图片URL以进行WebP转换
+		allStickerImages := make([]string, 0)
+		stickerPathMap := make(map[string]string) // 存储原始路径和对应的键
+		
+		for key, sticker := range stickerUpdate.Stickers {
+			if stickerMap, ok := sticker.(map[string]interface{}); ok {
+				if url, exists := stickerMap["url"].(string); exists {
+					// 只处理本地图片
+					if strings.HasPrefix(url, "/assets/") {
+						allStickerImages = append(allStickerImages, url)
+						stickerPathMap[url] = key
+					}
+				}
+			}
+		}
+		
+		// 如果有贴纸图片，进行WebP转换
+		if len(allStickerImages) > 0 {
+			log.Printf("开始将 %d 张贴纸图片转换为WebP格式", len(allStickerImages))
+			webpImages, err := convertResourceImagesToWebP(allStickerImages, resourceID)
+			
+			if err != nil {
+				log.Printf("转换贴纸图片为WebP格式时出错: %v", err)
+				// 发生错误时继续使用原始图片
+			} else {
+				// 更新贴纸中的图片URL为WebP路径
+				for i, oldPath := range allStickerImages {
+					if i < len(webpImages) && oldPath != webpImages[i] {
+						key := stickerPathMap[oldPath]
+						
+						if stickerMap, ok := stickerUpdate.Stickers[key].(map[string]interface{}); ok {
+							stickerMap["url"] = webpImages[i]
+							stickerUpdate.Stickers[key] = stickerMap
+							log.Printf("更新贴纸图片WebP路径: %s -> %s", oldPath, webpImages[i])
+							stickerMapModified = true
+						}
+					}
+				}
+				
+				// 异步调用WebP转换工具处理所有贴纸图片，确保转换完成
+				go func(paths []string) {
+					log.Printf("[INFO] 开始异步转换贴纸图片为WebP格式，图片数量: %d", len(paths))
+					convertImagesToWebP(paths)
+				}(webpImages)
+			}
+		}
+	}
+
+	// 更新贴纸数据
+	resource.Stickers = stickerUpdate.Stickers
+	if stickerMapModified {
+		log.Printf("已更新贴纸图片路径，更新后的贴纸数据: %v", resource.Stickers)
+	} else {
+		log.Printf("更新贴纸数据: %v", resource.Stickers)
+	}
+	
+	// 更新资源
+	if err := models.UpdateResourceWithStickers(resource); err != nil {
+		log.Printf("更新资源贴纸失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新贴纸失败"})
+		return
+	}
+
+	log.Printf("贴纸更新成功，资源ID: %d", resourceID)
+	c.JSON(http.StatusOK, gin.H{"message": "贴纸更新成功", "resource": resource})
 }
