@@ -385,7 +385,7 @@
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(124, 58, 237, 0.1);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* 修改为visible，确保不会截断header-actions中的按钮 */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -400,6 +400,7 @@
   height: 100%;
   background: linear-gradient(45deg, rgba(124, 58, 237, 0.07), transparent);
   opacity: 0.8;
+  z-index: 1; /* 添加z-index，确保在按钮下层 */
 }
 
 .card-header h3 {
@@ -410,6 +411,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  z-index: 2; /* 确保标题在背景上层 */
 }
 
 .card-header h3::before {
@@ -1307,6 +1309,7 @@
   
   .card-header {
     padding: 1rem;
+    overflow: visible; /* 确保不会截断按钮 */
   }
   
   .card-header h3 {
@@ -1335,7 +1338,10 @@
   }
   
   .table-body {
-    max-height: none;
+    max-height: 250px; /* 设置合适的高度，而不是none */
+    overflow-y: auto; /* 保留自动滚动 */
+    scrollbar-width: thin; /* 保留细滚动条 */
+    -webkit-overflow-scrolling: touch; /* 增加iOS流畅滚动 */
   }
   
   .col-link, .col-password, .col-note {
@@ -1581,6 +1587,7 @@
   
   .card-header {
     padding: 0.75rem;
+    overflow: visible; /* 确保不会截断按钮 */
   }
   
   .card-header h3 {
@@ -1696,7 +1703,7 @@
   .link-item {
     padding: 0.5rem;
   }
-}
+} 
 
 /* ===== 17. 贴纸容器样式 ===== */
 .stickers-container {
@@ -2138,6 +2145,24 @@
 
 .links-list {
   margin-bottom: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* 为链接列表添加滚动条样式 */
+.links-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.links-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.links-list::-webkit-scrollbar-thumb {
+  background: var(--primary-gradient);
+  border-radius: 10px;
 }
 
 .link-item {
@@ -2238,6 +2263,12 @@
     padding: 0.75rem;
   }
   
+  .links-list {
+    max-height: 350px; /* 移动端稍微减小高度 */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* 增强移动端滚动体验 */
+  }
+  
   .link-inputs {
     display: flex;
     flex-direction: column;
@@ -2293,5 +2324,142 @@
   
   .link-item {
     padding: 0.5rem;
+  }
+} 
+
+/* ===== 19. 网盘搜索功能样式 ===== */
+/* 标题栏中的操作按钮容器 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 10; /* 确保按钮在最上层 */
+}
+
+/* 网盘搜索按钮 */
+.pan-search-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 15px;
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
+  z-index: 20; /* 确保按钮在最上层 */
+}
+
+.pan-search-button:hover {
+  background-color: #5a6268;
+}
+
+.pan-search-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.pan-search-button i {
+  margin-right: 5px;
+}
+
+/* 搜索结果指示器 */
+.search-results-indicator {
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  padding: 8px 15px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #6c757d;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 异步更新指示器 */
+.async-update-indicator {
+  font-size: 12px;
+  color: #007bff;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 旋转动画 */
+.spin {
+  animation: spin 1.5s linear infinite;
+}
+
+/* 空搜索结果提示 */
+.empty-search-results {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+  margin: 15px 0;
+}
+
+.empty-search-results i {
+  font-size: 24px;
+  margin-right: 10px;
+  color: #dc3545;
+}
+
+/* 搜索错误消息 */
+.search-error-message {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  color: #721c24;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-error-message i {
+  font-size: 18px;
+  color: #dc3545;
+}
+
+/* 网盘搜索功能的响应式适配 */
+@media (max-width: 768px) {
+  /* .header-actions {
+    flex-direction: row;
+    gap: 8px;
+  } */
+  
+  .pan-search-button, .stream-button {
+    padding: 4px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .links-list {
+    max-height: 350px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 576px) {
+  /* .header-actions {
+    flex-direction: row; 
+    width: 100%;
+    gap: 6px;
+    margin-top: 8px; 
+  } */
+  
+  .pan-search-button, .stream-button {
+    width: auto; /* 不要占满整行 */
+    justify-content: center;
+    padding: 4px 8px;
+    font-size: 0.85rem;
   }
 } 

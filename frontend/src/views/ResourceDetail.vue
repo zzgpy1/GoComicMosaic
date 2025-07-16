@@ -535,17 +535,51 @@
               <div class="links-card" >
                 <div class="card-header">
                   <h3>资源链接</h3>
-                  <!-- 添加点播图标按钮 -->
-                  <button 
-                    class="stream-button" 
-                    title="点播此资源" 
-                    @click="goToStreamPage"
-                  >
-                    <i class="bi bi-play-circle"></i>
-                    <span>点播</span>
-                  </button>
+                  <div class="header-actions">
+                    <!-- 更多资源按钮 -->
+                    <button 
+                      class="pan-search-button" 
+                      title="盘搜" 
+                      @click="searchPanResource"
+                      :disabled="isSearching"
+                      style="position: relative; z-index: 20;"
+                    >
+                      <i :class="isShowingSearchResults ? 'bi bi-arrow-left' : 'bi bi-search-heart'"></i>
+                      <span>{{ resourceButtonText }}</span>
+                    </button>
+                    <!-- 点播按钮 -->
+                    <button 
+                      class="stream-button" 
+                      title="点播此资源" 
+                      @click="goToStreamPage"
+                    >
+                      <i class="bi bi-play-circle"></i>
+                      <span>点播</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="card-body">
+                  <!-- 搜索错误提示 -->
+                  <div v-if="searchError" class="search-error-message">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    {{ searchError }}
+                  </div>
+                  
+                  <!-- 搜索结果指示器 -->
+                  <div v-if="isShowingSearchResults" class="search-results-indicator">
+                    <i class="bi bi-info-circle"></i> 网盘搜索结果 - {{ resource.title }}
+                    <span v-if="isAsyncUpdating" class="async-update-indicator">
+                      <i class="bi bi-arrow-repeat spin"></i> 正在获取更多结果...
+                    </span>
+                  </div>
+                  
+                  <!-- 空结果处理 -->
+                  <div v-if="isShowingSearchResults && (!resource.links || Object.keys(resource.links).length === 0 || orderedVisibleCategories.length === 0)" class="empty-search-results">
+                    <i class="bi bi-exclamation-circle"></i>
+                    未找到相关网盘资源，请尝试其他关键词
+                  </div>
+                  
+                  <!-- 原有的链接标签和内容 -->
                   <div class="links-tabs">
                     <button 
                       v-for="category in orderedVisibleCategories" 
@@ -673,7 +707,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { isAdmin, getCurrentUser } from '../utils/auth'
@@ -682,6 +716,7 @@ import ShareResource from '@/components/ShareResource.vue'
 import draggable from 'vuedraggable'  // 导入 vuedraggable 组件
 import EpisodeOverview from '@/components/EpisodeOverview.vue' // 导入剧集探索组件
 import TmdbStatusService from '../services/TmdbStatusService'
+import { searchPanResources, convertToResourceLinks } from '@/utils/pansouService'
 import StickerManager from '@/components/StickerManager.vue' // 导入贴纸管理组件
 import DraggableSticker from '@/components/DraggableSticker.vue' // 导入可拖拽贴纸组件
 
@@ -1676,6 +1711,195 @@ const dragEnd = () => {
 // 贴纸相关数据
 const stickerBeingEdited = ref(null) // 当前正在编辑的贴纸索引
 
+// 网盘搜索相关状态
+const isSearching = ref(false)
+const isShowingSearchResults = ref(false)
+const originalLinks = ref(null)
+const searchResultLinks = ref(null)
+const searchError = ref(null) // 添加搜索错误状态
+const isAsyncUpdating = ref(false) // 新增：异步更新状态
+
+// 计算属性：按钮文本
+const resourceButtonText = computed(() => {
+  if (isSearching.value) return '搜索中...'
+  return isShowingSearchResults.value ? '返回原始资源' : '盘搜'
+})
+
+// 搜索网盘资源
+const searchPanResource = async () => {
+  console.log('搜索按钮被点击');
+  console.log('当前按钮状态: isSearching=', isSearching.value, 'isShowingSearchResults=', isShowingSearchResults.value);
+  searchError.value = null; // 清除之前的错误
+  
+  // 如果已经在显示搜索结果，则切换回原始链接
+  if (isShowingSearchResults.value) {
+    console.log('当前显示搜索结果，切换回原始链接');
+    toggleBackToOriginal()
+    return
+  }
+  
+  isSearching.value = true
+  console.log('开始搜索，设置isSearching=true');
+  
+  try {
+    // 保存原始链接数据
+    originalLinks.value = JSON.parse(JSON.stringify(resource.value.links || {}))
+    console.log('已保存原始链接数据:', originalLinks.value);
+    
+    // 搜索关键词优先使用中文标题，如果没有则使用英文标题
+    // 处理标题中的各种分隔符，只取主要部分
+    let searchKeyword = resource.value.title || resource.value.title_en;
+    if (searchKeyword) {
+      // 处理斜杠分隔的情况，取第一部分
+      if (searchKeyword.includes('/')) {
+        searchKeyword = searchKeyword.split('/')[0].trim();
+        console.log('标题包含斜杠，只使用斜杠前部分:', searchKeyword);
+      }
+      
+      // 处理括号内容，移除括号及其内容
+      searchKeyword = searchKeyword
+        .replace(/（[^）]*）/g, '') // 中文括号
+        .replace(/\([^)]*\)/g, '') // 英文括号
+        .replace(/【[^】]*】/g, '') // 中文方括号
+        .replace(/\[[^\]]*\]/g, '') // 英文方括号
+        .trim();
+      
+      console.log('处理后的搜索关键词:', searchKeyword);
+    }
+    console.log('最终搜索关键词:', searchKeyword);
+    
+    // 定义异步更新回调函数
+    const handleAsyncUpdate = (updatedResults) => {
+      console.log('收到异步更新结果:', updatedResults);
+      
+      // 只有当用户仍在查看搜索结果时才更新
+      if (isShowingSearchResults.value) {
+        // 转换为系统兼容的格式
+        const updatedLinks = convertToResourceLinks(updatedResults);
+        console.log('转换后的更新链接:', updatedLinks);
+        
+        // 合并新旧结果
+        const mergedLinks = mergeSearchResults(resource.value.links, updatedLinks);
+        
+        // 更新链接
+        resource.value.links = mergedLinks;
+        console.log('已更新资源链接');
+        
+        // 如果有新的分类，可能需要更新活动分类
+        nextTick(() => {
+          if (orderedVisibleCategories.value.length > 0 && 
+              !orderedVisibleCategories.value.includes(activeCategory.value)) {
+            activeCategory.value = orderedVisibleCategories.value[0];
+          }
+        });
+      }
+    };
+    
+    // 定义异步更新完成回调函数
+    const handleAsyncComplete = () => {
+      console.log('异步更新完成，关闭更新状态指示器');
+      isAsyncUpdating.value = false;
+    };
+    
+    // 调用搜索API，传入回调函数
+    console.log('调用searchPanResources API...');
+    console.log('注意：如果请求URL中包含/app/pansou，说明全局axios配置仍在影响请求');
+    isAsyncUpdating.value = true; // 开始异步更新
+    const results = await searchPanResources(searchKeyword, false, handleAsyncUpdate, handleAsyncComplete);
+    console.log('API返回结果:', results);
+    
+    // 检查结果是否为空对象
+    if (Object.keys(results).length === 0) {
+      searchError.value = `未找到"${searchKeyword}"的网盘资源`;
+      console.warn('搜索结果为空');
+      return;
+    }
+    
+    // 转换为系统兼容的格式
+    searchResultLinks.value = convertToResourceLinks(results)
+    console.log('转换后的链接:', searchResultLinks.value);
+    
+    // 检查转换后的结果是否为空
+    if (Object.keys(searchResultLinks.value).length === 0) {
+      searchError.value = '搜索结果格式无效';
+      console.warn('转换后的链接为空');
+      return;
+    }
+    
+    // 替换链接
+    resource.value.links = searchResultLinks.value
+    console.log('已替换资源链接');
+    
+    // 更新状态
+    isShowingSearchResults.value = true
+    console.log('设置isShowingSearchResults=true');
+    
+    // 如果有结果，自动选择第一个有内容的分类
+    nextTick(() => {
+      if (orderedVisibleCategories.value.length > 0) {
+        console.log('选择第一个可见分类:', orderedVisibleCategories.value[0]);
+        activeCategory.value = orderedVisibleCategories.value[0]
+      } else {
+        console.log('没有可见的分类');
+        searchError.value = '搜索结果中没有可用的链接';
+      }
+    })
+  } catch (error) {
+    console.error('搜索网盘资源失败:', error)
+    searchError.value = `搜索失败: ${error.message || '未知错误'}`;
+    isAsyncUpdating.value = false; // 出错时也关闭异步更新状态
+  } finally {
+    isSearching.value = false
+    console.log('搜索完成，设置isSearching=false');
+  }
+}
+
+// 合并搜索结果
+const mergeSearchResults = (oldResults, newResults) => {
+  const merged = { ...oldResults };
+  
+  // 遍历新结果中的每个分类
+  Object.keys(newResults).forEach(category => {
+    if (!merged[category]) {
+      // 如果旧结果中没有这个分类，直接添加
+      merged[category] = newResults[category];
+    } else {
+      // 如果旧结果中有这个分类，合并链接
+      const oldUrls = new Set(merged[category].map(link => link.url));
+      
+      // 添加旧结果中不存在的新链接
+      newResults[category].forEach(newLink => {
+        if (!oldUrls.has(newLink.url)) {
+          merged[category].push(newLink);
+        }
+      });
+    }
+  });
+  
+  return merged;
+}
+
+// 切换回原始链接
+const toggleBackToOriginal = () => {
+  if (originalLinks.value) {
+    resource.value.links = originalLinks.value
+    isShowingSearchResults.value = false
+    
+    // 恢复原来选择的分类
+    nextTick(() => {
+      if (orderedVisibleCategories.value.length > 0) {
+        // 如果原来选择的分类还存在，则继续选择它
+        if (orderedVisibleCategories.value.includes(activeCategory.value)) {
+          // 保持当前选择
+        } else {
+          // 否则选择第一个分类
+          activeCategory.value = orderedVisibleCategories.value[0]
+        }
+      }
+    })
+  }
+}
+
 onMounted(() => {
   fetchResource()
   loadTMDBConfig()
@@ -1683,4 +1907,3 @@ onMounted(() => {
 </script>
 
 <style scoped src="@/styles/ResourceDetail.css"></style>
-

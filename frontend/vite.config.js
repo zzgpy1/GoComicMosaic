@@ -60,6 +60,11 @@ export default defineConfig(({ command, mode }) => {
               console.log('请求代理:', req.method, req.url, '->', options.target + proxyReq.path);
             });
           }
+        },
+        '/pansou': {
+          target: 'https://pansou.252035.xyz',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/pansou/, '')
         }
       }
     }
