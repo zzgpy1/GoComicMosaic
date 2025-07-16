@@ -36,6 +36,15 @@
                 </div>
                 
                 <div class="form-group">
+                  <label for="mediaType" class="form-label">媒体类型 <small class="text-muted">(movie或tv)</small></label>
+                  <select class="form-control custom-input" id="mediaType" v-model="editForm.media_type">
+                    <option value="">未指定</option>
+                    <option value="movie">电影</option>
+                    <option value="tv">剧集</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
                   <label for="titleEn" class="form-label">英文标题</label>
                   <input type="text" class="form-control custom-input" id="titleEn" v-model="editForm.title_en">
                 </div>
@@ -441,7 +450,7 @@
                 </button>
                 <button class="btn-custom btn-episode" @click="toggleEpisodeExplorer" 
                         :class="{'active': showingEpisodeExplorer}"
-                        v-if="tmdbEnabled">
+                        v-if="tmdbEnabled && (!resource.media_type || resource.media_type === 'tv')">
                   <i class="bi bi-film"></i><span class="btn-text">{{ showingEpisodeExplorer ? '返回详情' : '剧集探索' }}</span>
                 </button>
                 <button 
@@ -718,11 +727,46 @@ const loadTMDBConfig = async () => {
 }
 
 // 切换剧集探索显示状态
-const toggleEpisodeExplorer = () => {
+const toggleEpisodeExplorer = async () => {
   if (!resource.value?.tmdb_id && !resource.value?.title_en) {
     alert('该资源没有关联的TMDB ID或英文标题，无法查看剧集信息');
     return;
   }
+  
+  // 如果没有tmdb_id但有title_en，尝试更新tmdb_id和media_type
+  if (!resource.value.tmdb_id && resource.value.title_en) {
+    try {
+      const response = await axios.post(`/api/resources/${resource.value.id}/update-tmdb`, {
+        title_en: resource.value.title_en,
+        media_type: 'tv' // 剧集探索按钮只对tv类型有效
+      });
+      
+      if (response.data && response.data.tmdb_id) {
+        resource.value.tmdb_id = response.data.tmdb_id;
+        resource.value.media_type = response.data.media_type || 'tv';
+        console.log(`已更新资源TMDB ID: ${resource.value.tmdb_id}, 媒体类型: ${resource.value.media_type}`);
+      }
+    } catch (err) {
+      console.error('更新TMDB ID失败:', err);
+    }
+  }
+  
+  // 如果有tmdb_id但没有media_type，设置默认media_type为tv
+  if (resource.value.tmdb_id && !resource.value.media_type) {
+    try {
+      const response = await axios.put(`/api/resources/${resource.value.id}`, {
+        media_type: 'tv'
+      });
+      
+      if (response.data) {
+        resource.value.media_type = 'tv';
+        console.log(`已更新资源媒体类型为: tv`);
+      }
+    } catch (err) {
+      console.error('更新媒体类型失败:', err);
+    }
+  }
+  
   showingEpisodeExplorer.value = !showingEpisodeExplorer.value;
 }
 
@@ -738,7 +782,8 @@ const editForm = reactive({
   poster_image: '',
   images: [], // 添加images数组存储所有图片
   tmdb_id: null, // 添加TMDB ID字段
-  stickers: [] // 添加贴纸数组
+  stickers: [], // 添加贴纸数组
+  media_type: '' // 添加媒体类型字段
 })
 
 // 链接编辑相关数据
@@ -964,6 +1009,7 @@ const startEdit = () => {
   editForm.poster_image = resource.value.poster_image || ''
   editForm.images = [...(resource.value.images || [])] // 复制所有图片
   editForm.tmdb_id = resource.value.tmdb_id || null // 复制TMDB ID
+  editForm.media_type = resource.value.media_type || '' // 复制媒体类型
   
   // 确保贴纸数据为数组
   if (Array.isArray(resource.value.stickers)) {
@@ -1209,7 +1255,8 @@ const saveChanges = async () => {
       images: editForm.images, // 提交所有图片
       links: hasLinks ? linksToSubmit : undefined, // 提交链接数据
       tmdb_id: editForm.tmdb_id === '' || editForm.tmdb_id === null ? 0 : editForm.tmdb_id, // 确保清空时传递数字0
-      stickers: stickersMap // 提交贴纸数据为JsonMap格式
+      stickers: stickersMap, // 提交贴纸数据为JsonMap格式
+      media_type: editForm.media_type // 提交媒体类型
     })
     
     // 更新本地资源数据

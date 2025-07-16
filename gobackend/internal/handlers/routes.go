@@ -82,6 +82,12 @@ func SetupRoutes(router *gin.Engine) {
 		
 		// 更新资源的TMDB ID
 		tmdb.PUT("/update-resource-id/:id/:tmdb_id", UpdateResourceTmdbID)
+		
+		// 添加新的多类型搜索API
+		tmdb.GET("/multi_search", MultiSearchTMDB)
+		
+		// 添加新的媒体详情API
+		tmdb.GET("/details/:media_type/:media_id", GetMediaDetails)
 	}
 	
 	// 资源路由 - 需要认证
@@ -94,7 +100,8 @@ func SetupRoutes(router *gin.Engine) {
 		resources.POST("/:id/unlike", UnlikeResource)
 		resources.PUT("/:id/supplement", SupplementResource)
 		resources.PUT("/:id/stickers", UpdateResourceStickers)
-		
+		resources.POST("/:id/update-tmdb", UpdateResourceTMDBInfo)
+
 		resources.POST("/", CreateResource)
 
 		// 图片上传API - 处理不同URL路径格式

@@ -26,6 +26,7 @@ type TMDBSearchRequest struct {
 	PosterImage string              `json:"poster_image"`
 	Images      []string            `json:"images"`
 	Links       map[string][]map[string]string `json:"links"`
+	MediaType   string              `json:"media_type"` // 媒体类型：movie, tv
 	IsCustom    bool                `json:"is_custom"` // 标识是否为自定义资源
 }
 
@@ -119,6 +120,12 @@ func CreateResourceFromTMDB(c *gin.Context) {
 			tmdbID = &req.ID
 		}
 		
+		// 处理媒体类型
+		var mediaType *string
+		if req.MediaType != "" {
+			mediaType = &req.MediaType
+		}
+		
 		// 创建自定义资源对象
 		resource = &models.Resource{
 			Title:        req.Title,
@@ -130,35 +137,61 @@ func CreateResourceFromTMDB(c *gin.Context) {
 			Links:        linksMap,
 			Status:       defaultStatus,
 			TmdbID:       tmdbID,
+			MediaType:    mediaType,
 			CreatedAt:    now,
 			UpdatedAt:    now,
 		}
 	} else {
-		// 标准TMDB资源处理逻辑
-		tmdbResource, err := utils.SearchTMDB(req.Query)
-		if err != nil {
-			log.Printf("TMDB搜索失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 标准TMDB资源处理逻辑 - 使用前端传递的数据而不是重新搜索
+		log.Printf("处理TMDB资源导入请求: ID=%d, 标题=%s, 类型=%s", 
+			req.ID, req.Title, req.MediaType)
+		
+		// 验证必要字段
+		if req.ID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "TMDB ID不能为空"})
+			return
+		}
+		
+		if req.Title == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "资源标题不能为空"})
 			return
 		}
 		
 		// 确保PosterImage不为空
-		posterImage := tmdbResource.PosterImage
+		var posterImage *string
+		if req.PosterImage != "" {
+			posterImage = &req.PosterImage
+		} else if len(req.Images) > 0 {
+			posterImage = &req.Images[0]
+		}
 		
-		// 设置TMDB ID
-		tmdbID := tmdbResource.ID
+		// 将 req.Links 转换为 models.JsonMap 类型
+		linksMap := make(models.JsonMap)
+		for key, value := range req.Links {
+			linksMap[key] = value
+		}
 		
-		// 创建资源对象
+		// 处理TMDB ID
+		tmdbID := req.ID
+		
+		// 处理媒体类型
+		var mediaType *string
+		if req.MediaType != "" {
+			mediaType = &req.MediaType
+		}
+		
+		// 创建资源对象 - 直接使用前端提供的数据
 		resource = &models.Resource{
-			Title:        tmdbResource.Title,
-			TitleEn:      tmdbResource.TitleEn,
-			Description:  tmdbResource.Description,
-			ResourceType: tmdbResource.ResourceType,
-			PosterImage:  &posterImage,
-			Images:       tmdbResource.Images,
-			Links:        models.JsonMap(tmdbResource.Links),
+			Title:        req.Title,
+			TitleEn:      req.TitleEn,
+			Description:  req.Description,
+			ResourceType: req.ResourceType,
+			PosterImage:  posterImage,
+			Images:       req.Images,
+			Links:        linksMap,
 			Status:       defaultStatus,
 			TmdbID:       &tmdbID,
+			MediaType:    mediaType,
 			CreatedAt:    now,
 			UpdatedAt:    now,
 		}
@@ -168,10 +201,10 @@ func CreateResourceFromTMDB(c *gin.Context) {
 	result, err := models.DB.NamedExec(`
 		INSERT INTO resources (
 			title, title_en, description, resource_type, poster_image, 
-			images, links, status, tmdb_id, created_at, updated_at
+			images, links, status, tmdb_id, media_type, created_at, updated_at
 		) VALUES (
 			:title, :title_en, :description, :resource_type, :poster_image, 
-			:images, :links, :status, :tmdb_id, :created_at, :updated_at
+			:images, :links, :status, :tmdb_id, :media_type, :created_at, :updated_at
 		)
 	`, resource)
 

@@ -41,6 +41,83 @@
       <p>资源已成功导入！</p>
     </div>
 
+    <!-- 搜索结果列表 -->
+    <div v-else-if="searchResults && !tmdbResource" class="search-results-container">
+      <h2 class="results-title">
+        搜索结果 <span class="results-count">(共{{ searchResults.total_results }}项)</span>
+      </h2>
+      
+      <!-- 无结果提示 -->
+      <div v-if="searchResults.results && searchResults.results.length === 0" class="no-results">
+        <i class="bi bi-search"></i>
+        <p>未找到相关资源，请尝试其他关键词</p>
+      </div>
+      
+      <!-- 结果网格 -->
+      <div v-else class="results-grid">
+        <div 
+          v-for="item in searchResults.results" 
+          :key="`${item.media_type}-${item.id}`"
+          class="result-card"
+          @click="viewMediaDetails(item)"
+        >
+          <div class="result-poster">
+            <img 
+              :src="item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Image'" 
+              class="poster-image"
+              :alt="item.title || item.name"
+            >
+            <div class="media-type-badge">
+              {{ item.media_type === 'movie' ? '电影' : '电视剧' }}
+            </div>
+          </div>
+          <div class="result-info">
+            <h3 class="result-title">{{ item.title || item.name }}</h3>
+            <p v-if="item.original_title && item.original_title !== item.title" class="result-original-title">
+              {{ item.original_title || item.original_name }}
+            </p>
+            <p class="result-year" v-if="getYear(item)">{{ getYear(item) }}</p>
+            <div class="result-rating" v-if="item.vote_average">
+              <i class="bi bi-star-fill"></i>
+              <span>{{ item.vote_average.toFixed(1) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 分页控件 -->
+      <div v-if="searchResults.total_pages > 1" class="pagination-container">
+        <button 
+          class="pagination-btn" 
+          @click="changePage(currentPage - 1)"
+          :disabled="currentPage <= 1"
+        >
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        
+        <div class="page-numbers">
+          <button 
+            v-for="page in displayedPages" 
+            :key="page"
+            class="page-number"
+            :class="{ active: page === currentPage }"
+            @click="page !== '...' && changePage(page)"
+            :disabled="page === '...'"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button 
+          class="pagination-btn" 
+          @click="changePage(currentPage + 1)"
+          :disabled="currentPage >= searchResults.total_pages"
+        >
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- 搜索结果和预览 -->
     <div v-else-if="tmdbResource">
       <div class="resource-detail">
@@ -568,6 +645,11 @@ export default {
       showImagePreview: false,
       previewImageUrl: '',
       
+      // 搜索结果相关
+      searchResults: null,
+      currentPage: 1,
+      totalPages: 0,
+      
       // 编辑模式相关
       isEditing: false,
       _resourceWasEdited: false, // 内部标记，用于跟踪资源是否被编辑过
@@ -651,6 +733,31 @@ export default {
     isValidImageUrl() {
       const url = this.imageUrlInput.trim();
       return url.startsWith('http://') || url.startsWith('https://');
+    },
+    // 计算要显示的页码
+    displayedPages() {
+      const pages = [];
+      if (!this.totalPages) return pages;
+      
+      if (this.totalPages <= 5) {
+        for (let i = 1; i <= this.totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // 当前页在前面
+        if (this.currentPage <= 3) {
+          pages.push(1, 2, 3, 4, 5, '...', this.totalPages);
+        } 
+        // 当前页在后面
+        else if (this.currentPage >= this.totalPages - 2) {
+          pages.push(1, '...', this.totalPages - 4, this.totalPages - 3, this.totalPages - 2, this.totalPages - 1, this.totalPages);
+        } 
+        // 当前页在中间
+        else {
+          pages.push(1, '...', this.currentPage - 1, this.currentPage, this.currentPage + 1, '...', this.totalPages);
+        }
+      }
+      return pages;
     }
   },
   methods: {
@@ -660,22 +767,84 @@ export default {
         return;
       }
 
-      this.resetState();
       this.loading = true;
       
+      // 只有在新搜索时重置状态，分页操作时保留tmdbResource为null
+      if (this.currentPage === 1) {
+        this.resetState();
+      } else {
+        // 分页操作时只重置部分状态
+        this.tmdbResource = null;
+        this.error = null;
+      }
+      
       try {
-        // 调用TMDB搜索API
-        const response = await axios.get(`/api/tmdb/search`, {
-          params: { query: this.searchQuery.trim() }
+        // 调用TMDB Multi Search API
+        const response = await axios.get(`/api/tmdb/multi_search`, {
+          params: { 
+            query: this.searchQuery.trim(), 
+            page: this.currentPage 
+          }
         });
         
-        this.tmdbResource = response.data;
-        if (this.tmdbResource && this.tmdbResource.images && this.tmdbResource.images.length > 0) {
-          this.currentImage = this.tmdbResource.poster_image || this.tmdbResource.images[0];
+        this.searchResults = response.data;
+        this.totalPages = this.searchResults.total_pages;
+        this.currentPage = this.searchResults.page;
+        this.hasSearched = true;
+      } catch (error) {
+        console.error('TMDB搜索失败:', error);
+        this.error = error.response?.data?.error || '搜索失败，请稍后重试';
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    // 获取年份显示
+    getYear(item) {
+      if (item.media_type === 'movie' && item.release_date) {
+        return item.release_date.substring(0, 4);
+      } else if (item.media_type === 'tv' && item.first_air_date) {
+        return item.first_air_date.substring(0, 4);
+      }
+      return '';
+    },
+
+    // 媒体详情点击事件
+    async viewMediaDetails(item) {
+      this.loading = true;
+      try {
+        // 保存搜索结果中的中文数据
+        const chineseData = {
+          title: item.title || item.name || '',
+          overview: item.overview || ''
+        };
+        
+        // 调用详情API获取完整信息
+        const response = await axios.get(`/api/tmdb/details/${item.media_type}/${item.id}`);
+        const detailData = response.data;
+        
+        // 合并数据，优先使用中文数据
+        this.tmdbResource = {
+          ...detailData,
+          // 使用搜索结果中的中文标题作为主标题
+          title: chineseData.title,
+          // 使用详情中的原始标题作为英文标题
+          title_en: detailData.original_title || detailData.original_name || '',
+          // 使用搜索结果中的中文简介
+          description: chineseData.overview || detailData.overview || '',
+          // 保留后端返回的中文分类
+          resource_type: detailData.resource_type || '',
+          // 保存媒体类型
+          media_type: item.media_type || 'tv'
+        };
+        
+        // 设置当前图片
+        if (this.tmdbResource.images && this.tmdbResource.images.length > 0) {
+          this.currentImage = this.tmdbResource.poster_path || this.tmdbResource.images[0];
         }
         
         // 设置默认的活动链接类别
-        if (this.tmdbResource && this.tmdbResource.links) {
+        if (this.tmdbResource.links) {
           const categories = Object.keys(this.tmdbResource.links);
           for (const category of categories) {
             if (this.tmdbResource.links[category] && this.tmdbResource.links[category].length > 0) {
@@ -686,12 +855,12 @@ export default {
         }
         
         // 检查资源是否已存在
-        if (this.tmdbResource && this.tmdbResource.id) {
+        if (this.tmdbResource.id) {
           try {
             const checkResponse = await axios.get(`/api/tmdb/check-exists`, {
               params: { 
                 tmdb_id: this.tmdbResource.id,
-                title: this.tmdbResource.title 
+                title: this.tmdbResource.title || this.tmdbResource.name
               }
             });
             
@@ -704,14 +873,11 @@ export default {
             }
           } catch (checkError) {
             console.error('检查资源是否存在失败:', checkError);
-            // 检查失败不影响主流程，继续显示搜索结果
           }
         }
-        
-        this.hasSearched = true;
       } catch (error) {
-        console.error('TMDB搜索失败:', error);
-        this.error = error.response?.data?.error || '搜索失败，请稍后重试';
+        console.error('获取媒体详情失败:', error);
+        this.error = error.response?.data?.error || '获取详情失败，请稍后重试';
       } finally {
         this.loading = false;
       }
@@ -762,6 +928,8 @@ export default {
           links: this.tmdbResource.links,
           // 添加TMDB ID
           id: this.tmdbResource.id,
+          // 添加媒体类型
+          media_type: this.tmdbResource.media_type,
           // 检查资源是否已被编辑过
           is_custom: this.hasBeenEdited
         };
@@ -790,11 +958,16 @@ export default {
       this.activeCategory = null;
       this.resourceExists = false;
       this.existingResource = null;
+      // 不重置searchResults和分页相关状态
     },
     
     resetSearch() {
+      // 完全重置，包括搜索结果和分页
       this.resetState();
       this.searchQuery = '';
+      this.searchResults = null;
+      this.currentPage = 1;
+      this.totalPages = 0;
     },
     
     // 编辑模式相关方法
@@ -1006,7 +1179,9 @@ export default {
           resource_type: this.editForm.resource_type.join(','),
           poster_image: this.editForm.poster_image,
           images: [...this.editForm.images],
-          links: linksToSubmit
+          links: linksToSubmit,
+          // 保留原来的media_type
+          media_type: this.tmdbResource.media_type
         };
         
         // 标记资源已被编辑
@@ -1120,6 +1295,11 @@ export default {
       
       // 清空输入框
       this.imageUrlInput = '';
+    },
+    changePage(page) {
+      if (page < 1 || page > this.totalPages) return;
+      this.currentPage = page;
+      this.searchTMDB(); // 重新搜索以更新结果
     }
   },
   beforeDestroy() {

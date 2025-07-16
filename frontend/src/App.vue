@@ -530,7 +530,8 @@ onMounted(() => {
   // 添加不蒜子访问统计脚本
   const bszScript = document.createElement('script');
   bszScript.async = true;
-  bszScript.src = "//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js";
+  // bszScript.src = "//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js";
+  bszScript.src = "//events.vercount.one/js";
   document.head.appendChild(bszScript);
 
   // 加载TMDB配置

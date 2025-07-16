@@ -109,7 +109,7 @@ func InitDB() (*sqlx.DB, error) {
 	db.SetConnMaxLifetime(time.Minute * 30)
 
 	// 分步执行初始化表结构，避免一次性执行可能导致的错误
-	// 1. 创建resources表（不包含tmdb_id字段）
+	// 1. 创建resources表（不包含media_type字段，该字段将通过迁移添加）
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS resources (
 			id INTEGER NOT NULL, 
@@ -136,7 +136,7 @@ func InitDB() (*sqlx.DB, error) {
 		return nil, fmt.Errorf("创建resources表失败: %w", err)
 	}
 	
-	// 2. 创建基本索引
+	// 2. 创建基本索引（不包含media_type的索引，该索引将在迁移中创建）
 	_, err = db.Exec(`
 		CREATE INDEX IF NOT EXISTS ix_resources_id ON resources (id);
 		CREATE INDEX IF NOT EXISTS ix_resources_title ON resources (title);
@@ -219,6 +219,7 @@ func MigrateDatabase() error {
 	}{
 		{"添加tmdb_id列", AddTmdbIDColumn},
 		{"添加stickers列", AddStickersColumn},
+		{"添加media_type列", AddMediaTypeColumn},
 		// 未来可以在这里添加更多迁移
 	}
 
@@ -646,6 +647,51 @@ func AddStickersColumn() error {
 	return nil
 }
 
+// AddMediaTypeColumn 添加media_type字段到resources表
+func AddMediaTypeColumn() error {
+	log.Printf("检查resources表是否需要添加media_type字段...")
+	
+	// 先检查resources表是否存在
+	var tableExists int
+	err := DB.Get(&tableExists, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources'`)
+	if err != nil {
+		return fmt.Errorf("检查resources表是否存在失败: %w", err)
+	}
+	
+	if tableExists == 0 {
+		log.Printf("resources表不存在，无需添加media_type字段")
+		return nil
+	}
+	
+	// 检查media_type字段是否已存在
+	var count int
+	err = DB.Get(&count, `SELECT COUNT(*) FROM pragma_table_info('resources') WHERE name = 'media_type'`)
+	if err != nil {
+		return fmt.Errorf("检查media_type字段是否存在失败: %w", err)
+	}
+	
+	// 如果字段不存在，则添加
+	if count == 0 {
+		log.Printf("media_type字段不存在，正在添加...")
+		_, err = DB.Exec(`ALTER TABLE resources ADD COLUMN media_type VARCHAR`)
+		if err != nil {
+			return fmt.Errorf("添加media_type字段失败: %w", err)
+		}
+		
+		// 创建索引
+		_, err = DB.Exec(`CREATE INDEX IF NOT EXISTS ix_resources_media_type ON resources (media_type)`)
+		if err != nil {
+			return fmt.Errorf("创建media_type索引失败: %w", err)
+		}
+		
+		log.Printf("media_type字段添加成功")
+	} else {
+		log.Printf("media_type字段已存在，无需添加")
+	}
+	
+	return nil
+}
+
 // UpdateResourceWithStickers 更新资源并支持贴纸数据
 func UpdateResourceWithStickers(resource *Resource) error {
 	// 更新时间戳
@@ -656,11 +702,11 @@ func UpdateResourceWithStickers(resource *Resource) error {
 		`UPDATE resources SET 
 			title = ?, title_en = ?, description = ?, resource_type = ?,
 			images = ?, poster_image = ?, links = ?, updated_at = ?, 
-			tmdb_id = ?, stickers = ?
+			tmdb_id = ?, media_type = ?, stickers = ?
 		WHERE id = ?`,
 		resource.Title, resource.TitleEn, resource.Description, resource.ResourceType,
 		resource.Images, resource.PosterImage, resource.Links, resource.UpdatedAt, 
-		resource.TmdbID, resource.Stickers, resource.ID,
+		resource.TmdbID, resource.MediaType, resource.Stickers, resource.ID,
 	)
 
 	if err != nil {

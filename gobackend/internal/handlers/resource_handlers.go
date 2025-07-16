@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 	"path/filepath"
+	"net/url"
+	"encoding/json"
 
 	"github.com/gin-gonic/gin"
 
@@ -699,6 +701,13 @@ func UpdateResource(c *gin.Context) {
 		log.Printf("更新TMDB ID: %v", resource.TmdbID)
 	}
 
+	if resourceUpdate.MediaType != nil {
+		// 处理媒体类型更新
+		resource.MediaType = resourceUpdate.MediaType
+		updated = true
+		log.Printf("更新媒体类型: %v", *resource.MediaType)
+	}
+
 	if resourceUpdate.Stickers != nil {
 		// 检查贴纸中是否有需要移动的图片（从临时uploads目录到永久目录）
 		imagesToMove := make([]string, 0)
@@ -985,4 +994,137 @@ func UpdateResourceStickers(c *gin.Context) {
 
 	log.Printf("贴纸更新成功，资源ID: %d", resourceID)
 	c.JSON(http.StatusOK, gin.H{"message": "贴纸更新成功", "resource": resource})
+}
+
+// UpdateResourceTMDBInfo 更新资源的TMDB ID和媒体类型 - 通过英文标题自动更新
+func UpdateResourceTMDBInfo(c *gin.Context) {
+	// 获取路径参数
+	resourceID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
+		return
+	}
+
+	// 解析请求
+	var request struct {
+		TitleEn   string `json:"title_en"`
+		MediaType string `json:"media_type"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
+		return
+	}
+
+	// 检查英文标题是否存在
+	if request.TitleEn == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "英文标题不能为空"})
+		return
+	}
+
+	// 检查媒体类型
+	if request.MediaType == "" {
+		request.MediaType = "tv" // 默认为电视剧
+	}
+
+	// 验证媒体类型是否有效
+	if request.MediaType != "tv" && request.MediaType != "movie" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的媒体类型，必须是 tv 或 movie"})
+		return
+	}
+
+	// 检查资源是否存在
+	var resource models.Resource
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+		return
+	}
+
+	// 通过TMDB API查询资源ID
+	tmdbResults, err := SearchTMDBByQuery(request.TitleEn, request.MediaType)
+	if err != nil || len(tmdbResults) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "在TMDB中未找到匹配的资源"})
+		return
+	}
+
+	// 使用第一个结果的ID
+	tmdbID := tmdbResults[0].ID
+	
+	// 更新资源的TMDB ID和媒体类型
+	resource.TmdbID = &tmdbID
+	mediaType := request.MediaType
+	resource.MediaType = &mediaType
+	resource.UpdatedAt = time.Now()
+
+	// 保存更新
+	err = models.UpdateResourceWithStickers(&resource)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("更新资源失败: %v", err)})
+		return
+	}
+
+	// 返回更新后的资源
+	c.JSON(http.StatusOK, resource)
+}
+
+// SearchTMDBByQuery 通过查询字符串搜索TMDB资源
+func SearchTMDBByQuery(query string, mediaType string) ([]TMDBSearchResult, error) {
+	if !IsTMDBEnabled() {
+		return nil, fmt.Errorf("TMDB未启用")
+	}
+
+	// 构建请求URL
+	baseURL := "https://api.themoviedb.org/3/search/" + mediaType
+	requestURL := fmt.Sprintf("%s?api_key=%s&query=%s&language=zh-CN", 
+		baseURL, utils.GetTMDBAPIKey(), url.QueryEscape(query))
+
+	// 发送请求
+	response, err := http.Get(requestURL)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	// 解析响应
+	var searchResponse struct {
+		Results []TMDBSearchResult `json:"results"`
+	}
+
+	err = json.NewDecoder(response.Body).Decode(&searchResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return searchResponse.Results, nil
+}
+
+// TMDBSearchResult TMDB搜索结果结构
+type TMDBSearchResult struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Overview    string `json:"overview"`
+	PosterPath  string `json:"poster_path"`
+	BackdropPath string `json:"backdrop_path"`
+	MediaType   string `json:"media_type,omitempty"`
+}
+
+// IsTMDBEnabled 检查TMDB功能是否启用
+func IsTMDBEnabled() bool {
+	var settings models.SiteSettings
+	err := models.GetDB().Get(&settings, "SELECT * FROM site_settings WHERE setting_key = ?", "tmdb_config")
+	
+	if err != nil {
+		// 如果找不到配置，返回未启用状态
+		return false
+	}
+
+	// 从配置中提取enabled字段
+	enabled := false
+	if val, ok := settings.SettingValue["enabled"].(bool); ok {
+		enabled = val
+	}
+
+	return enabled
 }

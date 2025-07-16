@@ -194,6 +194,7 @@ type Resource struct {
 	IsSupplementApproval bool         `db:"is_supplement_approval" json:"is_supplement_approval"`
 	LikesCount         int            `db:"likes_count" json:"likes_count"`
 	TmdbID             *int           `db:"tmdb_id" json:"tmdb_id"`
+	MediaType          *string        `db:"media_type" json:"media_type"`
 	Stickers           JsonMap        `db:"stickers" json:"stickers"`
 	CreatedAt          time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time      `db:"updated_at" json:"updated_at"`
@@ -231,6 +232,7 @@ type ResourceUpdate struct {
 	PosterImage  *string   `json:"poster_image"`
 	Links        JsonMap   `json:"links"`
 	TmdbID       *int      `json:"tmdb_id"`
+	MediaType    *string   `json:"media_type"`
 	Stickers     JsonMap   `json:"stickers"`
 }
 
