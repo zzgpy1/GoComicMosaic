@@ -229,6 +229,12 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://dm.xueximeng.com/resource/184</loc>
+    <lastmod>2025-07-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://dm.xueximeng.com/resource/185</loc>
     <lastmod>2025-07-16</lastmod>
     <changefreq>weekly</changefreq>
@@ -471,12 +477,6 @@
   <url>
     <loc>https://dm.xueximeng.com/resource/180</loc>
     <lastmod>2025-07-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://dm.xueximeng.com/resource/184</loc>
-    <lastmod>2025-07-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -860,7 +860,7 @@
   </url>
   <url>
     <loc>https://dm.xueximeng.com/resource/164</loc>
-    <lastmod>2025-06-27</lastmod>
+    <lastmod>2025-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -884,7 +884,7 @@
   </url>
   <url>
     <loc>https://dm.xueximeng.com/resource/168</loc>
-    <lastmod>2025-06-30</lastmod>
+    <lastmod>2025-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -908,7 +908,7 @@
   </url>
   <url>
     <loc>https://dm.xueximeng.com/resource/172</loc>
-    <lastmod>2025-07-02</lastmod>
+    <lastmod>2025-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -944,19 +944,19 @@
   </url>
   <url>
     <loc>https://dm.xueximeng.com/resource/178</loc>
-    <lastmod>2025-07-06</lastmod>
+    <lastmod>2025-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://dm.xueximeng.com/resource/179</loc>
-    <lastmod>2025-07-07</lastmod>
+    <lastmod>2025-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://dm.xueximeng.com/resource/181</loc>
-    <lastmod>2025-07-09</lastmod>
+    <lastmod>2025-07-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>

@@ -58,6 +58,13 @@ func SetupRoutes(router *gin.Engine) {
 		admin.PUT("/users/:id", UpdateUser)
 		admin.DELETE("/users/:id", DeleteUser)
 	}
+
+	// 图像处理工具路由
+	imgtools := api.Group("/imgtools")
+	{
+		// 图像超分辨率API - 公开接口
+		imgtools.POST("/enhance", EnhanceImageHandler)
+	}
 	
 	// TMDB API路由
 	tmdb := api.Group("/tmdb")

@@ -768,37 +768,28 @@ const toggleEpisodeExplorer = async () => {
     return;
   }
   
-  // 如果没有tmdb_id但有title_en，尝试更新tmdb_id和media_type
-  if (!resource.value.tmdb_id && resource.value.title_en) {
+  // 如果没有tmdb_id但有title_en，或者有tmdb_id但没有media_type，使用update-tmdb接口更新
+  if ((!resource.value.tmdb_id && resource.value.title_en) || 
+      (resource.value.tmdb_id && !resource.value.media_type)) {
     try {
       const response = await axios.post(`/api/resources/${resource.value.id}/update-tmdb`, {
         title_en: resource.value.title_en,
+        tmdb_id: resource.value.tmdb_id || null,
         media_type: 'tv' // 剧集探索按钮只对tv类型有效
       });
       
-      if (response.data && response.data.tmdb_id) {
-        resource.value.tmdb_id = response.data.tmdb_id;
-        resource.value.media_type = response.data.media_type || 'tv';
-        console.log(`已更新资源TMDB ID: ${resource.value.tmdb_id}, 媒体类型: ${resource.value.media_type}`);
-      }
-    } catch (err) {
-      console.error('更新TMDB ID失败:', err);
-    }
-  }
-  
-  // 如果有tmdb_id但没有media_type，设置默认media_type为tv
-  if (resource.value.tmdb_id && !resource.value.media_type) {
-    try {
-      const response = await axios.put(`/api/resources/${resource.value.id}`, {
-        media_type: 'tv'
-      });
-      
       if (response.data) {
-        resource.value.media_type = 'tv';
-        console.log(`已更新资源媒体类型为: tv`);
+        // 更新本地资源数据
+        if (response.data.tmdb_id) {
+          resource.value.tmdb_id = response.data.tmdb_id;
+        }
+        if (response.data.media_type) {
+          resource.value.media_type = response.data.media_type;
+        }
+        console.log(`已更新资源信息: TMDB ID=${resource.value.tmdb_id}, 媒体类型=${resource.value.media_type}`);
       }
     } catch (err) {
-      console.error('更新媒体类型失败:', err);
+      console.error('更新资源信息失败:', err);
     }
   }
   

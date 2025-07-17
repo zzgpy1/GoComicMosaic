@@ -127,7 +127,7 @@ const baseRoutes = [
   },
   // 图像处理测试页面
   {
-    path: '/image_tools',
+    path: '/imgtools',
     name: 'ImageTools',
     component: () => import('../views/ImageTools.vue'),
     meta: {

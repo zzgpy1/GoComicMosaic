@@ -1009,6 +1009,7 @@ func UpdateResourceTMDBInfo(c *gin.Context) {
 	var request struct {
 		TitleEn   string `json:"title_en"`
 		MediaType string `json:"media_type"`
+		TmdbID    *int   `json:"tmdb_id"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -1016,9 +1017,11 @@ func UpdateResourceTMDBInfo(c *gin.Context) {
 		return
 	}
 
-	// 检查英文标题是否存在
-	if request.TitleEn == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "英文标题不能为空"})
+	// 检查资源是否存在
+	var resource models.Resource
+	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
 		return
 	}
 
@@ -1033,28 +1036,30 @@ func UpdateResourceTMDBInfo(c *gin.Context) {
 		return
 	}
 
-	// 检查资源是否存在
-	var resource models.Resource
-	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
-		return
-	}
-
-	// 通过TMDB API查询资源ID
-	tmdbResults, err := SearchTMDBByQuery(request.TitleEn, request.MediaType)
-	if err != nil || len(tmdbResults) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "在TMDB中未找到匹配的资源"})
-		return
-	}
-
-	// 使用第一个结果的ID
-	tmdbID := tmdbResults[0].ID
-	
-	// 更新资源的TMDB ID和媒体类型
-	resource.TmdbID = &tmdbID
+	// 更新媒体类型
 	mediaType := request.MediaType
 	resource.MediaType = &mediaType
+
+	// 如果提供了tmdb_id，直接使用
+	if request.TmdbID != nil && *request.TmdbID > 0 {
+		resource.TmdbID = request.TmdbID
+	} else if request.TitleEn != "" {
+		// 如果提供了英文标题，通过TMDB API查询资源ID
+		tmdbResults, err := SearchTMDBByQuery(request.TitleEn, request.MediaType)
+		if err != nil || len(tmdbResults) == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "在TMDB中未找到匹配的资源"})
+			return
+		}
+
+		// 使用第一个结果的ID
+		tmdbID := tmdbResults[0].ID
+		resource.TmdbID = &tmdbID
+	} else {
+		// 既没有提供tmdb_id也没有提供title_en
+		c.JSON(http.StatusBadRequest, gin.H{"error": "必须提供英文标题或TMDB ID"})
+		return
+	}
+	
 	resource.UpdatedAt = time.Now()
 
 	// 保存更新
