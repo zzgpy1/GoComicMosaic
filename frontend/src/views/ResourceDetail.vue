@@ -567,9 +567,9 @@
                   
                   <!-- 搜索结果指示器 -->
                   <div v-if="isShowingSearchResults" class="search-results-indicator">
-                    <i class="bi bi-info-circle"></i> 网盘搜索结果 - {{ resource.title }}
+                    <i class="bi bi-info-circle"></i> 网盘搜索结果 <span class="search-results-count">(共{{ searchResultsTotal }}条)</span>
                     <span v-if="isAsyncUpdating" class="async-update-indicator">
-                      <i class="bi bi-arrow-repeat spin"></i> 正在获取更多结果...
+                      <i class="bi bi-arrow-repeat spin"></i> 
                     </span>
                   </div>
                   
@@ -1718,11 +1718,12 @@ const originalLinks = ref(null)
 const searchResultLinks = ref(null)
 const searchError = ref(null) // 添加搜索错误状态
 const isAsyncUpdating = ref(false) // 新增：异步更新状态
+const searchResultsTotal = ref(0) // 新增：搜索结果总数量
 
 // 计算属性：按钮文本
 const resourceButtonText = computed(() => {
   if (isSearching.value) return '搜索中...'
-  return isShowingSearchResults.value ? '返回原始资源' : '盘搜'
+  return isShowingSearchResults.value ? '返回' : '盘搜'
 })
 
 // 搜索网盘资源
@@ -1785,6 +1786,10 @@ const searchPanResource = async () => {
         resource.value.links = mergedLinks;
         console.log('已更新资源链接');
         
+        // 更新搜索结果总数
+        searchResultsTotal.value = calculateTotalResults(mergedLinks);
+        console.log('更新后的搜索结果总数:', searchResultsTotal.value);
+        
         // 如果有新的分类，可能需要更新活动分类
         nextTick(() => {
           if (orderedVisibleCategories.value.length > 0 && 
@@ -1818,6 +1823,10 @@ const searchPanResource = async () => {
     // 转换为系统兼容的格式
     searchResultLinks.value = convertToResourceLinks(results)
     console.log('转换后的链接:', searchResultLinks.value);
+    
+    // 计算搜索结果总数
+    searchResultsTotal.value = calculateTotalResults(searchResultLinks.value);
+    console.log('搜索结果总数:', searchResultsTotal.value);
     
     // 检查转换后的结果是否为空
     if (Object.keys(searchResultLinks.value).length === 0) {
@@ -1904,6 +1913,19 @@ onMounted(() => {
   fetchResource()
   loadTMDBConfig()
 })
+
+// 计算搜索结果总数
+const calculateTotalResults = (links) => {
+  let total = 0;
+  if (links && typeof links === 'object') {
+    Object.values(links).forEach(categoryLinks => {
+      if (Array.isArray(categoryLinks)) {
+        total += categoryLinks.length;
+      }
+    });
+  }
+  return total;
+}
 </script>
 
 <style scoped src="@/styles/ResourceDetail.css"></style>

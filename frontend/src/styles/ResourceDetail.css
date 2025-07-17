@@ -2371,13 +2371,21 @@
   background-color: #f8f9fa;
   border-left: 3px solid #007bff;
   padding: 8px 15px;
-  margin-bottom: 15px;
   font-size: 14px;
   color: #6c757d;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center; /* 改为居中显示 */
+  position: relative; /* 添加相对定位 */
+}
+
+/* 搜索结果数量样式 */
+.search-results-count {
+  font-weight: bold;
+  color: #007bff;
+  margin-left: 5px;
+  display: inline-block; /* 确保内联显示 */
 }
 
 /* 异步更新指示器 */
@@ -2387,6 +2395,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  position: absolute; /* 绝对定位 */
+  right: 15px; /* 固定在右侧 */
 }
 
 /* 旋转动画 */
