@@ -104,7 +104,7 @@ export const getImageUrl = (imagePath, defaultImage = 'https://via.placeholder.c
   if (!imagePath) return defaultImage;
   
   // 如果路径已经是完整URL，直接返回
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+  if (imagePath.startsWith('https://') || imagePath.startsWith('http://')) {
     return imagePath;
   }
   

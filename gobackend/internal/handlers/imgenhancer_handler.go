@@ -133,12 +133,7 @@ func EnhanceImageHandler(c *gin.Context) {
 	}
 
 	// 构造URL和相对路径（用于前端显示）
-	scheme := "http"
-	if c.Request.TLS != nil {
-		scheme = "https"
-	}
-	host := c.Request.Host
-	baseURL := fmt.Sprintf("%s://%s", scheme, host)
+	baseURL := c.GetHeader("Origin")
 	
 	originalRelPath := filepath.Join("assets", "handles", originalFilename)
 	enhancedRelPath := filepath.Join("assets", "handles", enhancedFilename)
