@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	
 	"dongman/internal/models"
-	"dongman/internal/utils"
+	"dongman/internal/config"
 )
 
 func main() {

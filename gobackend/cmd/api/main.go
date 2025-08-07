@@ -17,37 +17,17 @@ import (
 	"dongman/internal/handlers"
 	"dongman/internal/models"
 	"dongman/internal/config"
-	"dongman/internal/utils"
 )
 
 func main() {
-	// 设置日志
-	log.Println("启动动漫资源共享平台API服务...")
 	
 	// 检查数据库文件
-	dbPath := utils.GetDbPath()
-	log.Printf("数据库文件路径: %s", dbPath)
+	dbPath := config.GetDbPath()
 	
 	// 检查主数据库文件是否存在
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		log.Printf("警告: 数据库文件不存在，将创建新的数据库")
-	} else {
-		// 检查WAL文件是否存在
-		walPath := dbPath + "-wal"
-		if _, err := os.Stat(walPath); os.IsNotExist(err) {
-			log.Printf("注意: WAL文件不存在，这可能是正常的（如果是首次启动或数据库被正常关闭）")
-		} else {
-			log.Printf("检测到WAL文件: %s", walPath)
-		}
-		
-		// 检查SHM文件是否存在
-		shmPath := dbPath + "-shm"
-		if _, err := os.Stat(shmPath); os.IsNotExist(err) {
-			log.Printf("注意: SHM文件不存在")
-		} else {
-			log.Printf("检测到SHM文件: %s", shmPath)
-		}
-	}
+		// log.Printf("警告: 数据库文件不存在，将创建新的数据库")
+	} 
 
 	// 初始化数据库
 	db, err := models.InitDB()
@@ -57,20 +37,15 @@ func main() {
 	// 不再使用defer db.Close()，我们会在收到信号时手动关闭
 	
 	// 执行WAL检查点，确保启动时数据已同步
-	log.Println("执行启动时数据库检查点...")
 	_, err = db.Exec("PRAGMA wal_checkpoint(RESTART);")
 	if err != nil {
 		log.Printf("启动时执行检查点失败: %v", err)
-	} else {
-		log.Println("启动时检查点执行成功")
-	}
+	} 
 	
 	// 设置WAL自动检查点阈值（页数）
 	_, err = db.Exec("PRAGMA wal_autocheckpoint=500;")
 	if err != nil {
 		log.Printf("设置WAL自动检查点阈值失败: %v", err)
-	} else {
-		log.Println("WAL自动检查点阈值设置成功")
 	}
 
 	// 创建初始管理员账号
@@ -81,6 +56,14 @@ func main() {
 	// 初始化网站设置
 	if err := models.InitSiteSettings(); err != nil {
 		log.Printf("初始化网站设置失败: %v", err)
+	}
+
+	// 设置Gin模式（默认为release模式，除非明确设置为debug）
+	ginMode := os.Getenv("GIN_MODE")
+	if ginMode == "" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		log.Printf("Gin模式: %s", ginMode)
 	}
 
 	// 创建Gin应用

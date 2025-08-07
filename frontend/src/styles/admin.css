@@ -273,10 +273,12 @@
 }
 
 .custom-table thead {
-  position: sticky; /* 设置表头为粘性定位 */
-  top: 0;          /* 固定在容器顶部 */
-  z-index: 1;       /* 确保表头在内容上层 */
-  background: rgba(255, 255, 255, 0.95); /* 确保表头背景不透明 */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .custom-table th {
@@ -286,9 +288,29 @@
   padding: 1rem;
   text-align: left;
   border-bottom: 1px solid rgba(99, 102, 241, 0.1);
-  position: sticky; /* 确保每个th元素也保持粘性定位 */
-  top: 0;          /* 固定在容器顶部 */
-  z-index: 2;      /* 确保高于tbody内容 */
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* 移动端粘性表头优化 */
+@media (max-width: 768px) {
+  .custom-table thead {
+    position: static; /* 移动端取消粘性定位 */
+    z-index: auto;
+    background: rgba(255, 255, 255, 0.95); /* 简化背景 */
+    backdrop-filter: none; /* 移除模糊效果 */
+    -webkit-backdrop-filter: none;
+  }
+  
+  .custom-table th {
+    position: static; /* 移动端取消粘性定位 */
+    z-index: auto;
+    backdrop-filter: none; /* 移除模糊效果 */
+    -webkit-backdrop-filter: none;
+  }
 }
 
 .custom-table td {
@@ -364,7 +386,9 @@
 .actions-cell {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .view-images-btn {
@@ -987,11 +1011,55 @@
   }
 }
 
-/* @media (max-width: 768px) { */
-@media (max-width: 1200px) {
-  /* 移动端基础样式 */
+@media (max-width: 768px) {
+  /* 移动端基础样式和滚动优化 */
   .admin-container {
     padding: 0 0.5rem;
+    touch-action: manipulation; /* 允许滚动和缩放，但禁用双击缩放 */
+    -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+    overflow-x: hidden; /* 防止水平滚动条 */
+  }
+  
+  /* 确保body在移动端可以正常滚动 */
+  body {
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+  }
+  
+  /* 移动端优化卡片性能 */
+  .admin-card {
+    backdrop-filter: none; /* 移除模糊效果 */
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.95); /* 使用更简单的背景 */
+    transform: none; /* 移除变换 */
+    transition: none; /* 移除动画 */
+  }
+  
+  .admin-card:hover {
+    transform: none; /* 移除悬停效果 */
+    box-shadow: 
+      0 10px 20px rgba(0, 0, 0, 0.08),
+      inset 0 -2px 6px rgba(255, 255, 255, 0.7),
+      inset 2px 2px 6px rgba(255, 255, 255, 1);
+  }
+  
+  /* 移动端禁用按钮变换效果 */
+  .btn-custom:hover {
+    transform: none !important;
+  }
+  
+  /* 移动端禁用其他悬停效果 */
+  .detail-section:hover,
+  .image-preview-item:hover {
+    transform: none !important;
+  }
+  
+  /* 移动端模态框优化 */
+  .custom-modal {
+    backdrop-filter: none; /* 移除模糊效果 */
+    -webkit-backdrop-filter: none;
+    background: rgba(0, 0, 0, 0.7); /* 使用更简单的背景 */
   }
   
   .admin-hero {
@@ -1009,47 +1077,47 @@
   
   .card-header {
     padding: 1rem;
-    flex-wrap: nowrap; /* 强制不换行 */
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     justify-content: space-between;
+    align-items: center;
   }
   
   .card-header h4 {
     font-size: 1.1rem;
-    max-width: 80%; /* 进一步增加宽度确保文字显示完整 */
-    overflow: visible; /* 确保文字不会被截断 */
-    white-space: nowrap; /* 不允许文字换行，保持在一行 */
-    text-overflow: ellipsis; /* 超出部分显示省略号 */
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
   
-  .header-left h4 {
+  .header-actions {
+    flex-shrink: 0;
     display: flex;
-    align-items: center;
-    flex-wrap: nowrap; /* 不允许换行 */
-    gap: 0.25rem; /* 减小图标和文字间的间距 */
-  }
-  
-  .header-left h4 i {
-    margin-right: 0.25rem; /* 减少图标右侧边距 */
+    gap: 0.5rem;
   }
   
   .card-body {
     padding: 1rem;
   }
   
-  /* 表格样式 - 增强横向显示 */
-  .custom-table {
-    min-width: 1000px !important;
-    width: 100% !important;
-    white-space: nowrap !important;
-    border-collapse: collapse !important;
+  /* 表格容器优化 - 移除强制样式和高度限制 */
+  .table-container {
+    margin: 0;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible; /* 移动端不限制垂直滚动 */
+    max-height: none; /* 移除高度限制 */
+    padding: 0;
+    border-radius: var(--border-radius);
+    background: rgba(255, 255, 255, 0.5);
   }
   
-  .table-container {
-    margin: 0 -1rem !important;
-    width: calc(100% + 2rem) !important;
-    overflow-x: auto !important;
-    padding: 0 0.5rem !important;
+  .custom-table {
+    min-width: 800px;
+    width: 100%;
+    white-space: nowrap;
   }
   
   .custom-table td, 
@@ -1057,75 +1125,39 @@
     padding: 0.75rem 0.5rem;
   }
   
-  /* 按钮布局优化 */
-  .header-actions {
-    margin-left: auto;
-    white-space: nowrap;
+  /* 按钮样式优化 */
+  .btn-custom {
+    padding: 0.5rem;
+    min-width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   
-  /* 优化按钮在移动端的布局 */
   .btn-custom.btn-sm {
     padding: 0.4rem;
-    font-size: 0.8rem;
     min-width: 36px;
     height: 36px;
-    justify-content: center;
+    font-size: 0.85rem;
   }
   
-  /* 改善下拉菜单在移动端的可用性 */
-  .dropdown-menu {
-    min-width: 200px;
-  }
-  
-  /* 改善模态框在移动端的显示 */
-  .custom-modal .modal-dialog {
-    width: 95%;
-    max-width: none;
-  }
-  
-  /* 修改表单在移动端的布局 */
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  /* 修改密码按钮样式优化 */
-  .form-actions {
-    display: flex;
-    justify-content: center;
-    gap: 0.75rem;
-  }
-  
-  .form-actions button {
-    width: auto;
-    border-radius: 50%;
-    min-width: 38px;
-    height: 38px;
-    padding: 0.5rem;
-  }
-  
-  /* 移动端按钮仅显示图标，不显示文字 */
+  /* 移动端按钮文本控制 - 隐藏所有按钮文本 */
   .btn-text {
     display: none;
   }
   
-  .btn-custom {
-    padding: 0.5rem;
-    min-width: 38px;
-    height: 38px;
-    justify-content: center;
-  }
-  
   .btn-custom i {
-    font-size: 1.1rem;
+    font-size: 1rem;
     margin-right: 0;
   }
   
-  /* 确保带有徽章的按钮能正常显示 */
+  /* 徽章样式调整 */
   .btn-custom .badge-count {
     display: inline-flex;
-    position: absolute;
-    top: -8px;
-    right: -8px;
+    margin-left: 0.25rem;
+    position: static;
     min-width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -1134,17 +1166,23 @@
     justify-content: center;
   }
   
-  /* 特殊处理某些需要文本的按钮 */
-  .close-btn .btn-text,
-  .confirmation-btn .btn-text {
-    display: inline-block;
+  /* 模态框优化 */
+  .custom-modal .modal-dialog {
+    width: 95%;
+    max-width: none;
+    margin: 1rem;
   }
   
-  /* 批量删除按钮需要更多空间 */
-  .btn-custom.btn-accent.btn-sm {
-    position: relative;
-    min-width: 38px;
-    padding: 0.4rem;
+  /* 表单布局优化 */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 }
 
@@ -1213,29 +1251,33 @@
   
   /* 调整按钮大小和间距 */
   .btn-custom {
-    padding: 0.45rem;
-    min-width: 34px;
-    height: 34px;
-    border-radius: 50%;
+    padding: 0.4rem;
+    min-width: 36px;
+    height: 36px;
+    border-radius: var(--border-radius);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .btn-custom.btn-sm {
-    padding: 0.35rem;
-    min-width: 30px;
-    height: 30px;
+    padding: 0.3rem;
+    min-width: 32px;
+    height: 32px;
   }
   
   .btn-custom i {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
   
-  /* 垂直堆叠操作按钮 */
+  /* 操作按钮布局优化 */
   .actions-cell {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
     justify-content: flex-end;
+    align-items: center;
   }
   
   /* 优化弹窗提示和确认 */
@@ -1258,7 +1300,7 @@
   }
   
   .modal-footer .btn-custom .btn-text {
-    display: inline-block;
+    display: none;
   }
 }
 
@@ -1268,21 +1310,26 @@
   display: inline-block;
 }
 
-/* 优化审批详情中查看公开页面按钮在移动端的样式 */
+/* 审批详情模态框按钮优化 */
 @media (max-width: 768px) {
   .modal-actions .btn-custom {
-    padding: 0.5rem;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    display: flex;
+    padding: 0.5rem 0.75rem;
+    min-width: auto;
+    height: auto;
+    border-radius: var(--border-radius);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.25rem;
   }
   
   .modal-actions .btn-custom i {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1rem;
+  }
+  
+  .modal-actions .btn-custom .btn-text {
+    display: none;
   }
 }
 
@@ -1668,6 +1715,24 @@
     width: 100%;
   }
   
+  /* 数据源列表移动端适配 */
+  .datasource-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 1fr 80px 60px;
+  }
+  
+  .datasource-item {
+    grid-template-columns: 40px 1fr 40px;
+    padding: 8px;
+  }
+  
+  .datasource-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr 80px 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  
   /* 移除字段垂直堆叠样式 */
   .link-field {
     display: flex;
@@ -1730,47 +1795,57 @@
   }
 }
 
-/* 添加更小屏幕的特殊处理 */
-/* @media (max-width: 576px) { */
-@media (max-width: 1200px) {
+/* 移动端链接管理样式优化 */
+@media (max-width: 768px) {
   .links-container {
-    min-width: 650px; /* 确保最小宽度足够显示所有内容 */
+    min-width: 600px;
   }
   
-  .remove-link-btn {
-    margin-top: 0; /* 移除按钮上方的额外边距 */
-  }
-  
-  /* 优化移动端链接项内容显示 */
   .link-fields {
     display: grid;
     grid-template-columns: 1fr 1fr 80px 1fr;
-    gap: 4px; /* 减小间距 */
+    gap: 0.5rem;
   }
   
   .link-field input {
-    width: 100%; /* 确保输入框宽度为100% */
-    min-width: 0; /* 防止输入框最小宽度导致溢出 */
-    font-size: 0.85rem; /* 减小字体大小 */
-    padding: 0.5rem 0.75rem; /* 减小内边距 */
-    text-overflow: ellipsis; /* 文本溢出时显示省略号 */
-    white-space: nowrap; /* 防止文本换行 */
-    overflow: hidden; /* 隐藏溢出内容 */
+    width: 100%;
+    min-width: 0;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
   
-  /* 修复图标按钮样式，确保居中显示不溢出 */
+  /* 数据源列表768px断点优化 */
+  .datasource-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr 80px 1fr;
+    gap: 0.5rem;
+  }
+  
+  .datasource-fields input {
+    width: 100%;
+    min-width: 0;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  
   .icon-selector-button {
-    width: 36px; /* 减小图标选择按钮尺寸 */
+    width: 36px;
     height: 36px;
-    min-width: 36px; /* 确保最小宽度 */
+    min-width: 36px;
     padding: 0;
   }
   
   .icon-field {
     display: flex;
     justify-content: center;
-    min-width: 36px; /* 确保最小宽度 */
-    max-width: 80px; /* 限制最大宽度 */
+    min-width: 36px;
+    max-width: 80px;
   }
 }
 
@@ -2064,25 +2139,19 @@
   min-width: 650px; /* 确保在移动端有足够宽度显示全部内容 */
 }
 
-/* 在所有设备上覆盖移动端样式 */
+/* 添加链接按钮在移动端的特殊样式 */
 @media (max-width: 768px) {
-  /* 移除其他按钮文本的隐藏样式 */
-  .btn-text {
-    display: none;
-  }
-  
-  /* 但保持添加链接按钮文本显示 */
   .add-link-btn {
-    height: auto !important;
-    width: auto !important;
-    display: inline-flex !important;
-    padding: 0.5rem 1rem !important;
+    height: auto;
+    width: auto;
+    display: inline-flex;
+    padding: 0.5rem 1rem;
     min-width: 150px;
-    border-radius: var(--border-radius) !important;
+    border-radius: var(--border-radius);
   }
   
   .add-link-btn .btn-text {
-    display: inline !important;
+    display: inline;
   }
 }
 
@@ -2117,18 +2186,7 @@
   margin-left: 0.35rem; /* 增加图标和文字间距 */
 }
 
-/* 在所有设备上覆盖移动端样式 */
-@media (max-width: 768px) {
-  /* 但保持添加链接按钮文本显示并居中 */
-  .add-link-btn {
-    height: auto !important;
-    width: auto !important;
-    display: inline-flex !important;
-    padding: 0.5rem 1.5rem !important;
-    min-width: 150px;
-    border-radius: var(--border-radius) !important;
-  }
-}
+
 
 /* 表单帮助文本样式 */
 .form-text {
@@ -2463,11 +2521,15 @@ textarea.custom-input {
 }
 
 .datasource-header {
-  display: flex;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr 80px 60px;
+  gap: 8px;
+  padding: 0 10px;
+  margin-bottom: 10px;
   font-weight: 600;
+  color: var(--primary-color);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  padding-bottom: 8px;
 }
 
 .datasource-header-fields {
@@ -2793,14 +2855,23 @@ textarea.custom-input {
 
 /* 数据源列表项样式 */
 .datasource-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
   align-items: center;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius);
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
 }
 
 .datasource-fields {
-  display: flex;
-  flex: 1;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr 80px 1fr;
+  gap: 8px;
+  width: 100%;
 }
 
 /* .actions-field {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"dongman/internal/config"
 )
 
 // CalculateFileHash 计算文件内容的SHA-256哈希值，并将文件指针重置到开头
@@ -78,7 +79,7 @@ func MoveApprovedImages(resourceID int, imagePaths []string) ([]string, error) {
 	}
 
 	// 获取资源目录
-	assetsDir := GetAssetsDir()
+	assetsDir := config.GetAssetsDir()
 
 	// 创建目标目录
 	imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
@@ -133,7 +134,7 @@ func MoveApprovedImage(resourceID int, imagePath string) (string, error) {
 	}
 
 	// 获取资源目录
-	assetsDir := GetAssetsDir()
+	assetsDir := config.GetAssetsDir()
 
 	// 创建目标目录
 	imgsDir := filepath.Join(assetsDir, "imgs", fmt.Sprintf("%d", resourceID))
@@ -216,7 +217,7 @@ func moveFile(src, dst string) error {
 // ensureUploadDir 确保上传目录存在
 func ensureUploadDir() (string, error) {
 	// 获取资源目录
-	assetsDir := GetAssetsDir()
+	assetsDir := config.GetAssetsDir()
 
 	// 按日期创建上传目录
 	dateDir := time.Now().Format("20060102")

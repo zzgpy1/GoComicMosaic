@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
-	"dongman/internal/utils"
+	"dongman/internal/config"
 )
 
 // DB 是全局数据库连接
@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS resources (
 	is_supplement_approval BOOLEAN DEFAULT 'False', 
 	likes_count INTEGER DEFAULT '0' NOT NULL,
 	tmdb_id INTEGER,
+	stickers TEXT DEFAULT '{}' NOT NULL,
+	media_type VARCHAR,
 	PRIMARY KEY (id)
 );
 
@@ -44,6 +46,7 @@ CREATE INDEX IF NOT EXISTS ix_resources_id ON resources (id);
 CREATE INDEX IF NOT EXISTS ix_resources_title ON resources (title);
 CREATE INDEX IF NOT EXISTS ix_resources_title_en ON resources (title_en);
 CREATE INDEX IF NOT EXISTS ix_resources_tmdb_id ON resources (tmdb_id);
+CREATE INDEX IF NOT EXISTS ix_resources_media_type ON resources (media_type);
 
 CREATE TABLE IF NOT EXISTS approval_records (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,8 +91,8 @@ CREATE INDEX IF NOT EXISTS idx_site_settings_key ON site_settings(setting_key);
 // InitDB 初始化数据库连接
 func InitDB() (*sqlx.DB, error) {
 	// 从utils包获取数据库路径
-	dbPath := utils.GetDbPath()
-	log.Printf("连接数据库: %s", dbPath)
+	dbPath := config.GetDbPath()
+
 	
 	// 连接SQLite数据库，使用WAL模式，并添加额外的健壮性参数
 	// _journal=WAL: 使用WAL模式
@@ -108,87 +111,10 @@ func InitDB() (*sqlx.DB, error) {
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(time.Minute * 30)
 
-	// 分步执行初始化表结构，避免一次性执行可能导致的错误
-	// 1. 创建resources表（不包含media_type字段，该字段将通过迁移添加）
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS resources (
-			id INTEGER NOT NULL, 
-			title VARCHAR, 
-			title_en VARCHAR, 
-			description TEXT, 
-			images JSON, 
-			poster_image VARCHAR, 
-			resource_type VARCHAR, 
-			status VARCHAR(8), 
-			hidden_from_admin BOOLEAN, 
-			created_at DATETIME, 
-			updated_at DATETIME, 
-			links JSON, 
-			original_resource_id INTEGER, 
-			supplement JSON, 
-			approval_history JSON, 
-			is_supplement_approval BOOLEAN DEFAULT 'False', 
-			likes_count INTEGER DEFAULT '0' NOT NULL,
-			PRIMARY KEY (id)
-		);
-	`)
+	// 执行初始化表结构
+	_, err = db.Exec(initSQL)
 	if err != nil {
-		return nil, fmt.Errorf("创建resources表失败: %w", err)
-	}
-	
-	// 2. 创建基本索引（不包含media_type的索引，该索引将在迁移中创建）
-	_, err = db.Exec(`
-		CREATE INDEX IF NOT EXISTS ix_resources_id ON resources (id);
-		CREATE INDEX IF NOT EXISTS ix_resources_title ON resources (title);
-		CREATE INDEX IF NOT EXISTS ix_resources_title_en ON resources (title_en);
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("创建resources表索引失败: %w", err)
-	}
-	
-	// 3. 创建其他表
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS approval_records (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			resource_id INTEGER NOT NULL,
-			status VARCHAR(8) NOT NULL,
-			field_approvals JSON,
-			field_rejections JSON,
-			approved_images JSON,
-			rejected_images JSON,
-			poster_image VARCHAR,
-			notes TEXT,
-			approved_links JSON,
-			rejected_links JSON,
-			is_supplement_approval BOOLEAN DEFAULT 'False',
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_approval_records_resource_id ON approval_records(resource_id);
-
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT NOT NULL UNIQUE,
-			hashed_password TEXT NOT NULL,
-			is_admin BOOLEAN DEFAULT 0,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-
-		CREATE TABLE IF NOT EXISTS site_settings (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			setting_key TEXT NOT NULL UNIQUE,
-			setting_value JSON NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_site_settings_key ON site_settings(setting_key);
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("创建其他表失败: %w", err)
+		return nil, fmt.Errorf("创建数据库表失败: %w", err)
 	}
 
 	// 设置自定义类型映射
@@ -197,45 +123,13 @@ func InitDB() (*sqlx.DB, error) {
 	// 保存全局数据库连接
 	DB = db
 	
-	// 执行所有数据库迁移
-	if err := MigrateDatabase(); err != nil {
-		return nil, fmt.Errorf("数据库迁移失败: %w", err)
-	}
-	
 	// 启动定期检查点执行
 	go PerformPeriodicCheckpoints()
 
 	return db, nil
 }
 
-// MigrateDatabase 执行所有数据库迁移
-func MigrateDatabase() error {
-	log.Println("开始运行数据库迁移...")
 
-	// 按顺序执行所有迁移
-	migrations := []struct {
-		name string
-		fn   func() error
-	}{
-		{"添加tmdb_id列", AddTmdbIDColumn},
-		{"添加stickers列", AddStickersColumn},
-		{"添加media_type列", AddMediaTypeColumn},
-		// 未来可以在这里添加更多迁移
-	}
-
-	// 执行所有迁移
-	for _, migration := range migrations {
-		log.Printf("执行迁移: %s", migration.name)
-		if err := migration.fn(); err != nil {
-			log.Printf("迁移失败 [%s]: %v", migration.name, err)
-			return err
-		}
-		log.Printf("迁移成功: %s", migration.name)
-	}
-
-	log.Println("所有迁移已成功完成")
-	return nil
-}
 
 // GetDB 获取数据库连接
 func GetDB() *sqlx.DB {
@@ -282,21 +176,14 @@ func CreateInitialAdmin() error {
 
 // RestoreImagesPath 检查并恢复图片路径
 func RestoreImagesPath() error {
-	// 查询所有资源，明确指定列名，排除tmdb_id字段
+	// 查询所有资源
 	resources := []Resource{}
-	if err := DB.Select(&resources, `
-		SELECT 
-			id, title, title_en, description, images, poster_image, 
-			resource_type, status, hidden_from_admin, created_at, updated_at, 
-			links, original_resource_id, supplement, approval_history, 
-			is_supplement_approval, likes_count
-		FROM resources
-	`); err != nil {
+	if err := DB.Select(&resources, `SELECT * FROM resources`); err != nil {
 		return fmt.Errorf("查询资源失败: %w", err)
 	}
 
 	// 获取资源目录
-	assetsDir := utils.GetAssetsDir()
+	assetsDir := config.GetAssetsDir()
 	log.Printf("资源目录: %s", assetsDir)
 
 	// 扫描所有图片文件
@@ -414,17 +301,9 @@ func isValidJson(data []byte) bool {
 func ConvertJsonFieldsToText() error {
 	log.Printf("开始修复数据库中的JSON字段...")
 
-	// 查询所有资源，明确指定列名，排除tmdb_id字段
+	// 查询所有资源
 	var resources []Resource
-	err := DB.Select(&resources, `
-		SELECT 
-			id, title, title_en, description, images, poster_image, 
-			resource_type, status, hidden_from_admin, created_at, updated_at, 
-			links, original_resource_id, supplement, approval_history, 
-			is_supplement_approval, likes_count
-		FROM resources
-	`)
-	if err != nil {
+	if err := DB.Select(&resources, `SELECT * FROM resources`); err != nil {
 		return fmt.Errorf("查询资源失败: %w", err)
 	}
 
@@ -468,7 +347,6 @@ func InitSiteSettings() error {
 
 	// 如果已经有info设置，不进行覆盖
 	if count == 0 {
-		log.Printf("未检测到网站基本信息设置，创建默认设置...")
 		// 默认的页脚设置
 		footerSettings := JsonMap{
 			"links": []map[string]interface{}{
@@ -508,11 +386,7 @@ func InitSiteSettings() error {
 		if err != nil {
 			return fmt.Errorf("保存info设置失败: %w", err)
 		}
-		
-		log.Printf("网站设置初始化完成")
-	} else {
-		log.Printf("检测到已有网站设置，跳过初始化")
-	}
+	} 
 	
 	return nil
 }
@@ -563,133 +437,6 @@ func PerformPeriodicCheckpoints() {
 			log.Println("定期检查点操作成功完成")
 		}
 	}
-}
-
-// AddTmdbIDColumn 向resources表添加tmdb_id字段
-func AddTmdbIDColumn() error {
-	log.Printf("检查resources表是否需要添加tmdb_id字段...")
-	
-	// 先检查resources表是否存在
-	var tableExists int
-	err := DB.Get(&tableExists, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources'`)
-	if err != nil {
-		return fmt.Errorf("检查resources表是否存在失败: %w", err)
-	}
-	
-	if tableExists == 0 {
-		log.Printf("resources表不存在，无需添加tmdb_id字段")
-		return nil
-	}
-	
-	// 检查tmdb_id字段是否已存在
-	var count int
-	err = DB.Get(&count, `SELECT COUNT(*) FROM pragma_table_info('resources') WHERE name = 'tmdb_id'`)
-	if err != nil {
-		return fmt.Errorf("检查tmdb_id字段是否存在失败: %w", err)
-	}
-	
-	// 如果字段不存在，则添加
-	if count == 0 {
-		log.Printf("tmdb_id字段不存在，正在添加...")
-		_, err = DB.Exec(`ALTER TABLE resources ADD COLUMN tmdb_id INTEGER`)
-		if err != nil {
-			return fmt.Errorf("添加tmdb_id字段失败: %w", err)
-		}
-		
-		// 创建索引
-		_, err = DB.Exec(`CREATE INDEX IF NOT EXISTS ix_resources_tmdb_id ON resources (tmdb_id)`)
-		if err != nil {
-			return fmt.Errorf("创建tmdb_id索引失败: %w", err)
-		}
-		
-		log.Printf("tmdb_id字段添加成功")
-	}
-	
-	return nil
-}
-
-// AddStickersColumn 添加stickers字段到resources表
-func AddStickersColumn() error {
-	log.Printf("检查resources表是否需要添加stickers字段...")
-	
-	// 先检查resources表是否存在
-	var tableExists int
-	err := DB.Get(&tableExists, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources'`)
-	if err != nil {
-		return fmt.Errorf("检查resources表是否存在失败: %w", err)
-	}
-	
-	if tableExists == 0 {
-		log.Printf("resources表不存在，无需添加stickers字段")
-		return nil
-	}
-	
-	// 检查stickers字段是否已存在
-	var count int
-	err = DB.Get(&count, `SELECT COUNT(*) FROM pragma_table_info('resources') WHERE name = 'stickers'`)
-	if err != nil {
-		return fmt.Errorf("检查stickers字段是否存在失败: %w", err)
-	}
-	
-	// 如果字段不存在，则添加
-	if count == 0 {
-		log.Printf("stickers字段不存在，正在添加...")
-		_, err = DB.Exec(`ALTER TABLE resources ADD COLUMN stickers TEXT DEFAULT '{}' NOT NULL`)
-		if err != nil {
-			return fmt.Errorf("添加stickers字段失败: %w", err)
-		}
-		
-		log.Printf("stickers字段添加成功")
-	} else {
-		log.Printf("stickers字段已存在，无需添加")
-	}
-	
-	return nil
-}
-
-// AddMediaTypeColumn 添加media_type字段到resources表
-func AddMediaTypeColumn() error {
-	log.Printf("检查resources表是否需要添加media_type字段...")
-	
-	// 先检查resources表是否存在
-	var tableExists int
-	err := DB.Get(&tableExists, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources'`)
-	if err != nil {
-		return fmt.Errorf("检查resources表是否存在失败: %w", err)
-	}
-	
-	if tableExists == 0 {
-		log.Printf("resources表不存在，无需添加media_type字段")
-		return nil
-	}
-	
-	// 检查media_type字段是否已存在
-	var count int
-	err = DB.Get(&count, `SELECT COUNT(*) FROM pragma_table_info('resources') WHERE name = 'media_type'`)
-	if err != nil {
-		return fmt.Errorf("检查media_type字段是否存在失败: %w", err)
-	}
-	
-	// 如果字段不存在，则添加
-	if count == 0 {
-		log.Printf("media_type字段不存在，正在添加...")
-		_, err = DB.Exec(`ALTER TABLE resources ADD COLUMN media_type VARCHAR`)
-		if err != nil {
-			return fmt.Errorf("添加media_type字段失败: %w", err)
-		}
-		
-		// 创建索引
-		_, err = DB.Exec(`CREATE INDEX IF NOT EXISTS ix_resources_media_type ON resources (media_type)`)
-		if err != nil {
-			return fmt.Errorf("创建media_type索引失败: %w", err)
-		}
-		
-		log.Printf("media_type字段添加成功")
-	} else {
-		log.Printf("media_type字段已存在，无需添加")
-	}
-	
-	return nil
 }
 
 // UpdateResourceWithStickers 更新资源并支持贴纸数据

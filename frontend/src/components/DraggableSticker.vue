@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, defineProps, defineEmits } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getImageUrl } from '@/utils/imageUtils'
 
 const props = defineProps({

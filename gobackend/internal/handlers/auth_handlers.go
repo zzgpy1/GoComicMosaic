@@ -74,8 +74,6 @@ func Login(c *gin.Context) {
 
 // GetCurrentUserInfo 获取当前用户信息
 func GetCurrentUserInfo(c *gin.Context) {
-	log.Printf("获取当前用户信息, Authorization: %s", c.GetHeader("Authorization"))
-	
 	user, err := GetCurrentUser(c)
 	if err != nil {
 		log.Printf("获取用户信息失败: %v", err)

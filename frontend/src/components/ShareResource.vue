@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, watch, defineExpose, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import QRCode from 'qrcode'
 import { getImageUrl } from '@/utils/imageUtils'
 import infoManager from '@/utils/InfoManager'

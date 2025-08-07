@@ -397,7 +397,6 @@ func LoadTMDBConfig() {
 		return
 	}
 	
-	log.Printf("未找到TMDB API密钥配置，将使用默认值")
 }
 
 // GetTMDBStatus 获取TMDB功能是否启用，只返回enabled状态，不返回API密钥

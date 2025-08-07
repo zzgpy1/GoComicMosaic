@@ -73,7 +73,7 @@
 </template>
 
 <script>
-import { ref, computed, defineProps, defineEmits, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 
 export default {
   name: 'EpisodeSelector',

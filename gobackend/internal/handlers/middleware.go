@@ -16,7 +16,6 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取Authorization头
 		authHeader := c.GetHeader("Authorization")
-		log.Printf("Authorization头: %s", authHeader)
 		
 		if authHeader == "" {
 			log.Printf("缺少Authorization头")
@@ -46,7 +45,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("令牌验证成功，用户: %s, 是否管理员: %v", claims.Username, claims.IsAdmin)
+		// log.Printf("令牌验证成功，用户: %s, 是否管理员: %v", claims.Username, claims.IsAdmin)
 		
 		// 存储用户信息到上下文
 		c.Set("username", claims.Username)

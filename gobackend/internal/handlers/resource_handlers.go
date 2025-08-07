@@ -226,8 +226,8 @@ func GetPublicResources(c *gin.Context) {
 	}
 
 	// 打印请求参数用于调试
-	log.Printf("获取公开资源：skip=%d, limit=%d, search=%s, sortBy=%s, sortOrder=%s, countOnly=%v",
-		params.Skip, params.Limit, params.Search, params.SortBy, params.SortOrder, params.CountOnly)
+	// log.Printf("获取公开资源：skip=%d, limit=%d, search=%s, sortBy=%s, sortOrder=%s, countOnly=%v",
+	// 	params.Skip, params.Limit, params.Search, params.SortBy, params.SortOrder, params.CountOnly)
 
 	// 设置默认排序
 	if params.SortBy == "" {
@@ -255,7 +255,6 @@ func GetPublicResources(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "计算资源总数失败"})
 		return
 	}
-	log.Printf("符合条件的资源总数: %d", count)
 
 	// 如果只需要计数，直接返回
 	if params.CountOnly {
@@ -265,7 +264,7 @@ func GetPublicResources(c *gin.Context) {
 
 	// 如果没有记录，返回空数组
 	if count == 0 {
-		log.Printf("数据库中没有符合条件的记录")
+		// log.Printf("数据库中没有符合条件的记录")
 		c.JSON(http.StatusOK, []interface{}{})
 		return
 	}
@@ -332,7 +331,7 @@ func GetPublicResources(c *gin.Context) {
 		resources[0].TotalCount = &count
 	}
 
-	log.Printf("查询成功，返回 %d 条记录", len(resources))
+	// log.Printf("查询成功，返回 %d 条记录", len(resources))
 	
 	// 返回结果
 	c.JSON(http.StatusOK, resources)
@@ -347,8 +346,6 @@ func GetResourceByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的资源ID"})
 		return
 	}
-	
-	log.Printf("尝试获取资源ID: %d", resourceID)
 
 	isAdminView := c.DefaultQuery("is_admin_view", "false") == "true"
 	
@@ -368,7 +365,6 @@ func GetResourceByID(c *gin.Context) {
 		return
 	}
 	
-	log.Printf("资源ID: %d 存在性检查结果: %d", resourceID, count)
 	
 	if count == 0 {
 		log.Printf("资源ID: %d 不存在", resourceID)
@@ -378,7 +374,7 @@ func GetResourceByID(c *gin.Context) {
 
 	// 查询资源
 	var resource models.Resource
-	log.Printf("执行查询: SELECT * FROM resources WHERE id = %d", resourceID)
+	// log.Printf("执行查询: SELECT * FROM resources WHERE id = %d", resourceID)
 	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
 	if err != nil {
 		log.Printf("查询资源ID: %d 失败: %v", resourceID, err)
@@ -386,7 +382,7 @@ func GetResourceByID(c *gin.Context) {
 		return
 	}
 
-	log.Printf("成功获取资源ID: %d, 标题: %s, 状态: %s", resource.ID, resource.Title, resource.Status)
+	// log.Printf("成功获取资源ID: %d, 标题: %s, 状态: %s", resource.ID, resource.Title, resource.Status)
 
 	// 只有在公开页面访问时（非管理页面），才重定向补充审批记录到原始资源
 	if !isAdminView && resource.IsSupplementApproval && resource.OriginalResourceID != nil {

@@ -143,7 +143,12 @@ TMDB_API_KEY=your_tmdb_api_key # 此处可选，也可通过管理界面配置
 
 ### 运行
 
-开发测试运行
+开发测试运行（默认为Release模式）
+```
+go run cmd/api/main.go
+```
+
+开发调试运行（启用Debug模式）
 ```
 GIN_MODE=debug go run cmd/api/main.go
 ```

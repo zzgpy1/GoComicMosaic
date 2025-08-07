@@ -500,6 +500,22 @@ onMounted(() => {
   
   checkAuthState();
   
+  // 监听登录成功事件
+  const handleLoginSuccess = () => {
+    checkAuthState();
+  };
+  window.addEventListener('login-success', handleLoginSuccess);
+  
+  // 监听TMDB配置更新事件
+  const handleTmdbConfigUpdated = () => {
+    loadTMDBConfig();
+  };
+  window.addEventListener('tmdb-config-updated', handleTmdbConfigUpdated);
+  
+  // 将事件处理器保存到组件实例，以便在卸载时移除
+  window.handleLoginSuccess = handleLoginSuccess;
+  window.handleTmdbConfigUpdated = handleTmdbConfigUpdated;
+  
   // 初始加载时设置meta信息
   updateMetaInfo(route);
   
@@ -564,6 +580,18 @@ watch(() => route.path, () => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('beforeunload', clearPaginationStorage);
+  
+  // 移除登录成功事件监听器
+  if (window.handleLoginSuccess) {
+    window.removeEventListener('login-success', window.handleLoginSuccess);
+    delete window.handleLoginSuccess;
+  }
+  
+  // 移除TMDB配置更新事件监听器
+  if (window.handleTmdbConfigUpdated) {
+    window.removeEventListener('tmdb-config-updated', window.handleTmdbConfigUpdated);
+    delete window.handleTmdbConfigUpdated;
+  }
   
   // 移除路由监听
   if (routeWatcher && typeof routeWatcher === 'function') {

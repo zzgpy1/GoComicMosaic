@@ -3111,6 +3111,13 @@ const saveTMDBSettings = async () => {
       }
     });
     
+    // 清除TMDB状态缓存，确保前端状态立即更新
+    const TmdbStatusService = (await import('../services/TmdbStatusService')).default;
+    TmdbStatusService.clearCache();
+    
+    // 通知App.vue重新加载TMDB状态
+    window.dispatchEvent(new Event('tmdb-config-updated'));
+    
     // 显示成功消息
     tmdbSuccess.value = true;
     setTimeout(() => {

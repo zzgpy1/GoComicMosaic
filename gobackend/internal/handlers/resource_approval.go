@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"dongman/internal/models"
+	"dongman/internal/config"
 	"dongman/internal/utils"
 	"encoding/json"
 	"fmt"
@@ -88,7 +89,7 @@ func ApproveResource(c *gin.Context) {
 			log.Printf("[DEBUG] 原始图片路径: %v", approval.ApprovedImages)
 
 			// 获取assets目录路径
-			assetsDir := utils.GetAssetsDir()
+			assetsDir := config.GetAssetsDir()
 			log.Printf("[DEBUG] Assets目录路径: %s", assetsDir)
 			
 			// 创建目标目录
@@ -486,7 +487,7 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 			log.Printf("[DEBUG] 原始图片路径: %v", approval.ApprovedImages)
 
 			// 获取assets目录路径
-			assetsDir := utils.GetAssetsDir()
+			assetsDir := config.GetAssetsDir()
 			log.Printf("[DEBUG] Assets目录路径: %s", assetsDir)
 			
 			// 创建目标目录
