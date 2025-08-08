@@ -12,9 +12,10 @@ const pansouAxios = axios.create({
  * @param {boolean} refresh - 是否刷新结果
  * @param {Function} onUpdate - 结果更新时的回调函数
  * @param {Function} onComplete - 异步更新完成后的回调函数
+ * @param {Object} ext - 扩展参数，包含referer和英文标题等
  * @returns {Promise<Object>} 搜索结果
  */
-export const searchPanResources = async (keyword, refresh = false, onUpdate = null, onComplete = null) => {
+export const searchPanResources = async (keyword, refresh = false, onUpdate = null, onComplete = null, ext = null) => {
   console.log('pansouService: 开始搜索关键词:', keyword);
   
   if (!keyword || keyword.trim() === '') {
@@ -23,18 +24,28 @@ export const searchPanResources = async (keyword, refresh = false, onUpdate = nu
   }
   
   try {
+    // 构建请求参数
+    const params = {
+      kw: keyword,
+      refresh: refresh,
+      res: 'merge',
+      src: 'all'
+    };
+    
+    // 如果有扩展参数，添加到请求中
+    if (ext && typeof ext === 'object') {
+      params.ext = JSON.stringify(ext);
+      console.log('pansouService: 添加扩展参数:', ext);
+    }
+    
     // 确保直接调用/pansou/api/search而不是通过/app前缀
     const requestUrl = `/pansou/api/search?kw=${encodeURIComponent(keyword)}&refresh=${refresh}&res=merge&src=all`;
     console.log('pansouService: 发送API请求到:', requestUrl);
     console.log('pansouService: 完整URL应为:', window.location.origin + requestUrl);
+    console.log('pansouService: 请求参数:', params);
     
     const response = await pansouAxios.get(`/pansou/api/search`, {
-      params: {
-        kw: keyword,
-        refresh: refresh,
-        res: 'merge',
-        src: 'all'
-      }
+      params: params
     });
     
     console.log('pansouService: API响应:', response);
@@ -49,7 +60,7 @@ export const searchPanResources = async (keyword, refresh = false, onUpdate = nu
         setTimeout(async () => {
           try {
             console.log('pansouService: 开始异步更新搜索结果');
-            const updatedResults = await searchPanResources(keyword, false);
+            const updatedResults = await searchPanResources(keyword, false, null, null, ext);
             console.log('pansouService: 异步更新完成，新结果:', updatedResults);
             onUpdate(updatedResults);
             

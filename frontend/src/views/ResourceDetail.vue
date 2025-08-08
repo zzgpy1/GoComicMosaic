@@ -1741,6 +1741,14 @@ const searchPanResource = async () => {
     // 搜索关键词优先使用中文标题，如果没有则使用英文标题
     // 处理标题中的各种分隔符，只取主要部分
     let searchKeyword = resource.value.title || resource.value.title_en;
+    
+    // 处理英文标题，同样只取斜杠前的部分
+    let englishTitle = resource.value.title_en || '';
+    if (englishTitle && englishTitle.includes('/')) {
+      englishTitle = englishTitle.split('/')[0].trim();
+      console.log('英文标题包含斜杠，只使用斜杠前部分:', englishTitle);
+    }
+    
     if (searchKeyword) {
       // 处理斜杠分隔的情况，取第一部分
       if (searchKeyword.includes('/')) {
@@ -1759,6 +1767,19 @@ const searchPanResource = async () => {
       console.log('处理后的搜索关键词:', searchKeyword);
     }
     console.log('最终搜索关键词:', searchKeyword);
+    console.log('处理后的英文标题:', englishTitle);
+    
+    // 构建扩展参数
+    const extParams = {
+      referer: "https://dm.xueximeng.com"
+    };
+    
+    // 如果有英文标题，添加到扩展参数中
+    if (englishTitle) {
+      extParams.title_en = englishTitle;
+    }
+    
+    console.log('扩展参数:', extParams);
     
     // 定义异步更新回调函数
     const handleAsyncUpdate = (updatedResults) => {
@@ -1797,11 +1818,11 @@ const searchPanResource = async () => {
       isAsyncUpdating.value = false;
     };
     
-    // 调用搜索API，传入回调函数
-    console.log('调用searchPanResources API...');
+    // 调用搜索API，传入回调函数和扩展参数
+    console.log('调用pwd API...');
     console.log('注意：如果请求URL中包含/app/pansou，说明全局axios配置仍在影响请求');
     isAsyncUpdating.value = true; // 开始异步更新
-    const results = await searchPanResources(searchKeyword, false, handleAsyncUpdate, handleAsyncComplete);
+    const results = await searchPanResources(searchKeyword, false, handleAsyncUpdate, handleAsyncComplete, extParams);
     console.log('API返回结果:', results);
     
     // 检查结果是否为空对象
