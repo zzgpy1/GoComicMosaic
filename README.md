@@ -1,10 +1,9 @@
 # GoComicMosaic
-一款开源美漫共建平台，不同用户可以自由提交动漫信息(标题、类型、简介、图片、资源链接)，像马赛克一样，由多方贡献拼凑成完整资源。当然程序本身是通用的，用来做电影、剧集、综艺等等都可以。  
+一款开源影视资源共建平台，不同用户可以自由提交资源信息(标题、类型、简介、图片、资源链接)，像马赛克一样，由多方贡献拼凑成完整资源。 集成网盘搜索、分季分集剧集信息查看、在线点播(支持采集解析和自定义爬虫)等功能
 
 正式上线地址：https://dm.xueximeng.com/  
-套CF CDN地址：https://mm.252035.xyz/
 
-Demo演示（每小时重置1次数据）：https://demo.xueximeng.com/  
+Demo演示：https://demo.xueximeng.com/  
 管理员账号：admin / admin123  
 
 如果喜欢，点个star  
@@ -55,7 +54,7 @@ docker run -d --name dongman \
 
 ![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/dianbo.gif)
 
-也可以直接在`https://域名/streams`页面点播，支持解析线路和自定义爬虫
+也可以直接在`https://域名/streams`页面点播，支持采集解析和自定义爬虫
 
 ![image|690x397](https://raw.githubusercontent.com/fishforks/imgs/refs/heads/main/gcm/streams.gif)
 
